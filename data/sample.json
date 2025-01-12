@@ -1,5 +1,6 @@
 {
     "food_name": "Chicken Milanese with Herby Escarole Salad",
+    "image": "data/images/001.png",
     "ingredients": [
         {
             "id_1": [
