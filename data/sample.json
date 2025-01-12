@@ -1,9 +1,20 @@
 {
     "food_name": "Chicken Milanese with Herby Escarole Salad",
     "ingredients": [
-        "1/4 cup red wine vinegar",
-        "2 lemons",
-        "2 teaspoons Dijon mustard"
+        {
+            "id_1": [
+                "1/4 cup red wine vinegar",
+                "2 lemons",
+                "2 teaspoons Dijon mustard"
+            ]
+        },
+        {
+            "id_2": [
+                "1/4 cup red wine vinegar",
+                "2 lemons",
+                "2 teaspoons Dijon mustard"
+            ]
+        }
     ],
     "instructions": [
         "In a small mixing bowl, combine vinegar, juice of a ½ a lemon, Dijon and honey. Slowly whisk in olive oil until emulsified. Add anchovy, plus salt and pepper to taste. Set dressing aside.",
