@@ -1,0 +1,10 @@
+# Set text files to use LF
+*.txt text eol=lf
+
+# Set scripts to use LF
+*.sh text eol=lf
+*.py text eol=lf
+
+# Set Windows-specific files to use CRLF
+*.bat text eol=crlf
+*.ipynb text eol=lf
