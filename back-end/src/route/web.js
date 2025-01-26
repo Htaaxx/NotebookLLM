@@ -1,6 +1,6 @@
-import express from "express";
+import express from 'express';
 
-let router = express.Router();
+let router = express.Router();  
 
 let initWebRoutes = (app) => {
     router.get("/", (req, res) => {
@@ -11,7 +11,11 @@ let initWebRoutes = (app) => {
         return res.send("About Page");
     });
 
+    router.get("/crud", (req, res) => {
+        return res.send("CRUD Page");
+    });
+
     return app.use("/", router);
 }
 
-export default initWebRoutes;
+module.exports = initWebRoutes;
