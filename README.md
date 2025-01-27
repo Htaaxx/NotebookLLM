@@ -1,6 +1,6 @@
-# CookWise
+# NotebookLLM
 
-This repository contains the source code for the machine learning project developed by the CookWise Team, as part of the 'Machine learning' course.
+This repository contains the source code for the machine learning project developed by the Notebook Team, as part of the 'Machine learning' course.
 
 # Members
 
