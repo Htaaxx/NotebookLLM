@@ -7,10 +7,10 @@ export function NavBar() {
     <nav className="flex items-center h-16 px-6 border-b">
       <div className="flex items-center gap-2">
         <Image src="/placeholder.svg" alt="Logo" width={32} height={32} className="w-8 h-8" />
-        <span className="font-semibold">YourLogo</span>
+        <span className="font-semibold">NoteGPT</span>
       </div>
       <div className="flex gap-8 ml-32">
-        <Link href="/chatbox" className="hover:text-primary">
+        <Link href="/" className="hover:text-primary">
           Chatbox
         </Link>
         <Link href="/files" className="hover:text-primary">
