@@ -34,9 +34,7 @@ To use the API, follow these steps:
 ```
 API/
 ├── extract_file_content_api/
-|   ├── extract_file_content_api.py
 ├── get_youtube_transcript_api/
-|   ├── get_youtube_transcript_api.py
 ├── requirements.txt
 ```
 
