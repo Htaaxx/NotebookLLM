@@ -1,5 +1,7 @@
-vscode
+API/extract_file_content_api/__pycache__
+API/get_youtube_transcript_api/__pycache__
 
+vscode
 .vs/
 tsbir_model_final.pt
 
