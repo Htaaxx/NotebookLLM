@@ -45,7 +45,6 @@ async def extract_text(file: UploadFile = File(...)):
     if file_extension not in ["pdf", "docx", "txt"]:
         raise HTTPException(status_code=400, detail="Just support PDF, DOCX, TXT")
 
-    # Lưu file tạm
     file_path = f"temp_{file.filename}"
     with open(file_path, "wb") as f:
         f.write(await file.read())

@@ -2,6 +2,7 @@ import re
 import os
 import requests
 import yt_dlp
+import torch
 from fastapi import FastAPI, HTTPException
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
@@ -32,8 +33,7 @@ def get_video_title(video_id: str) -> str:
         return "Unknown Title"
 
 def clean_transcript(text: str) -> str:
-    text = re.sub(r"\s+", " ", text).strip()
-    return text
+    return re.sub(r"\s+", " ", text).strip()
 
 def fetch_transcript(video_id: str) -> str:
     try:
@@ -45,9 +45,8 @@ def fetch_transcript(video_id: str) -> str:
             return None
     except TranscriptsDisabled:
         return None
-    
-    transcript_text = " ".join([entry["text"] for entry in transcript_data])
-    return clean_transcript(transcript_text)
+
+    return clean_transcript(" ".join([entry["text"] for entry in transcript_data]))
 
 def download_audio(video_url: str, output_path: str) -> str:
     ydl_opts = {
@@ -66,9 +65,21 @@ def download_audio(video_url: str, output_path: str) -> str:
     return output_path + ".mp3"
 
 def transcribe_audio(audio_path: str) -> str:
-    model = WhisperModel("base", device="cuda", compute_type="float16")
+    if torch.backends.mps.is_available():
+        device = "mps"
+    elif torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+    
+    compute_type = "float16" if device in ["cuda", "mps"] else "int8"
+    print(f"Using device: {device}, compute type: {compute_type}")
+    
+    model = WhisperModel("base", device=device, compute_type=compute_type)
+    
     segments, _ = model.transcribe(audio_path)
     transcript = " ".join([segment.text for segment in segments])
+    
     return clean_transcript(transcript)
 
 @app.post("/get_transcript/")
@@ -80,16 +91,16 @@ async def get_transcript(link: YouTubeLink):
     video_name = get_video_title(video_id)
     transcript_text = fetch_transcript(video_id)
     
-    # if transcript_text is None:
-    #     audio_path = f"temp/{video_id}"
-    #     try:
-    #         os.makedirs("temp", exist_ok=True)
-    #         audio_file = download_audio(link.url, audio_path)
-    #         transcript_text = transcribe_audio(audio_file)
-    #         os.remove(audio_file)
-    #     except Exception as e:
-    #         raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
+    if transcript_text is None:
+        audio_path = f"temp/{video_id}"
+        try:
+            os.makedirs("temp", exist_ok=True)
+            audio_file = download_audio(link.url, audio_path)
+            transcript_text = transcribe_audio(audio_file)
+            os.remove(audio_file)
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
     
     return {"video_id": video_id, "video_name": video_name, "text": transcript_text}
 
-# uvicorn get_youtube_transcript_api:app --reload
+# run API: uvicorn get_youtube_transcript_api:app --reload
