@@ -118,5 +118,9 @@ async def extract_text(file: UploadFile = File(...)):
         "file_id": file.filename,
         "pages": [{"page_id": page_id, "text": text} for page_id, text in text_data.items()]
     }
+    
+@app.get("/")
+def read_root():
+    return {"message": "YouTube Transcript API is running"}
 
 # Run API: uvicorn extract_file_content_api:app --reload

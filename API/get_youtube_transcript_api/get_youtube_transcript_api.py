@@ -103,4 +103,8 @@ async def get_transcript(link: YouTubeLink):
     
     return {"video_id": video_id, "video_name": video_name, "text": transcript_text}
 
+@app.get("/")
+def read_root():
+    return {"message": "File Extraction API is running"}
+
 # Run API: uvicorn get_youtube_transcript_api:app --reload

@@ -1,4 +1,5 @@
-API/__pycache__
+API/extract_file_content_api/__pycache__
+API/get_youtube_transcript_api/__pycache__
 
 vscode
 .vs/
