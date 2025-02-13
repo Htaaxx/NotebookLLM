@@ -1,0 +1,7 @@
+uvicorn ocr_pdf_image_txt_api:app --host 0.0.0.0 --port 8000
+
+
+curl -X 'POST' 'http://127.0.0.1:8000/ocr/' \
+     -H 'Content-Type: multipart/form-data' \
+     -F 'file=@/home/aaronpham5504/personalFolder/ADIP/Project/Ref/TP-GMOT-LQN.pdf'
+
