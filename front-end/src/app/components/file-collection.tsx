@@ -111,6 +111,10 @@ export function FileCollection() {
     }
   }
 
+  const deleteFolder = (folderId: string) => {
+    setFolders(folders.filter((folder) => folder.id !== folderId))
+  }
+
   return (
     <div className="w-64 border-r h-[calc(100vh-64px)] p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -163,7 +167,10 @@ export function FileCollection() {
                   {folder.expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                 </button>
                 <Checkbox checked={folder.selected} onCheckedChange={() => toggleFolderSelection(folder.id)} />
-                <span className="text-sm">{folder.name}</span>
+                <span className="text-sm truncate flex-grow">{folder.name}</span>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFolder(folder.id)}>
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </Button>
               </div>
 
               {folder.expanded && (
@@ -222,4 +229,3 @@ export function FileCollection() {
     </div>
   )
 }
-
