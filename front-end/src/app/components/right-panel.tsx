@@ -49,7 +49,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
     <div className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex flex-col">
       {activePanel === "preview" && selectedPdf && (
         <>
-          <div className="flex justify-between items-center mb-4">
+          {/* <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold">PDF Preview: {selectedPdf.name}</h2>
             <div className="flex gap-2">
               <Button onClick={handleZoomOut} size="sm">
@@ -59,7 +59,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
                 <ZoomIn className="w-4 h-4" />
               </Button>
             </div>
-          </div>
+          </div> */}
           <div className="flex-grow overflow-auto">
             {selectedPdf.size > MAX_PDF_SIZE ? (
               <p className="text-red-500">This PDF is too large to preview (max 10MB). Please download to view.</p>
@@ -67,8 +67,9 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
               <p className="text-red-500">{error}</p>
             ) : (
               <iframe
-                src={selectedPdf.url}
-                style={{ width: "100%", height: "100%", transform: `scale(${scale})`, transformOrigin: "top left" }}
+                src={`${selectedPdf.url}#toolbar=0`}
+                style={{ width: "100%", height: "100%", transform: `scale(${scale})`, transformOrigin: "top left", overflow: "hidden", border: "none" }}
+                className="no-scrollbars"
                 title="PDF Viewer"
               ></iframe>
             )}

@@ -19,3 +19,12 @@ body {
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+iframe::-webkit-scrollbar {
+  display: none;
+}
+
+iframe {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
