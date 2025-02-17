@@ -1,12 +1,8 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Document, Page } from "react-pdf"
 import { ZoomIn, ZoomOut } from "lucide-react"
 import { Button } from "@/app/components/ui/button"
-import { pdfjs as pdfjs2 } from "react-pdf"
-
-pdfjs2.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs2.version}/pdf.worker.min.js`
 
 interface FileItem {
   id: string
@@ -24,10 +20,8 @@ interface RightPanelProps {
 const MAX_PDF_SIZE = 10 * 1024 * 1024 // 10MB
 
 export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
-  const [numPages, setNumPages] = useState<number | null>(null)
   const [scale, setScale] = useState(1.0)
   const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(false)
 
   const selectedPdf = selectedFiles.find(
     (file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf"),
@@ -36,8 +30,6 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   useEffect(() => {
     setScale(1.0)
     setError(null)
-    setNumPages(null)
-    setLoading(false)
   }, [])
 
   if (!activePanel) return null
@@ -48,17 +40,6 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
         <p className="text-lg text-muted-foreground">No chosen file</p>
       </div>
     )
-  }
-
-  function onDocumentLoadSuccess({ numPages }: { numPages: number }) {
-    setNumPages(numPages)
-    setLoading(false)
-  }
-
-  function onDocumentLoadError(error: Error) {
-    console.error("Error loading PDF:", error)
-    setError("Failed to load PDF. Please try again or choose a different file.")
-    setLoading(false)
   }
 
   const handleZoomIn = () => setScale((prevScale) => Math.min(prevScale + 0.1, 2))
@@ -85,24 +66,11 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
             ) : error ? (
               <p className="text-red-500">{error}</p>
             ) : (
-              <Document
-                file={selectedPdf.url}
-                onLoadSuccess={onDocumentLoadSuccess}
-                onLoadError={onDocumentLoadError}
-                loading={<p>Loading PDF...</p>}
-                className="flex flex-col items-center"
-              >
-                {numPages &&
-                  Array.from(new Array(numPages), (el, index) => (
-                    <Page
-                      key={`page_${index + 1}`}
-                      pageNumber={index + 1}
-                      scale={scale}
-                      className="mb-4"
-                      loading={<p>Loading page {index + 1}...</p>}
-                    />
-                  ))}
-              </Document>
+              <iframe
+                src={selectedPdf.url}
+                style={{ width: "100%", height: "100%", transform: `scale(${scale})`, transformOrigin: "top left" }}
+                title="PDF Viewer"
+              ></iframe>
             )}
           </div>
         </>
@@ -116,4 +84,3 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
     </div>
   )
 }
-
