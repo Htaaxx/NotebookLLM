@@ -17,7 +17,7 @@ interface RightPanelProps {
   selectedFiles: FileItem[]
 }
 
-const MAX_PDF_SIZE = 10 * 1024 * 1024 // 10MB
+const MAX_PDF_SIZE = 100 * 1024 * 1024 // Allow pdf to be only < 100MB
 
 export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   const [scale, setScale] = useState(1.0)
@@ -69,7 +69,6 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
               <iframe
                 src={`${selectedPdf.url}#toolbar=0`}
                 style={{ width: "100%", height: "100%", transform: `scale(${scale})`, transformOrigin: "top left", overflow: "hidden", border: "none" }}
-                className="no-scrollbars"
                 title="PDF Viewer"
               ></iframe>
             )}
