@@ -1,8 +1,9 @@
-from API.create_mindmap.create_mindmap_api import get_smaller_branches
-from API.get_youtube_transcript_api.get_youtube_transcript_api import get_transcript
-from API.ocr_image_api.ocr_image_api import ocr
-from API.extract_file_content_api.extract_file_content_api import extract_text
+from create_mindmap.create_mindmap_api import get_smaller_branches
+from get_youtube_transcript_api.get_youtube_transcript_api import get_transcript
+from ocr_image_api.ocr_image_api import ocr
+from extract_file_content_api.extract_file_content_api import extract_text
 from fastapi import FastAPI, File, UploadFile
+from get_youtube_transcript_api.get_youtube_transcript_api import YouTubeLink
 import uvicorn
 
 # init fastAPI
@@ -17,7 +18,7 @@ async def get_smaller_branches_api(doc: str):
     return get_smaller_branches(doc)
 
 @app.post("/get_transcript")
-async def get_transcript_api(link: str):
+async def get_transcript_api(link: YouTubeLink):
     return get_transcript(link)
 
 @app.post("/ocr")
