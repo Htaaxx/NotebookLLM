@@ -20,16 +20,11 @@ export default function Home() {
   const [selectedFiles, setSelectedFiles] = useState<FileItem[]>([])
   const [activePanel, setActivePanel] = useState<"preview" | "mindmap" | null>(null)
 
-  const handleFileSelection = useCallback((file: FileItem) => {
-    setSelectedFiles((prev) => {
-      const isAlreadySelected = prev.some((f) => f.id === file.id)
-      if (isAlreadySelected) {
-        return prev.filter((f) => f.id !== file.id)
-      } else {
-        return [...prev, file]
-      }
-    })
-  }, [])
+  const handleFileSelection = useCallback((files: FileItem[]) => {
+    setSelectedFiles(files);
+  }, []);
+  
+  
 
   const handleViewChange = useCallback((view: "preview" | "mindmap" | null) => {
     setActivePanel((prev) => (prev === view ? null : view))

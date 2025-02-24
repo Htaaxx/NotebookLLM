@@ -41,9 +41,20 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   const [annotations, setAnnotations] = useState<Annotation[]>([])
   const [selectedPage, setSelectedPage] = useState<number | null>(null)
 
-  const selectedPdf = selectedFiles.find(
-    (file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
-  )
+  const selectedPdf = useMemo(() => {
+    return selectedFiles.find(
+      (file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+    ) || null;
+  }, [selectedFiles]);
+  
+  useEffect(() => {
+    if (!selectedPdf) {
+      setNumPages(null);
+      setError(null);
+      setScale(1.0);
+    }
+  }, [selectedPdf]);
+  
 
   useEffect(() => {
     setScale(1.0)

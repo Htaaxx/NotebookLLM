@@ -39,7 +39,7 @@ type DragItem =
     }
 
 interface FileCollectionProps {
-  onFileSelect: (file: FileItem) => void
+  onFileSelect: (files: FileItem[]) => void;
 }
 
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
@@ -339,9 +339,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     const allSelectedFiles = [
       ...rootFiles.filter((file) => file.selected),
       ...rootFolders.flatMap((folder) => getAllSelectedFiles(folder)),
-    ]
-    allSelectedFiles.forEach((file) => onFileSelect(file))
-  }, [rootFiles, rootFolders, onFileSelect])
+    ];
+    onFileSelect(allSelectedFiles); // Pass the full array
+  }, [rootFiles, rootFolders, onFileSelect]);
 
   const getAllSelectedFiles = (folder: Folder): FileItem[] => {
     return [
