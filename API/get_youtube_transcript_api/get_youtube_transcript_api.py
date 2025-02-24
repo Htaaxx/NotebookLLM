@@ -82,7 +82,7 @@ def transcribe_audio(audio_path: str) -> str:
     
     return clean_transcript(transcript)
 
-@app.post("/get_transcript/")
+# @app.post("/get_transcript/")
 async def get_transcript(link: YouTubeLink):
     video_id = extract_video_id(link.url)
     if not video_id:

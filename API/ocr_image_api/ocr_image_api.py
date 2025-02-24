@@ -6,7 +6,6 @@ from fastapi import FastAPI, File, UploadFile
 from fastapi.responses import JSONResponse
 from pdf2image import convert_from_bytes
 
-app = FastAPI()
 
 
 def clean_text(text):
@@ -42,7 +41,7 @@ def extract_text_pdf(file_bytes):
     return text
 
 
-@app.post("/ocr/")
+# @app.post("/ocr/")
 async def ocr(file: UploadFile = File(...)):
     try:
         file_bytes = await file.read()

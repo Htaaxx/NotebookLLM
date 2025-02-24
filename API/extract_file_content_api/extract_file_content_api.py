@@ -89,7 +89,7 @@ def extract_text_from_txt(file_path: str):
 
     return text_data
 
-@app.post("/extract_text/", response_model=FileContentResponse)
+# @app.post("/extract_text/", response_model=FileContentResponse)
 async def extract_text(file: UploadFile = File(...)):
     file_extension = file.filename.split(".")[-1].lower()
     if file_extension not in ["pdf", "docx", "txt"]:
@@ -119,8 +119,8 @@ async def extract_text(file: UploadFile = File(...)):
         "pages": [{"page_id": page_id, "text": text} for page_id, text in text_data.items()]
     }
     
-@app.get("/")
-def read_root():
-    return {"message": "YouTube Transcript API is running"}
+# @app.get("/")
+# def read_root():
+#     return {"message": "YouTube Transcript API is running"}
 
 # Run API: uvicorn extract_file_content_api:app --reload
