@@ -14,8 +14,5 @@
       "src": "/(.*)",
       "dest": "api/main.py"
     }
-  ],
-  "scripts": {
-    "build": "python3.12 -m pip install --disable-pip-version-check --target . --upgrade -r requirements.txt"
-  }
+  ]
 }
