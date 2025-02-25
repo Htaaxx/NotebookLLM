@@ -5,7 +5,7 @@
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "15mb",
-        "runtime": "python3.12.7"
+        "runtime": "python3.12"
       }
     }
   ],
@@ -14,5 +14,8 @@
       "src": "/(.*)",
       "dest": "api/main.py"
     }
-  ]
+  ],
+  "scripts": {
+    "build": "python3.12 -m pip install --disable-pip-version-check --target . --upgrade -r requirements.txt"
+  }
 }
