@@ -15,5 +15,21 @@
       "src": "/(.*)",
       "dest": "api/main.py"
     }
+  ],
+  "excludeFiles": [
+    "**/*.pyc",
+    "**/__pycache__/**",
+    ".env",
+    ".git/**",
+    ".venv/**",
+    "automations/**",
+    "docs/**",
+    "logdir/**",
+    "tests/**",
+    "prisma/migrations/**",
+    "Dockerfile",
+    "README.md",
+    "pytest.ini",
+    "package.json"
   ]
 }
