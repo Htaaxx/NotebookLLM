@@ -1,2 +1,4 @@
 #!/bin/bash
-python3.12 -m pip install --disable-pip-version-check --target . --upgrade -r requirements.txt
+#!/bin/bash
+pip3.12 install --target . -r requirements.txt
+rm -rf *.dist-info __pycache__

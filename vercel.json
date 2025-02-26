@@ -4,8 +4,9 @@
       "src": "api/main.py",
       "use": "@vercel/python",
       "config": {
+        "maxLambdaSize": "250mb",
         "runtime": "python3.12",
-        "buildCommand": "python3.12 -m pip install --disable-pip-version-check --target . --upgrade -r requirements.txt"
+        "includeFiles": ["api/", "requirements.txt"]
       }
     }
   ],
