@@ -4,7 +4,7 @@
 # from extract_file_content_api.extract_file_content_api import extract_text
 from fastapi import FastAPI, File, UploadFile
 # from get_youtube_transcript_api.get_youtube_transcript_api import YouTubeLink
-import uvicorn
+# import uvicorn
 
 # init fastAPI
 app = FastAPI()
