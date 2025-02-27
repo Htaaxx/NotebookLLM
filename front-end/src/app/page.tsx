@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { NavBar } from "@/app/components/nav-bar"
-import { FileCollection } from "@/app/components/file-collection"
-import { ChatBox } from "@/app/components/chat-box"
-import { RightPanel } from "@/app/components/right-panel"
-import { RightButtons } from "@/app/components/right-buttons"
+import { NavBar } from "@//components/nav-bar"
+import { FileCollection } from "@/components/file-collection"
+import { ChatBox } from "@/components/chat-box"
+import { RightPanel } from "@/components/right-panel"
+import { RightButtons } from "@/components/right-buttons"
 
 interface FileItem {
   id: string

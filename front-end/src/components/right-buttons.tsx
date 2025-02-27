@@ -1,6 +1,6 @@
 "use client"
 import { FileText, Network } from "lucide-react"
-import { Button } from "@/app/components/ui/button"
+import { Button } from "@/components/ui/button"
 
 interface RightButtonsProps {
   onViewChange: (view: "preview" | "mindmap" | null) => void
