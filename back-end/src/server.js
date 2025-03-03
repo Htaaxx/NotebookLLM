@@ -1,19 +1,20 @@
-import express from "express";
-import bodyParser from "body-parser";
-import viewEngine from "./config/viewEngine";
-import initWebRoutes from './route/web';
-require('dotenv').config();
+require("dotenv").config();
+const express = require("express");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
+const webRoutes = require("./routes/web");
 
-let app = express();
+const app = express();
+const PORT = process.env.PORT || 5000;
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }))
+// Middleware
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(cors({ credentials: true, origin: "http://localhost:3000" })); // Allow frontend
 
-viewEngine(app);
-initWebRoutes(app);
+// Routes
+app.use("/", webRoutes);
 
-let port = process.env.PORT || 6969;
-
-app.listen(port, () => {
-    console.log("Backend Nodejs is runing on the port : " + port)
-})
+// Start server
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -1,21 +1,13 @@
-import express from 'express';
+const express = require("express");
+const router = express.Router();
+const authController = require("../controllers/controller");
+const verifyToken = require("../middlewares/authMiddleware");
 
-let router = express.Router();  
+// Authentication routes
+router.post("/signup", authController.signup);
+router.post("/signin", authController.signin);
+router.post("/signout", authController.signout);
+router.get("/dashboard", verifyToken, authController.dashboard);
+router.get("/users", authController.getUsers);
 
-let initWebRoutes = (app) => {
-    router.get("/", (req, res) => {
-        return res.send("Hello World");
-    });
-
-    router.get("/about", (req, res) => {
-        return res.send("About Page");
-    });
-
-    router.get("/crud", (req, res) => {
-        return res.send("CRUD Page");
-    });
-
-    return app.use("/", router);
-}
-
-module.exports = initWebRoutes;
+module.exports = router;

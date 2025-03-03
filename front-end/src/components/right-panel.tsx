@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import { ZoomIn, ZoomOut, Highlighter } from "lucide-react"
-import { Button } from "@/app/components/ui/button"
+import { Button } from "@/components/ui/button"
 import 'react-pdf/dist/esm/Page/TextLayer.css'
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'
 

@@ -1,40 +1,17 @@
-import jwt from "jsonwebtoken";
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
 
-export const verifyToken = (req, res, next) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader && authHeader.split(" ")[1];
-  if (!token) {
-    return res.status(401).json({
-      error: true,
-      message: "Access token not found",
-    });
-  }
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
+
+const verifyToken = (req, res, next) => {
+  const token = req.cookies.token;
+  if (!token) return res.status(401).json({ message: "Unauthorized" });
+
+  jwt.verify(token, JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ message: "Invalid token" });
+    req.user = user;
     next();
-  } catch (error) {
-    return res.status(403).json({
-      error: true,
-      message: "Invalid or expired token",
-    });
-  }
+  });
 };
 
-export const checkRole = (roles) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      return res.status(401).json({
-        error: true,
-        message: "Unauthorized",
-      });
-    }
-    if (!roles.includes(req.user.role)) {
-      return res.status(403).json({
-        error: true,
-        message: "You do not have permission to perform this action",
-      });
-    }
-    next();
-  };
-};
+module.exports = verifyToken;
