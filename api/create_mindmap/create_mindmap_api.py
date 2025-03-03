@@ -1,13 +1,9 @@
 from openai import OpenAI
 from fastapi import FastAPI 
 from nltk.tokenize import sent_tokenize
-import tiktoken
-from typing import List
-from transformers import AutoTokenizer
 import numpy as np
 from sklearn.cluster import KMeans
 from sentence_transformers import SentenceTransformer
-import tiktoken
 from sklearn.metrics.pairwise import cosine_similarity
 
 
