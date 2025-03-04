@@ -8,7 +8,8 @@ WORKDIR /app
 
 COPY requirements.txt .
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install pip==25.0.1 && \
+    pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
