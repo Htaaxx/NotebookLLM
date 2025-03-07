@@ -12,17 +12,18 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("Connected to MongoDB Atlas"))
   .catch(err => console.error("MongoDB Connection Error:", err));
 
+
 // User Collection Schema
 const userSchema = new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
+  user_id: { type: String, unique: true, default: function () { return new mongoose.Types.ObjectId().toString(); } },
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
 });
 
 // Document Collection Schema
 const documentSchema = new mongoose.Schema({
-  _id: mongoose.Schema.Types.ObjectId,
-  user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  document_id: { type: String, unique: true, default: function () { return new mongoose.Types.ObjectId().toString(); } },
+  user_id: { type: String, ref: "User", required: true }, 
 });
 
 // Models
@@ -43,7 +44,7 @@ exports.signup = async (req, res) => {
     const newUser = new User({ username, password: hashedPassword });
     await newUser.save();
 
-    res.json({ message: "User registered successfully", user: { username: newUser.username } });
+    res.json({ message: "User registered successfully", user: { user_id: newUser.user_id, username: newUser.username, password: newUser.password } });
   } catch (error) {
     res.status(500).json({ message: "Error signing up", error });
   }
@@ -91,3 +92,32 @@ exports.getUsers = async (req, res) => {
     res.status(500).json({ message: "Error fetching users", error });
   }
 };
+
+// // Get Document with User
+// exports.getDocumentWithUser = async (req, res) => {
+//   try {
+//     const { user_id } = req.body; // user_id được lấy từ request
+//     // print user_id
+//     console.log(user_id);
+//   } catch (error) {
+//     res.status(500).json({ message: "Error fetching document", error });
+//   }
+// };
+
+
+
+// Create Document by User
+exports.createDocument = async (req, res) => {
+  const { user_id } = req.body;
+  try {
+    const user = await User.findOne({ user_id });
+    if (!user) return res.status(404).json({ message: "User not found" });
+    
+    const newDocument = new Document({ user_id });
+    await newDocument.save();
+    res.json({ message: "Document created successfully", document: newDocument });
+  } catch (error) {
+    res.status(500).json({ message: "Error creating document", error });
+  }
+};
+
