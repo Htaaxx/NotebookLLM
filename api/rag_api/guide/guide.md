@@ -19,6 +19,13 @@ curl -X 'POST' 'http://localhost:8000/embed' \
 -F 'files=@document2.pdf'
 ```
 
+```sh
+curl -X 'POST' 'http://localhost:8000/embed' \
+-H 'accept: application/json' \
+-H 'Content-Type: multipart/form-data' \
+-F 'file=@/home/aaronpham5504/personalFolder/ML/Project/notebooklm/api/rag_api/nke-10k-2023.pdf'
+```
+
 ## Expected respone
 
 ```sh
