@@ -8,7 +8,7 @@ router.post("/signup", authController.signup);
 router.post("/signin", authController.signin);
 router.post("/signout", authController.signout);
 router.post("/createDocument", authController.createDocument);
-//router.post("/getDocumentWithUser", authController.getDocumentWithUser);
+router.post("/getDocumentWithUser", authController.getDocumentWithUser);
 
 
 router.get("/dashboard", verifyToken, authController.dashboard);
