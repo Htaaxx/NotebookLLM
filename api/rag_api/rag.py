@@ -24,7 +24,7 @@ import openai
 app = FastAPI()
 
 # Load embedding model
-hf = SentenceTransformer("BAAI/bge-m3")
+hf = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Load LLM Model
 OPENAI_API_KEY = ""
