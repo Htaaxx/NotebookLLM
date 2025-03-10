@@ -64,7 +64,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="johndoe" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
+                <Input placeholder="Enter your username" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
