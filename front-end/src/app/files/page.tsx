@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { NavBar } from "@/app/components/nav-bar"
+import { NavBar } from "@/components/nav-bar"
 import { Upload, FileText, Youtube } from "lucide-react"
-import { Card, CardContent } from "@/app/components/ui/card"
-import { Button } from "@/app/components/ui/button"
-import { Textarea } from "@/app/components/ui/textarea"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 
 export default function FilesPage() {
   const [dragActive, setDragActive] = useState(false)

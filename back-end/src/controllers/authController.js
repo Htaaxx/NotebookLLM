@@ -93,16 +93,6 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-// // Get Document with User
-// exports.getDocumentWithUser = async (req, res) => {
-//   try {
-//     const { user_id } = req.body; // user_id được lấy từ request
-//     // print user_id
-//     console.log(user_id);
-//   } catch (error) {
-//     res.status(500).json({ message: "Error fetching document", error });
-//   }
-// };
 
 // Create Document by User
 exports.createDocument = async (req, res) => {
@@ -116,6 +106,22 @@ exports.createDocument = async (req, res) => {
     res.json({ message: "Document created successfully", document: newDocument });
   } catch (error) {
     res.status(500).json({ message: "Error creating document", error });
+  }
+};
+
+// Get Document with User
+exports.getDocumentWithUser = async (req, res) => {
+  try {
+      const { user_id } = req.body;
+      if (!user_id) {
+          return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const documents = await Document.find({ user_id: new ObjectId(user_id) }).select("document_id -_id");
+      return res.json(documents);
+  } catch (error) {
+      console.error("Error:", error);
+      res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
