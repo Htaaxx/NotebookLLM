@@ -10,10 +10,10 @@ export default function AuthUI() {
   const [activeTab, setActiveTab] = useState<string>("signin")
 
   return (
-    <Card className="w-full">
+    <Card className="w-full border-0 shadow-xl backdrop-blur-sm bg-white/90 dark:bg-gray-900/90">
       <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">Welcome</CardTitle>
-        <CardDescription className="text-center">Sign in to your account or create a new one</CardDescription>
+        <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
+        <CardDescription className="text-center">Sign in to your account to continue</CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="signin" value={activeTab} onValueChange={setActiveTab}>
@@ -27,7 +27,7 @@ export default function AuthUI() {
               <span className="text-muted-foreground">Don&apos;t have an account? </span>
               <button
                 onClick={() => setActiveTab("signup")}
-                className="text-primary underline-offset-4 hover:underline"
+                className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 underline-offset-4 hover:underline font-medium"
               >
                 Sign up
               </button>
@@ -39,7 +39,7 @@ export default function AuthUI() {
               <span className="text-muted-foreground">Already have an account? </span>
               <button
                 onClick={() => setActiveTab("signin")}
-                className="text-primary underline-offset-4 hover:underline"
+                className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 underline-offset-4 hover:underline font-medium"
               >
                 Sign in
               </button>

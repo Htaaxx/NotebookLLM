@@ -64,7 +64,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="johndoe" {...field} />
+                <Input placeholder="johndoe" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -77,7 +77,11 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="name@example.com" {...field} />
+                <Input
+                  placeholder="name@example.com"
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -90,7 +94,12 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -100,18 +109,24 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
           control={form.control}
           name="terms"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border">
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
               <FormControl>
                 <Checkbox checked={field.value} onCheckedChange={field.onChange} />
               </FormControl>
               <div className="space-y-1 leading-none">
                 <FormLabel>
                   I agree to the{" "}
-                  <a href="#" className="text-primary underline-offset-4 hover:underline">
+                  <a
+                    href="#"
+                    className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 underline-offset-4 hover:underline"
+                  >
                     terms of service
                   </a>{" "}
                   and{" "}
-                  <a href="#" className="text-primary underline-offset-4 hover:underline">
+                  <a
+                    href="#"
+                    className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 underline-offset-4 hover:underline"
+                  >
                     privacy policy
                   </a>
                 </FormLabel>
@@ -120,7 +135,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" variant="default" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

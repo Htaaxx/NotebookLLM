@@ -2,15 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #171717;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 142.1 76.2% 36.3%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 142.1 76.2% 36.3%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not(.light) {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 142.1 76.2% 36.3%;
   }
 }
 
@@ -20,26 +41,16 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.flex-grow.overflow-auto::-webkit-scrollbar {
-  width: 6px;
-  background-color: #f5f5f5;
-}
+/* Grid pattern background utility */
+@layer utilities {
+  .bg-grid-pattern {
+    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
 
-.flex-grow.overflow-auto::-webkit-scrollbar-thumb {
-  background-color: #d0d0d0;
-  border-radius: 10px; 
-  border: 1px solid #f5f5f5;
-}
-
-.flex-grow.overflow-auto::-webkit-scrollbar-thumb:hover {
-  background-color: #c0c0c0;
-}
-
-.flex-grow.overflow-auto::-webkit-scrollbar-button {
-  display: none;
-}
-
-.flex-grow.overflow-auto {
-  scrollbar-width: thin;
-  scrollbar-color: #d0d0d0 #f5f5f5;
+  .dark .bg-grid-pattern {
+    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  }
 }

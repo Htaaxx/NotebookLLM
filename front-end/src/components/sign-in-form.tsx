@@ -57,7 +57,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="johndoe" {...field} />
+                <Input placeholder="johndoe" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -70,18 +70,27 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
             <FormItem>
               <FormLabel>Password</FormLabel>
               <FormControl>
-                <Input type="password" placeholder="••••••••" {...field} />
+                <Input
+                  type="password"
+                  placeholder="••••••••"
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
         <div className="text-right">
-          <Button variant="link" className="p-0 h-auto font-normal" type="button">
+          <Button
+            variant="link"
+            className="p-0 h-auto font-normal text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400"
+            type="button"
+          >
             Forgot password?
           </Button>
         </div>
-        <Button type="submit" className="w-full" disabled={isLoading}>
+        <Button type="submit" className="w-full" variant="default" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
