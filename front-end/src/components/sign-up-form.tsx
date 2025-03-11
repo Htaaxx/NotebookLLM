@@ -10,6 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 
+import { authAPI } from "@/lib/api";
+
 const formSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters" }),
   email: z.string().email({ message: "Please enter a valid email address" }),
@@ -40,6 +42,13 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
     setIsLoading(true)
 
     try {
+      // Gọi API đăng ký
+      await authAPI.signUp(
+        values.username,
+        values.email,
+        values.password
+      );
+
       // Here you would typically call your authentication API
       console.log("Sign up values:", values)
 
