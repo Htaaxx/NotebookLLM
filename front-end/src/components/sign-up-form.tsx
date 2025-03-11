@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 
-import { authAPI } from "@/lib/api";
+import { authAPI } from "@/lib/api"
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters" }),
@@ -27,6 +27,7 @@ type SignUpFormProps = {
 
 export function SignUpForm({ onSuccess }: SignUpFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -40,24 +41,20 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
+    setError(null)
 
     try {
       // Gọi API đăng ký
-      await authAPI.signUp(
-        values.username,
-        values.email,
-        values.password
-      );
+      await authAPI.signUp(values.username, values.email, values.password)
 
-      // Here you would typically call your authentication API
-      console.log("Sign up values:", values)
+      // After successful signup, sign in the user automatically
+      await authAPI.signIn(values.username, values.password)
 
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
+      // Navigate to defaultPage
       onSuccess()
     } catch (error) {
       console.error("Sign up error:", error)
+      setError("Failed to create account. The username or email may already be in use.")
     } finally {
       setIsLoading(false)
     }
@@ -66,6 +63,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {error && <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md">{error}</div>}
         <FormField
           control={form.control}
           name="username"
@@ -158,3 +156,4 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
     </Form>
   )
 }
+

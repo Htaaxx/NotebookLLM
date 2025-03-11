@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
 
 // connect to backend
-import { authAPI } from "@/lib/api";
+import { authAPI } from "@/lib/api"
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters" }),
@@ -23,6 +23,7 @@ type SignInFormProps = {
 
 export function SignInForm({ onSuccess }: SignInFormProps) {
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -34,15 +35,17 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
+    setError(null)
 
     try {
       // call backend API
       const data = await authAPI.signIn(values.username, values.password)
-      
-      // call the success callback
+
+      // call the success callback to navigate to defaultPage
       onSuccess()
     } catch (error) {
       console.error("Sign in error:", error)
+      setError("Invalid username or password. Please try again.")
     } finally {
       setIsLoading(false)
     }
@@ -51,6 +54,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        {error && <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md">{error}</div>}
         <FormField
           control={form.control}
           name="username"
@@ -105,3 +109,4 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
     </Form>
   )
 }
+

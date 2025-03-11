@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useRouter } from "next/navigation"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { SignInForm } from "@/components/sign-in-form"
@@ -8,6 +9,13 @@ import { SignUpForm } from "@/components/sign-up-form"
 
 export default function AuthUI() {
   const [activeTab, setActiveTab] = useState<string>("signin")
+  const router = useRouter()
+
+  // Handle successful authentication
+  const handleAuthSuccess = () => {
+    // Redirect to the default page after successful authentication
+    router.push("/defaultPage")
+  }
 
   return (
     <Card className="w-full border-0 shadow-xl backdrop-blur-sm bg-white/90 dark:bg-gray-900/90">
@@ -22,7 +30,7 @@ export default function AuthUI() {
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
           <TabsContent value="signin">
-            <SignInForm onSuccess={() => {}} />
+            <SignInForm onSuccess={handleAuthSuccess} />
             <div className="mt-4 text-center text-sm">
               <span className="text-muted-foreground">Don&apos;t have an account? </span>
               <button
@@ -34,7 +42,7 @@ export default function AuthUI() {
             </div>
           </TabsContent>
           <TabsContent value="signup">
-            <SignUpForm onSuccess={() => {}} />
+            <SignUpForm onSuccess={handleAuthSuccess} />
             <div className="mt-4 text-center text-sm">
               <span className="text-muted-foreground">Already have an account? </span>
               <button
