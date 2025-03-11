@@ -5,7 +5,7 @@ require("dotenv").config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
 const MONGO_URI = "mongodb+srv://itsthang333:090304@cluster0.192xz.mongodb.net/NotebookMLv2?retryWrites=true&w=majority&appName=Cluster0";
-
+const REFRESH_SECRET = process.env.REFRESH_SECRET || "your_refresh_secret";
 
 // Kết nối MongoDB
 mongoose.connect(process.env.MONGO_URI)
@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   email: { type: String, required: true, unique: true },
+  refreshToken: { type: String, default: null },
 });
 
 // Document Collection Schema
@@ -30,6 +31,22 @@ const documentSchema = new mongoose.Schema({
 // Models
 const User = mongoose.model("User", userSchema);
 const Document = mongoose.model("Document", documentSchema);
+
+const generateAccessToken = (user) => {
+  return jwt.sign(
+    { id: user._id, username: user.username },
+    JWT_SECRET,
+    { expiresIn: "1h" }
+  );
+};
+
+const generateRefreshToken = (user) => {
+  return jwt.sign(
+    { id: user._id, username: user.username },
+    REFRESH_SECRET,
+    { expiresIn: "7d" }
+  );
+};
 
 // **Sign Up**
 exports.signup = async (req, res) => {
@@ -66,22 +83,89 @@ exports.signin = async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
-    const token = jwt.sign({ id: user._id, username: user.username }, JWT_SECRET, { expiresIn: "1h" });
-    res.cookie("token", token, { httpOnly: true });
+    // Tạo access token và refresh token
+    const accessToken = generateAccessToken(user);
+    const refreshToken = generateRefreshToken(user);
 
-    res.json({ message: "Signed in successfully", token });
+    // Lưu refresh token vào database
+    user.refreshToken = refreshToken;
+    await user.save();
+
+    // Gửi cả access token và refresh token về client
+    res.json({
+      message: "Signed in successfully",
+      accessToken,
+      refreshToken,
+    });
   } catch (error) {
     res.status(500).json({ message: "Error signing in", error });
-  }
+  }  
+};
 
-  // Get current user (owner)
-  
+// **Refresh Token**
+exports.refresh = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    if (!refreshToken) {
+      return res.status(401).json({ message: "Refresh Token is required" });
+    }
+    
+    // Xác minh refresh token
+    jwt.verify(refreshToken, REFRESH_SECRET, async (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ message: "Invalid or expired refresh token" });
+      }
+      
+      // Tìm user có refresh token tương ứng
+      const user = await User.findOne({ _id: decoded.id, refreshToken });
+      
+      if (!user) {
+        return res.status(403).json({ message: "User not found or token revoked" });
+      }
+      
+      // Tạo access token mới
+      const newAccessToken = generateAccessToken(user);
+      
+      // Tùy chọn: Tạo refresh token mới (cơ chế rotation)
+      // const newRefreshToken = generateRefreshToken(user);
+      // user.refreshToken = newRefreshToken;
+      // await user.save();
+      
+      // Trả về access token mới
+      res.json({
+        accessToken: newAccessToken,
+        // refreshToken: newRefreshToken, // Nếu bạn muốn luân phiên refresh token
+      });
+    });
+  } catch (error) {
+    console.error("Refresh token error:", error);
+    res.status(500).json({ message: "Error refreshing token", error: error.message });
+  }
 };
 
 // **Sign Out**
-exports.signout = (req, res) => {
-  res.clearCookie("token");
-  res.json({ message: "Signed out successfully" });
+exports.signout = async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    
+    // Nếu có refresh token, tìm và xóa nó
+    if (refreshToken) {
+      const user = await User.findOne({ refreshToken });
+      if (user) {
+        user.refreshToken = null;
+        await user.save();
+      }
+    }
+    
+    // Xóa cookie nếu sử dụng
+    res.clearCookie("token");
+    
+    res.json({ message: "Signed out successfully" });
+  } catch (error) {
+    console.error("Sign out error:", error);
+    res.status(500).json({ message: "Error signing out", error: error.message });
+  }
 };
 
 // **Protected Route**

@@ -7,6 +7,8 @@ const verifyToken = require("../middlewares/authMiddleware");
 router.post("/signup", authController.signup);
 router.post("/signin", authController.signin);
 router.post("/signout", authController.signout);
+router.post("/refresh", authController.refresh);
+
 router.post("/createDocument", authController.createDocument);
 router.post("/getDocumentWithUser", authController.getDocumentWithUser);
 
