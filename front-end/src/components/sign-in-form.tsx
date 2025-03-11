@@ -9,6 +9,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input"
 import { Loader2 } from "lucide-react"
 
+// connect to backend
+import { authAPI } from "@/lib/api";
+
 const formSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters" }),
   password: z.string().min(6, { message: "Password must be at least 6 characters" }),
@@ -33,12 +36,10 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
     setIsLoading(true)
 
     try {
-      // Here you would typically call your authentication API
-      console.log("Sign in values:", values)
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-
+      // call backend API
+      const data = await authAPI.signIn(values.username, values.password)
+      
+      // call the success callback
       onSuccess()
     } catch (error) {
       console.error("Sign in error:", error)
@@ -57,7 +58,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="Enter your username" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
+                <Input placeholder="johndoe" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -104,4 +105,3 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
     </Form>
   )
 }
-
