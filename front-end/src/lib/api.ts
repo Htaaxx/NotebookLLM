@@ -22,11 +22,56 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Thêm interceptor để xử lý 401 error và refresh token
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // Nếu lỗi là 401 (Unauthorized) và chưa thử refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      try {
+        // Lấy refresh token từ localStorage
+        const refreshToken = localStorage.getItem('refreshToken');
+        if (!refreshToken) {
+          // Không có refresh token, chuyển hướng đến trang đăng nhập
+          window.location.href = '/signin';
+          return Promise.reject(error);
+        }
+        
+        // Gọi API refresh token
+        const response = await axios.post(`${API_URL}/refresh`, { refreshToken });
+        
+        // Lưu token mới vào localStorage
+        localStorage.setItem('accessToken', response.data.accessToken);
+        if (response.data.refreshToken) {
+          localStorage.setItem('refreshToken', response.data.refreshToken);
+        }
+        
+        // Thử lại request ban đầu với token mới
+        originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
+        return axios(originalRequest);
+      } catch (refreshError) {
+        // Refresh token thất bại, chuyển hướng đến trang đăng nhập
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.location.href = '/signin';
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
 // Các phương thức API xác thực
 export const authAPI = {
   signIn: async (username: string, password: string) => {
     const response = await api.post('/signin', { username, password });
-    localStorage.setItem('authToken', response.data.token);
+    localStorage.setItem('accessToken', response.data.accessToken);
+    localStorage.setItem('refreshToken', response.data.refreshToken);
     return response.data;
   },
   
@@ -40,9 +85,23 @@ export const authAPI = {
   },
   
   signOut: async () => {
-    const response = await api.post('/signout');
-    localStorage.removeItem('authToken');
-    return response.data;
+    const refreshToken = localStorage.getItem('refreshToken');
+    try {
+      await api.post('/signout', { refreshToken });
+    } finally {
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+    }
+  },
+
+  // Check xem Token co hop le khong
+  checkAuth: async () => {
+    try {
+      const response = await api.get('/dashboard');
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
   }
 };
 

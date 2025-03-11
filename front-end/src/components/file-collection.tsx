@@ -366,7 +366,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <Button variant="secondary" className="w-full h-8 text-sm bg-green-500 hover:bg-green-600 text-white">
+        <Button variant="secondary" className="w-full h-8 text-sm bg-green-500 hover:bg-green-600 text-black">
           <Search className="w-4 h-4 mr-2" />
           Search in File(s)
         </Button>
