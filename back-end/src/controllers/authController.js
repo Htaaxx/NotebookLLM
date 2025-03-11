@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const mongoose = require("mongoose");
+const { ObjectId } = mongoose.Types;
 require("dotenv").config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
@@ -32,16 +33,27 @@ const Document = mongoose.model("Document", documentSchema);
 
 // **Sign Up**
 exports.signup = async (req, res) => {
-  const { username, password } = req.body;
+  const { username, email, password } = req.body;
 
   try {
-    const existingUser = await User.findOne({ username });
+    // Kiểm tra xem username hoặc email đã tồn tại chưa
+    const existingUser = await User.findOne({ 
+      $or: [{ username }, { email }] 
+    });
+
     if (existingUser) {
-      return res.status(400).json({ message: "Username already exists" });
+      return res.status(400).json({ message: "Username or email already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword });
+
+    // Tạo user mới
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword
+    });
+
     await newUser.save();
 
     res.json({ message: "User registered successfully", user: { user_id: newUser.user_id, username: newUser.username, password: newUser.password } });
