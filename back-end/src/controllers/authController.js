@@ -19,6 +19,7 @@ const userSchema = new mongoose.Schema({
   user_id: { type: String, unique: true, default: function () { return new mongoose.Types.ObjectId().toString(); } },
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  email: { type: String, required: true, unique: true }
 });
 
 // Document Collection Schema
@@ -36,27 +37,16 @@ exports.signup = async (req, res) => {
   const { username, email, password } = req.body;
 
   try {
-    // Kiểm tra xem username hoặc email đã tồn tại chưa
-    const existingUser = await User.findOne({ 
-      $or: [{ username }, { email }] 
-    });
-
+    const existingUser = await User.findOne({ username });
     if (existingUser) {
-      return res.status(400).json({ message: "Username or email already exists" });
+      return res.status(400).json({ message: "Username already exists" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    // Tạo user mới
-    const newUser = new User({
-      username,
-      email,
-      password: hashedPassword
-    });
-
+    const newUser = new User({ username, password: hashedPassword, email });
     await newUser.save();
 
-    res.json({ message: "User registered successfully", user: { user_id: newUser.user_id, username: newUser.username, password: newUser.password } });
+    res.json({ message: "User registered successfully", user: { user_id: newUser.user_id, username: newUser.username, email: newUser.email } });
   } catch (error) {
     res.status(500).json({ message: "Error signing up", error });
   }
