@@ -18,6 +18,7 @@ const userSchema = new mongoose.Schema({
   user_id: { type: String, unique: true, default: function () { return new mongoose.Types.ObjectId().toString(); } },
   username: { type: String, required: true, unique: true },
   password: { type: String, required: true },
+  email: { type: String, required: true, unique: true },
 });
 
 // Document Collection Schema
@@ -32,7 +33,7 @@ const Document = mongoose.model("Document", documentSchema);
 
 // **Sign Up**
 exports.signup = async (req, res) => {
-  const { username, password } = req.body;
+  const { username, email, password } = req.body;
 
   try {
     const existingUser = await User.findOne({ username });
@@ -40,11 +41,16 @@ exports.signup = async (req, res) => {
       return res.status(400).json({ message: "Username already exists" });
     }
 
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) {
+      return res.status(400).json({ message: "Email already exists" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword });
+    const newUser = new User({ username, password: hashedPassword, email });
     await newUser.save();
 
-    res.json({ message: "User registered successfully", user: { user_id: newUser.user_id, username: newUser.username, password: newUser.password } });
+    res.json({ message: "User registered successfully", user: { user_id: newUser.user_id, username: newUser.username, email: newUser.email } });
   } catch (error) {
     res.status(500).json({ message: "Error signing up", error });
   }
@@ -124,5 +130,4 @@ exports.getDocumentWithUser = async (req, res) => {
       res.status(500).json({ message: "Internal Server Error" });
   }
 };
-
 
