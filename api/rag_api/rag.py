@@ -124,7 +124,7 @@ index.set_client(client)
 index.create(overwrite=True, drop=True)
 
 
-@app.post("/store_embeddings")
+@app.post("/store_embeddings/")
 async def store_embeddings(file: UploadFile = None, url: str = None):
     if file:
         chunks, error = process_file(file)
@@ -159,7 +159,7 @@ class QueryRequest(BaseModel):
     query: str
 
 
-@app.post("/query")
+@app.post("/query/")
 async def query_openai(request: QueryRequest):
     """Retrieve context from Redis and query OpenAI."""
     query_embedding = hf.encode(f"query: {request.query}")
@@ -187,6 +187,8 @@ async def query_openai(request: QueryRequest):
     **Câu hỏi của người dùng:**  
     {request.query}
     """
+
+    print(full_prompt)
 
     try:
         response = openai_client.chat.completions.create(
