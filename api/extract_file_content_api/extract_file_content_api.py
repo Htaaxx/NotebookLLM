@@ -4,23 +4,26 @@ import os
 import re
 import unicodedata
 import docx
-import pytesseract # Please download/install pytesseract before importing
+import pytesseract  # Please download/install pytesseract before importing
 import docx2txt
 import PyPDF2
 from PIL import Image
 
 # If you are using windows, please change the path to suit your machine
-pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
 app = FastAPI()
+
 
 class PageData(BaseModel):
     page_id: int
     text: str
 
+
 class FileContentResponse(BaseModel):
     file_id: str
     pages: list[PageData]
+
 
 def clean_transcript(text: str) -> str:
     text = unicodedata.normalize("NFKC", text)
@@ -28,6 +31,7 @@ def clean_transcript(text: str) -> str:
     text = re.sub(r"\n+", " ", text)
     text = re.sub(r"\s*([,.!?;:])\s*", r"\1 ", text)
     return text
+
 
 def extract_text_from_pdf(file_path: str):
     text_data = {}
@@ -43,6 +47,7 @@ def extract_text_from_pdf(file_path: str):
 
     return text_data
 
+
 def extract_text_from_docx(file_path: str):
     text_data = {}
 
@@ -57,7 +62,9 @@ def extract_text_from_docx(file_path: str):
         os.makedirs(image_folder, exist_ok=True)
         docx2txt.process(file_path, image_folder)
 
-        image_files = [f for f in os.listdir(image_folder) if f.endswith((".png", ".jpg", ".jpeg"))]
+        image_files = [
+            f for f in os.listdir(image_folder) if f.endswith((".png", ".jpg", ".jpeg"))
+        ]
         extracted_text = ""
 
         for image_file in image_files:
@@ -77,6 +84,7 @@ def extract_text_from_docx(file_path: str):
 
     return text_data
 
+
 def extract_text_from_txt(file_path: str):
     text_data = {}
     try:
@@ -89,7 +97,8 @@ def extract_text_from_txt(file_path: str):
 
     return text_data
 
-# @app.post("/extract_text/", response_model=FileContentResponse)
+
+@app.post("/extract_text/", response_model=FileContentResponse)
 async def extract_text(file: UploadFile = File(...)):
     file_extension = file.filename.split(".")[-1].lower()
     if file_extension not in ["pdf", "docx", "txt"]:
@@ -116,9 +125,12 @@ async def extract_text(file: UploadFile = File(...)):
 
     return {
         "file_id": file.filename,
-        "pages": [{"page_id": page_id, "text": text} for page_id, text in text_data.items()]
+        "pages": [
+            {"page_id": page_id, "text": text} for page_id, text in text_data.items()
+        ],
     }
-    
+
+
 # @app.get("/")
 # def read_root():
 #     return {"message": "YouTube Transcript API is running"}

@@ -9,7 +9,6 @@ from pydantic import BaseModel
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.document_loaders import PyPDFLoader, CSVLoader, TextLoader
 
 # Redis
 from redisvl.query import VectorQuery
@@ -19,6 +18,9 @@ import numpy as np
 
 # Model
 import openai
+
+
+import requests
 
 
 app = FastAPI()
@@ -35,10 +37,6 @@ REDIS_PORT = os.getenv("REDIS_PORT", "6379")
 REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "")
 REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}"
 
-"""
-    Support functions
-"""
-
 
 def process_file(file: UploadFile):
     """Load and process file based on its type."""
@@ -49,24 +47,47 @@ def process_file(file: UploadFile):
     ext = file.filename.split(".")[-1].lower()
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
 
-    if ext == "pdf":
-        loader = PyPDFLoader(temp_path)
-    elif ext == "csv":
-        loader = CSVLoader(temp_path)
-    elif ext == "txt":
-        loader = TextLoader(temp_path)
-    else:
-        return None, "Unsupported file type"
+    if ext == "pdf" or ext == "txt" or ext == "docx":
+        response = requests.post(
+            "http://localhost:8001/extract_text/", files={"file": open(temp_path, "rb")}
+        )
+        os.remove(temp_path)
 
-    chunks = loader.load_and_split(text_splitter)
-    os.remove(temp_path)
+        text_data = response.json().get("pages", [])
+        text = "".join(page["text"] for page in text_data)
+
+    elif ext in ["jpg", "jpeg", "png"]:
+        response = requests.post("http://localhost:8002/ocr/")
+
+        text = response.get("text")
+
+    if response.status_code != 200:
+        return None, f"Error processing input document: {response.content.decode()}"
+
+    chunks = text_splitter.split_text(text)
+
+    return chunks, None
+
+
+def process_youtube_url(url):
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
+
+    response = requests.post('http://localhost:8003/get_transcript/"')
+
+    if response.status_code != 200:
+        return None, f"Error processing input video: {response.content.decode()}"
+
+    text = response.get("text")
+
+    chunks = text_splitter.split_text(text)
+
     return chunks, None
 
 
 def embed_texts(chunks):
     """Embed chunks using SentenceTransformer."""
     return hf.encode(
-        [f"passage: {chunk.page_content}" for chunk in chunks],
+        [f"passage: {chunk}" for chunk in chunks],
         batch_size=16,
         show_progress_bar=True,
     ).tolist()
@@ -87,7 +108,7 @@ schema = {
             "name": "text_embedding",
             "type": "vector",
             "attrs": {
-                "dims": 1024,
+                "dims": 384,
                 "distance_metric": "cosine",
                 "algorithm": "hnsw",
                 "datatype": "float32",
@@ -104,8 +125,14 @@ index.create(overwrite=True, drop=True)
 
 
 @app.post("/store_embeddings")
-async def store_embeddings(file: UploadFile = File(...)):
-    chunks, error = process_file(file)
+async def store_embeddings(file: UploadFile = None, url: str = None):
+    if file:
+        chunks, error = process_file(file)
+    elif url:
+        chunks, error = process_youtube_url(url)
+    else:
+        return {"error": "No valid input provided"}
+
     if error:
         return {"error": error}
     embeddings = embed_texts(chunks)
@@ -114,7 +141,7 @@ async def store_embeddings(file: UploadFile = File(...)):
     data = [
         {
             "chunk_id": i,
-            "content": chunk.page_content,
+            "content": chunk,
             "text_embedding": np.array(embeddings[i], dtype="float32").tobytes(),
         }
         for i, chunk in enumerate(chunks)
@@ -146,6 +173,7 @@ async def query_openai(request: QueryRequest):
     )
 
     result = index.query(vector_query)
+
     if not result:
         raise HTTPException(status_code=404, detail="No relevant context found.")
 
