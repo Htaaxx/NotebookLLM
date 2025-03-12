@@ -30,6 +30,11 @@ def clean_transcript(text: str) -> str:
     text = re.sub(r"\s+", " ", text).strip()
     text = re.sub(r"\n+", " ", text)
     text = re.sub(r"\s*([,.!?;:])\s*", r"\1 ", text)
+    
+    unwanted_chars = ["", "•"]
+    for char in unwanted_chars:
+        text = text.replace(char, "")
+
     return text
 
 
