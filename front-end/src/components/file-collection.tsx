@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useCallback, useEffect } from "react"
-import { Search, ChevronRight, ChevronDown, File, Trash2, Plus } from "lucide-react"
+import { Search, ChevronRight, ChevronDown, File, Trash2, Plus, MessageSquare } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -49,6 +49,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [newFolderName, setNewFolderName] = useState("")
   const [showNewFolderInput, setShowNewFolderInput] = useState<boolean | string>(false)
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
+  const [chatboxes, setChatboxes] = useState<{ id: string; name: string }[]>([])
+  const [showNewChatInput, setShowNewChatInput] = useState<boolean>(false)
+  const [newChatName, setNewChatName] = useState("")
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>, folderId?: string) => {
     const uploadedFiles = event.target.files
@@ -315,7 +318,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               draggable
               onDragStart={(e) => handleDragStart(e, file, "file", folder.id)}
             >
-              <File className="w-4 h-4 text-gray-400" />
+              <MessageSquare className="w-4 h-4 text-gray-400" />
               <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id, folder.id)} />
               <span className="text-sm truncate flex-grow">{file.name}</span>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id, folder.id)}>
@@ -350,13 +353,29 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     ]
   }
 
+  const createNewChat = () => {
+    const newChatbox = {
+      id: Math.random().toString(36).substr(2, 9),
+      name: newChatName || 'New Chatbox',
+    }
+    setChatboxes((prevChatboxes) => [...prevChatboxes, newChatbox])
+    setNewChatName("")
+    setShowNewChatInput(false)
+  }
+
+  const switchChatbox = (chatboxId: string) => {
+    console.log('Switching to chatbox:', chatboxId)
+    // Implement chatbox switching logic
+  }
+
+  const deleteChatbox = (chatboxId: string) => {
+    setChatboxes((prevChatboxes) => prevChatboxes.filter(chatbox => chatbox.id !== chatboxId))
+    console.log('Deleted chatbox:', chatboxId)
+  }
+
   return (
     <div className="w-64 border-r h-[calc(100vh-64px)] p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">File Collection</h2>
-        <button className="text-gray-400 hover:text-gray-600">
-          <span className="sr-only">Information</span>ⓘ
-        </button>
       </div>
 
       <div className="space-y-2">
@@ -372,16 +391,63 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         </Button>
       </div>
 
+      <div className="mt-2 flex items-center justify-between">
+        <h3 className="text-sm font-medium">Chat</h3>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 px-2">
+              <Plus className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="bg-background bg-white">
+            <DropdownMenuItem onSelect={() => setShowNewChatInput(true)}>Create New Chat</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {showNewChatInput && (
+        <div className="flex gap-2 mb-2">
+          <Input
+            placeholder="Chatbox name"
+            value={newChatName}
+            onChange={(e) => setNewChatName(e.target.value)}
+            className="h-8 text-sm"
+          />
+          <Button
+            size="sm"
+            className="h-8"
+            onClick={() => createNewChat()}
+          >
+            Create
+          </Button>
+        </div>
+      )}
+
+      <div className="-mt-2 space-y-1 overflow-auto flex-1" style={{ maxHeight: '150px' }}>
+        {chatboxes.map((chatbox) => (
+          <div
+            key={chatbox.id}
+            className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer"
+          >
+            <MessageSquare className="w-4 h-4 text-gray-400" />
+            <span className="text-sm truncate flex-grow" onClick={() => switchChatbox(chatbox.id)}>{chatbox.name}</span>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteChatbox(chatbox.id)}>
+              <Trash2 className="w-4 h-4 text-red-500" />
+            </Button>
+          </div>
+        ))}
+      </div>
+
       <div className="mt-2 flex-1 overflow-auto">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="text-sm font-medium">Public File Collection</h3>
+        <div className="flex items-center justify-between mb-2 sticky top-0 bg-white z-10">
+          <h3 className="text-sm font-medium">File Collection</h3>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 px-2">
                 <Plus className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-background">
+            <DropdownMenuContent className="bg-background bg-white">
               <DropdownMenuItem onSelect={() => setShowNewFolderInput(true)}>Add Folder</DropdownMenuItem>
               <DropdownMenuItem onSelect={() => document.getElementById("root-file-upload")?.click()}>
                 Add File
@@ -417,7 +483,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               draggable
               onDragStart={(e) => handleDragStart(e, file, "file", null)}
             >
-              <File className="w-4 h-4 text-gray-400" />
+              <MessageSquare className="w-4 h-4 text-gray-400" />
               <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id)} />
               <span className="text-sm truncate flex-grow">{file.name}</span>
               <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id)}>
@@ -428,7 +494,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         </div>
       </div>
 
-      <div className="mt-2">
+      <div className="mt-4">
         <h3 className="text-sm font-medium mb-2">Quick Upload</h3>
         <div
           className="border-2 border-dashed rounded-lg p-4 text-center"

@@ -18,7 +18,7 @@ interface FileItem {
 
 export default function Home() {
   const [selectedFiles, setSelectedFiles] = useState<FileItem[]>([])
-  const [activePanel, setActivePanel] = useState<"preview" | "mindmap" | null>(null)
+  const [activePanel, setActivePanel] = useState<"preview" | "mindmap" | "cheatsheet" | null>(null)
 
   const handleFileSelection = useCallback((files: FileItem[]) => {
     setSelectedFiles(files);
@@ -26,7 +26,7 @@ export default function Home() {
   
   
 
-  const handleViewChange = useCallback((view: "preview" | "mindmap" | null) => {
+  const handleViewChange = useCallback((view: "preview" | "mindmap" | "cheatsheet" | null) => {
     setActivePanel((prev) => (prev === view ? null : view))
   }, [])
 

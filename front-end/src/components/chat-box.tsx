@@ -8,16 +8,36 @@ import { Input } from "@/components/ui/input"
 export function ChatBox() {
   const [showSettings, setShowSettings] = useState(false)
   const [message, setMessage] = useState("")
+  const [chatHistory, setChatHistory] = useState<string[]>([])
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Handle message submission
-    setMessage("")
+    if (!message.trim()) return
+
+    try {
+      await sendMessageToBackend(message)
+      setChatHistory((prev) => [...prev, message])
+      setMessage("")
+    } catch (error) {
+      console.error("Failed to send message", error)
+    }
+  }
+
+  const sendMessageToBackend = async (message: string) => {
+    console.log("Sending message to backend:", message)
   }
 
   return (
     <div className="flex flex-col h-[calc(100vh-73px)]">
-      <div className="flex-1 p-4 overflow-y-auto">{/* Chat messages will appear here */}</div>
+      <div className="flex-1 p-4 overflow-y-auto">
+        {chatHistory.map((msg, index) => (
+          <div key={index} className="flex justify-end mb-2">
+            <div className="bg-green-500 text-black p-2 rounded-full font-sans">
+              {msg}
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div className="border-t p-4">
         <div className="flex items-center justify-between mb-2">
@@ -32,7 +52,6 @@ export function ChatBox() {
 
         {showSettings && (
           <div className="mb-4 p-4 bg-muted rounded-lg">
-            {/* Chat settings content */}
             <p className="text-sm">Chat settings panel</p>
           </div>
         )}

@@ -1,10 +1,10 @@
 "use client"
-import { FileText, Network } from "lucide-react"
+import { FileText, Network, BookOpen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface RightButtonsProps {
-  onViewChange: (view: "preview" | "mindmap" | null) => void
-  activeView: "preview" | "mindmap" | null
+  onViewChange: (view: "preview" | "mindmap" | "cheatsheet" | null) => void
+  activeView: "preview" | "mindmap" | "cheatsheet" | null
 }
 
 export function RightButtons({ onViewChange, activeView }: RightButtonsProps) {
@@ -26,7 +26,14 @@ export function RightButtons({ onViewChange, activeView }: RightButtonsProps) {
       >
         <Network className="w-4 h-4" />
       </Button>
+      <Button
+        variant={activeView === "cheatsheet" ? "default" : "outline"}
+        size="icon"
+        onClick={() => onViewChange(activeView === "cheatsheet" ? null : "cheatsheet")}
+        className="rounded-full w-10 h-10"
+      >
+        <BookOpen className="w-4 h-4" />
+      </Button>
     </div>
   )
 }
-

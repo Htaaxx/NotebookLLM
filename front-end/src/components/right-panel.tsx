@@ -28,7 +28,7 @@ interface Annotation {
 }
 
 interface RightPanelProps {
-  activePanel: "preview" | "mindmap" | null
+  activePanel: "preview" | "mindmap" | "cheatsheet" | null
   selectedFiles: FileItem[]
 }
 
@@ -124,7 +124,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
       {activePanel === "preview" && selectedPdf && (
         <>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-center bg-green-500 text-white uppercase py-2 px-4 rounded-md w-full">
+            <h2 className="text-center bg-green-600 text-black py-2 px-4 rounded-md w-full mr-2">
               {formattedPdfName}
             </h2>
             <div className="flex gap-2">
@@ -189,6 +189,12 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
       {activePanel === "mindmap" && (
         <div className="h-full bg-muted rounded-lg p-4">
           <p className="text-sm text-muted-foreground">Mind Map View</p>
+        </div>
+      )}
+
+      {activePanel === "cheatsheet" && (
+        <div className="h-full bg-muted rounded-lg p-4">
+          <p className="text-sm text-muted-foreground">Cheatsheet View</p>
         </div>
       )}
     </div>
