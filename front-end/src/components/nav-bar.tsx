@@ -5,18 +5,21 @@ import { UserCircle } from "lucide-react"
 import { Logo } from "./logo"
 import { authAPI } from "../lib/api"
 import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu"
 
 export function NavBar() {
-  const [showDropdown, setShowDropdown] = useState(false)
-
   const handleSignOut = async () => {
+    console.log("Sign out button clicked");
     try {
       await authAPI.signOut()
+      console.log("Sign out successful");
       window.location.href = "/";
     } catch (error) {
       console.error("Sign out failed", error)
     }
   }
+
+  const userName = "Htax"; // Replace with dynamic user name retrieval logic
 
   return (
     <nav className="flex items-center h-16 px-6 border-b">
@@ -36,17 +39,26 @@ export function NavBar() {
         </Link>
       </div>
       <div className="ml-auto relative">
-        <button className="p-1 rounded-full hover:bg-gray-100" onClick={() => setShowDropdown(!showDropdown)}>
-          <UserCircle className="w-6 h-6" />
-        </button>
-        {showDropdown && (
-          <div className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg">
-            <div className="p-2 border-b text-gray-700">Htax</div>
-            <Button variant="outline" size="sm" className="w-full text-left" onClick={handleSignOut}>
-              Sign Out
-            </Button>
-          </div>
-        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="p-1 rounded-full hover:bg-gray-100">
+              <UserCircle className="w-6 h-6" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="absolute right-0 mt-2 w-48 bg-white border rounded shadow-lg">
+            <div className="p-2 border-b text-gray-700 font-semibold">{userName}</div>
+            <DropdownMenuItem asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full text-left cursor-pointer hover:bg-gray-200"
+                onClick={handleSignOut}
+              >
+                Sign Out
+              </Button>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </nav>
   )
