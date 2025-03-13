@@ -96,6 +96,7 @@ exports.signin = async (req, res) => {
       message: "Signed in successfully",
       accessToken,
       refreshToken,
+      username: user.username 
     });
   } catch (error) {
     res.status(500).json({ message: "Error signing in", error });
