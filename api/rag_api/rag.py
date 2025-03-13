@@ -1,4 +1,5 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
+# Fast API
+from fastapi import FastAPI, File, UploadFile, HTTPException, Body
 from typing import List
 import os
 
@@ -9,6 +10,7 @@ from pydantic import BaseModel
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+from pdfminer.high_level import extract_text
 
 # Redis
 from redisvl.query import VectorQuery
@@ -19,9 +21,13 @@ import numpy as np
 # Model
 import openai
 
-
+# env
+from dotenv import load_dotenv
 import requests
 
+import io
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -29,7 +35,11 @@ app = FastAPI()
 hf = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Load LLM Model
-OPENAI_API_KEY = ""
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY not found in environment variables")
+
 openai_client = openai.OpenAI(api_key=OPENAI_API_KEY)
 
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
@@ -40,44 +50,82 @@ REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}"
 
 def process_file(file: UploadFile):
     """Load and process file based on its type."""
-    temp_path = f"temp_{file.filename}"
-    with open(temp_path, "wb") as f:
-        f.write(file.file.read())
+    try:
+        # Read file content once
+        file_content = file.file.read()
+        ext = file.filename.split(".")[-1].lower()
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
 
-    ext = file.filename.split(".")[-1].lower()
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
+        if ext == "pdf" or ext == "txt" or ext == "docx":
+            # Try native text extraction first
+            text = extract_text(io.BytesIO(file_content))
 
-    if ext == "pdf" or ext == "txt" or ext == "docx":
-        response = requests.post(
-            "http://localhost:8001/extract_text/", files={"file": open(temp_path, "rb")}
-        )
-        os.remove(temp_path)
+            if ext == "pdf" and not text.strip():
+                # If no text found, use OCR
+                response = requests.post(
+                    "http://localhost:8002/ocr/",
+                    files={
+                        "file": (
+                            file.filename,
+                            io.BytesIO(file_content),
+                            "application/pdf",
+                        )
+                    },
+                )
+                if response.status_code != 200:
+                    return None, f"OCR error: {response.content.decode()}"
+                text = response.json().get("text", "")
+            else:
+                # Use text extraction service
+                response = requests.post(
+                    "http://localhost:8004/extract_text/",
+                    files={
+                        "file": (
+                            file.filename,
+                            io.BytesIO(file_content),
+                            "application/pdf" if ext == "pdf" else "text/plain",
+                        )
+                    },
+                )
+                if response.status_code != 200:
+                    return None, f"Text extraction error: {response.content.decode()}"
+                text_data = response.json().get("pages", [])
+                text = "".join(page["text"] for page in text_data)
 
-        text_data = response.json().get("pages", [])
-        text = "".join(page["text"] for page in text_data)
+        elif ext in ["jpg", "jpeg", "png"]:
+            response = requests.post(
+                "http://localhost:8002/ocr/",
+                files={
+                    "file": (file.filename, io.BytesIO(file_content), f"image/{ext}")
+                },
+            )
+            if response.status_code != 200:
+                return None, f"OCR error: {response.content.decode()}"
+            text = response.json().get("text", "")
 
-    elif ext in ["jpg", "jpeg", "png"]:
-        response = requests.post("http://localhost:8002/ocr/")
+        if not text:
+            return None, "No text could be extracted from the document"
 
-        text = response.get("text")
+        chunks = text_splitter.split_text(text)
+        return chunks, None
 
-    if response.status_code != 200:
-        return None, f"Error processing input document: {response.content.decode()}"
-
-    chunks = text_splitter.split_text(text)
-
-    return chunks, None
+    except Exception as e:
+        return None, f"Error processing file: {str(e)}"
 
 
 def process_youtube_url(url):
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
 
-    response = requests.post('http://localhost:8003/get_transcript/"')
+    response = requests.post("http://localhost:8003/get_transcript/", json={"url": url})
 
     if response.status_code != 200:
         return None, f"Error processing input video: {response.content.decode()}"
 
+    response = response.json()
     text = response.get("text")
+
+    if not text:
+        return None, "No transcript text found in response"
 
     chunks = text_splitter.split_text(text)
 
@@ -124,14 +172,27 @@ index.set_client(client)
 index.create(overwrite=True, drop=True)
 
 
+# Add this class with your other models
+class URLRequest(BaseModel):
+    url: str
+
+
+from pdfminer.high_level import extract_text
+
+
 @app.post("/store_embeddings/")
-async def store_embeddings(file: UploadFile = None, url: str = None):
+async def store_embeddings(file: UploadFile = None, url_data: URLRequest = Body(None)):
+    if not url_data:
+        raise HTTPException(status_code=400, detail="No file or URL provided")
+
+    # Process file or URL
     if file:
         chunks, error = process_file(file)
-    elif url:
-        chunks, error = process_youtube_url(url)
-    else:
-        return {"error": "No valid input provided"}
+    elif url_data and url_data.url:
+        chunks, error = process_youtube_url(url_data.url)
+
+    if error:
+        raise HTTPException(status_code=400, detail=error)
 
     if error:
         return {"error": error}
