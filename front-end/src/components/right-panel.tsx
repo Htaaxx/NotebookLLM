@@ -124,7 +124,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
       {activePanel === "preview" && selectedPdf && (
         <>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-center bg-green-600 text-black py-2 px-4 rounded-md w-full mr-2">
+            <h2 className="text-center bg-green-500 text-black py-2 px-4 rounded-md w-full mr-2">
               {formattedPdfName}
             </h2>
             <div className="flex gap-2">

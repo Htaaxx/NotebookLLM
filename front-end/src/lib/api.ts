@@ -72,6 +72,7 @@ export const authAPI = {
     const response = await api.post('/signin', { username, password });
     localStorage.setItem('accessToken', response.data.accessToken);
     localStorage.setItem('refreshToken', response.data.refreshToken);
+    localStorage.setItem('username', username);
     return response.data;
   },
   
@@ -91,6 +92,7 @@ export const authAPI = {
     } finally {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
+      localStorage.removeItem('username');
     }
   },
 
