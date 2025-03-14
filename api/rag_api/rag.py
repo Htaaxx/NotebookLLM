@@ -1,10 +1,10 @@
 # Fast API
-from fastapi import FastAPI, File, UploadFile, HTTPException, Body
+from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from typing import List
 import os
 
 # Automatic API testing
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 
 # import PyPDF2
 import pandas as pd
@@ -24,7 +24,6 @@ import openai
 # env
 from dotenv import load_dotenv
 import requests
-
 import io
 
 load_dotenv()
@@ -56,11 +55,11 @@ def process_file(file: UploadFile):
         ext = file.filename.split(".")[-1].lower()
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
 
-        if ext == "pdf" or ext == "txt" or ext == "docx":
-            # Try native text extraction first
-            text = extract_text(io.BytesIO(file_content))
-
-            if ext == "pdf" and not text.strip():
+        if ext == "pdf":
+            text = extract_text(
+                io.BytesIO(file_content)
+            )  # ✅ Fixed: Correctly passing file content
+            if not text.strip():
                 # If no text found, use OCR
                 response = requests.post(
                     "http://localhost:8002/ocr/",
@@ -76,14 +75,13 @@ def process_file(file: UploadFile):
                     return None, f"OCR error: {response.content.decode()}"
                 text = response.json().get("text", "")
             else:
-                # Use text extraction service
                 response = requests.post(
                     "http://localhost:8004/extract_text/",
                     files={
                         "file": (
                             file.filename,
                             io.BytesIO(file_content),
-                            "application/pdf" if ext == "pdf" else "text/plain",
+                            "application/pdf",
                         )
                     },
                 )
@@ -91,6 +89,22 @@ def process_file(file: UploadFile):
                     return None, f"Text extraction error: {response.content.decode()}"
                 text_data = response.json().get("pages", [])
                 text = "".join(page["text"] for page in text_data)
+
+        elif ext in ["docx", "txt"]:
+            response = requests.post(
+                "http://localhost:8004/extract_text/",
+                files={
+                    "file": (
+                        file.filename,
+                        io.BytesIO(file_content),
+                        "application/json",
+                    )
+                },
+            )
+            if response.status_code != 200:
+                return None, f"Text extraction error: {response.content.decode()}"
+            text_data = response.json().get("pages", [])
+            text = "".join(page["text"] for page in text_data)
 
         elif ext in ["jpg", "jpeg", "png"]:
             response = requests.post(
@@ -172,24 +186,22 @@ index.set_client(client)
 index.create(overwrite=True, drop=True)
 
 
-# Add this class with your other models
-class URLRequest(BaseModel):
-    url: str
-
-
-from pdfminer.high_level import extract_text
+class URLData(BaseModel):
+    url: HttpUrl
 
 
 @app.post("/store_embeddings/")
-async def store_embeddings(file: UploadFile = None, url_data: URLRequest = Body(None)):
-    if not url_data:
+async def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
+    # Process file or URL
+    if file is None and url is None:
         raise HTTPException(status_code=400, detail="No file or URL provided")
 
-    # Process file or URL
+    chunks, error = [], None
+
     if file:
         chunks, error = process_file(file)
-    elif url_data and url_data.url:
-        chunks, error = process_youtube_url(url_data.url)
+    elif url:
+        chunks, error = process_youtube_url(url)
 
     if error:
         raise HTTPException(status_code=400, detail=error)
