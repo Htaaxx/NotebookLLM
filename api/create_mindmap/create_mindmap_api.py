@@ -6,41 +6,40 @@ from sklearn.cluster import KMeans
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
+# app = FastAPI()
 
 def find_api_key(file_path, header):
     with open(file_path, 'r') as file:
-        # read a list of lines into data
         data = file.readlines()
-        # now change the 2nd line, note that you have to add a newline
+
         for i in range(len(data)):
             if data[i].startswith(header):
                 return data[i].split('=')[1].strip()
     return None
+
+
 def count_tokens(text, model):
-    """
-    Count the number of tokens in a text using a SentenceTransformer model.
-    
-    """
     return len(model.tokenize(text))
+
+
 def read_txt_file(file_path):
     with open(file_path, "r") as f:
         return f.read()
 
+
 def write_chunks_to_file(text, file_path):
     with open(file_path, "w") as f:
         f.write(text)   
+        
+
 def preprocess_pdf_text(text):
-    """
-    Preprocesses the text extracted from a PDF file.
-    """
     text = text.replace("\n", " ")
     text = text.replace("\t", " ")
     text = " ".join(text.split())
     return text
+
+
 def combine_sentences(sentences, buffer_size=1):
-    """
-    This function combines sentences with its neighbors (i - buffer, i + buffer) to create a larger context for each sentence.
-    """
     for i in range(len(sentences)):
         combined_sentence = ''
         for j in range(i - buffer_size, i):
@@ -58,8 +57,11 @@ def combine_sentences(sentences, buffer_size=1):
         sentences[i]['combined_sentence'] = combined_sentence
 
     return sentences
+
+
 def calculate_cosine_distances(sentences):
     distances = []
+    
     for i in range(len(sentences) - 1):
         embedding_current = sentences[i]['combined_sentence_embedding']
         embedding_next = sentences[i + 1]['combined_sentence_embedding']
@@ -68,21 +70,24 @@ def calculate_cosine_distances(sentences):
         distance = 1 - similarity
         distances.append(distance)
         sentences[i]['distance_to_next'] = distance
+        
     return distances, sentences
+
+
 def combine_chunks(chunks, predictions):
-        combined_chunks = {}
-        for i, chunk in enumerate(chunks):
-            if predictions[i] not in combined_chunks:
-                combined_chunks[predictions[i]] = chunk
-            else:
-                combined_chunks[predictions[i]] += ' ' + chunk
-        return combined_chunks
+    combined_chunks = {}
+    for i, chunk in enumerate(chunks):
+        if predictions[i] not in combined_chunks:
+            combined_chunks[predictions[i]] = chunk
+        else:
+            combined_chunks[predictions[i]] += ' ' + chunk
+    return combined_chunks
 
 
-# app = FastAPI() # gọi constructor và gán vào biến app
-# @app.get("/") # giống flask, khai báo phương thức get và url
-async def root(): # do dùng ASGI nên ở đây thêm async, nếu bên thứ 3 không hỗ trợ thì bỏ async đi
+# @app.get("/")
+async def root():
     return {"message": "Hello World"}
+
 
 async def get_smaller_branches(doc: str):
     model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -91,11 +96,13 @@ async def get_smaller_branches(doc: str):
     sentences = [{'sentence': x, 'index' : i} for i, x in enumerate(sentences)]
     sentences = combine_sentences(sentences, buffer_size=10)
     embeddings = []
+    
     for sentence in sentences:
         embedding = model.encode(sentence['combined_sentence'])
         embeddings.append(embedding)
     for i, sentence in enumerate(sentences):
         sentence['combined_sentence_embedding'] = embeddings[i]
+        
     # get similarity to the next sentence
     distances, sentences = calculate_cosine_distances(sentences)
     breakpoint_percentile_threshold = 95
@@ -151,4 +158,5 @@ async def get_smaller_branches(doc: str):
             ]
         )
         result.append(completion.choices[0].message.content)
+        
     return result
