@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { ChevronDown, ChevronUp, Send, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,14 @@ export function ChatBox() {
   const [showSettings, setShowSettings] = useState(false)
   const [message, setMessage] = useState("")
   const [chatHistory, setChatHistory] = useState<string[]>([])
+
+  const chatEndRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    if (chatEndRef.current) {
+      chatEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [chatHistory])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -37,6 +45,7 @@ export function ChatBox() {
             </div>
           </div>
         ))}
+        <div ref={chatEndRef} />
       </div>
 
       <div className="border-t p-4">

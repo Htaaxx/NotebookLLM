@@ -42,6 +42,12 @@ interface FileCollectionProps {
   onFileSelect: (files: FileItem[]) => void;
 }
 
+interface ChatItem {
+  id: string;
+  name: string;
+  messages: string[];
+}
+
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [rootFiles, setRootFiles] = useState<FileItem[]>([])
   const [rootFolders, setRootFolders] = useState<Folder[]>([])
@@ -49,9 +55,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [newFolderName, setNewFolderName] = useState("")
   const [showNewFolderInput, setShowNewFolderInput] = useState<boolean | string>(false)
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
-  const [chatboxes, setChatboxes] = useState<{ id: string; name: string }[]>([])
+  const [chatboxes, setChatboxes] = useState<ChatItem[]>([])
   const [showNewChatInput, setShowNewChatInput] = useState<boolean>(false)
   const [newChatName, setNewChatName] = useState("")
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [chatHistory, setChatHistory] = useState<string[]>([])
 
   const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>, folderId?: string) => {
     const uploadedFiles = event.target.files
@@ -357,6 +365,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     const newChatbox = {
       id: Math.random().toString(36).substr(2, 9),
       name: newChatName || 'New Chatbox',
+      messages: [],
     }
     setChatboxes((prevChatboxes) => [...prevChatboxes, newChatbox])
     setNewChatName("")
@@ -364,8 +373,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   }
 
   const switchChatbox = (chatboxId: string) => {
-    console.log('Switching to chatbox:', chatboxId)
-    // Implement chatbox switching logic
+    setCurrentChatId(chatboxId)
+    const selectedChatbox = chatboxes.find(chatbox => chatbox.id === chatboxId)
+    if (selectedChatbox) {
+      setChatHistory(selectedChatbox.messages)
+    }
+    console.log('Switched to chatbox:', chatboxId)
   }
 
   const deleteChatbox = (chatboxId: string) => {
@@ -427,10 +440,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         {chatboxes.map((chatbox) => (
           <div
             key={chatbox.id}
-            className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer"
+            className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${currentChatId === chatbox.id ? 'bg-gray-200' : ''}`}
+            onClick={() => switchChatbox(chatbox.id)}
           >
             <MessageSquare className="w-4 h-4 text-gray-400" />
-            <span className="text-sm truncate flex-grow" onClick={() => switchChatbox(chatbox.id)}>{chatbox.name}</span>
+            <span className="text-sm truncate flex-grow">{chatbox.name}</span>
             <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteChatbox(chatbox.id)}>
               <Trash2 className="w-4 h-4 text-red-500" />
             </Button>
