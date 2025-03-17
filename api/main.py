@@ -11,23 +11,23 @@ app = FastAPI()
 
 @app.get("/")
 async def read_root():
-    return {"message": "Welcome to the API"}
+    return await {"message": "Welcome to the API"}
 
 @app.post("/get_smaller_branches")
 async def get_smaller_branches_api(doc: str):
-    return get_smaller_branches(doc)
+    return await get_smaller_branches(doc)
 
 @app.post("/get_transcript")
 async def get_transcript_api(link: YouTubeLink):
-    return get_transcript(link)
+    return await get_transcript(link)
 
 @app.post("/ocr")
 async def ocr_api(file: UploadFile = File(...)):
-    return ocr(file)
+    return await ocr(file)
 
 @app.post("/extract_text")
 async def extract_text_api(file: UploadFile = File(...)):
-    return extract_text(file)
+    return await extract_text(file)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
