@@ -26,6 +26,9 @@ from dotenv import load_dotenv
 import requests
 import io
 
+# unique id for doc
+from uuid import uuid4
+
 load_dotenv()
 
 app = FastAPI()
@@ -190,6 +193,9 @@ class URLData(BaseModel):
     url: HttpUrl
 
 
+# doc_id: str = Form(...)
+
+
 @app.post("/store_embeddings/")
 async def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
     # Process file or URL
@@ -210,10 +216,13 @@ async def store_embeddings(file: UploadFile = File(None), url: str = Form(None))
         return {"error": error}
     embeddings = embed_texts(chunks)
 
+    doc_id = str(uuid4())
+
     # Convert embeddings to Redis-storable format
     data = [
         {
-            "chunk_id": i,
+            "chunk_id": f"{doc_id}-{i}",
+            "doc_id": doc_id,
             "content": chunk,
             "text_embedding": np.array(embeddings[i], dtype="float32").tobytes(),
         }
@@ -223,6 +232,7 @@ async def store_embeddings(file: UploadFile = File(None), url: str = Form(None))
     keys = index.load(data, id_field="chunk_id")
     return {
         "message": "Embeddings stored successfully",
+        "doc_id": doc_id,
         "num_chunks": len(chunks),
         "keys": keys,
     }
@@ -240,9 +250,10 @@ async def query_openai(request: QueryRequest):
     vector_query = VectorQuery(
         vector=query_embedding,
         vector_field_name="text_embedding",
-        num_results=3,
-        return_fields=["chunk_id", "content"],
+        num_results=3,  # increase results to improve document converage
+        return_fields=["chunk_id", "content", "doc_id"],
         return_score=True,
+        filter_conditions=["@is_active:{1}"],
     )
 
     result = index.query(vector_query)
@@ -250,7 +261,13 @@ async def query_openai(request: QueryRequest):
     if not result:
         raise HTTPException(status_code=404, detail="No relevant context found.")
 
-    context = "\n\n".join([r["content"] for r in result])
+    context_chunks = []
+    for r in result:
+        chunk_id = r["chunk_id"]  # Example: "123abc-0"
+        doc_id = chunk_id.split("-")[0]  # Extract doc_id -> "123abc"
+        context_chunks.append(f"[{doc_id}] {r['content']}")  # Format with doc_id
+
+    context = "\n\n".join(context_chunks)
     full_prompt = f"""
     Hãy giúp tôi trả lời câu hỏi dựa vào context đã cung cấp
     
