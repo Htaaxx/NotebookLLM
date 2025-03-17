@@ -1,8 +1,0 @@
-fastapi==0.95.0
-redis==4.5.1
-redisvl==0.1.0
-sentence-transformers==2.2.2
-openai==0.27.0
-python-dotenv==0.21.0
-pandas==1.5.3
-langchain-community==0.0.1
