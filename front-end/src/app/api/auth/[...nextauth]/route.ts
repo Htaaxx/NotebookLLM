@@ -39,6 +39,23 @@ const handler = NextAuth({
     error: '/auth',
   },
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === 'google') {
+        try {
+          // When user signs in with Google, we'll try to create/update the user in our database
+          const response = await authAPI.googleSignIn({
+            email: user.email!,
+            name: user.name!,
+            id: user.id!,
+          });
+          return true;
+        } catch (error) {
+          console.error('Error saving Google user:', error);
+          return false;
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       return { ...token, ...user }
     },

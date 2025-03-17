@@ -85,6 +85,14 @@ export const authAPI = {
     return response.data;
   },
   
+  googleSignIn: async (userData: { email: string; name: string; id: string}) => {
+    const response = await api.post('/auth/google', userData);
+    localStorage.setItem('accessToken', response.data.accessToken);
+    localStorage.setItem('refreshToken', response.data.refreshToken);
+    localStorage.setItem('username', userData.name);
+    return response.data;
+  },
+  
   signOut: async () => {
     const refreshToken = localStorage.getItem('refreshToken');
     try {
