@@ -4,6 +4,7 @@ const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const webRoutes = require("./routes/web");
 const mongoose = require("mongoose"); //Import mongoose
+const uploadRoutes = require("./routes/upload"); // Import MinIO routes
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -23,6 +24,7 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // Routes
 app.use("/api", webRoutes);
+app.use("/api", uploadRoutes); // minIO
 
 // Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
