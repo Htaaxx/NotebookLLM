@@ -1,8 +1,9 @@
 import re
 import os
 import requests
-import yt_dlp
 import openai
+import io
+import subprocess
 from fastapi import FastAPI, HTTPException
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import TranscriptsDisabled, NoTranscriptFound
@@ -14,7 +15,6 @@ import time
 import random
 
 dotenv_path = os.path.abspath("../../API/.env")
-
 load_dotenv(dotenv_path)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -81,30 +81,48 @@ def fetch_transcript(video_id: str) -> str:
                 logging.critical(f"Unexpected error while fetching transcript for {video_id}: {str(e)}")
                 break 
 
-    return "" 
+    return ""
 
-def download_audio(video_url: str, output_path: str) -> str:
-    ydl_opts = {
-        "format": "bestaudio/best",
-        "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}],
-        "outtmpl": output_path,
-    }
+def download_audio_in_memory(video_url: str) -> bytes:
+    cmd = [
+        "yt-dlp", "-f", "bestaudio", "--extract-audio", "--audio-format", "mp3",
+        "--output", "-", video_url
+    ]
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info_dict = ydl.extract_info(video_url, download=True)
-            output_file = ydl.prepare_filename(info_dict).replace(".webm", ".mp3").replace(".m4a", ".mp3")
-            return output_file
-    except yt_dlp.utils.DownloadError as e:
-        logging.error(f"Failed to download audio: {str(e)}")
-        return ""
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        if result.returncode == 0:
+            return convert_to_mp3(result.stdout)
+        else:
+            logging.error(f"yt-dlp failed: {result.stderr.decode()}")
+            return b""
+    except Exception as e:
+        logging.error(f"Error downloading audio: {str(e)}")
+        return b""
 
-def transcribe_audio_with_openai(audio_path: str) -> str:
-    with open(audio_path, "rb") as audio_file:
-        response = openai.audio.transcriptions.create(
-            model="whisper-1",
-            file=audio_file
+def convert_to_mp3(audio_data: bytes) -> bytes:
+    try:
+        process = subprocess.run(
+            ["ffmpeg", "-i", "pipe:0", "-f", "mp3", "pipe:1"],
+            input=audio_data,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
+        if process.returncode == 0:
+            return process.stdout
+        else:
+            logging.error(f"FFmpeg conversion failed: {process.stderr.decode()}")
+            return b""
+    except Exception as e:
+        logging.error(f"Error in audio conversion: {str(e)}")
+        return b""
 
+def transcribe_audio_with_openai(audio_data: bytes) -> str:
+    audio_file = io.BytesIO(audio_data)
+    audio_file.name = "audio.mp3"
+    response = openai.audio.transcriptions.create(
+        model="whisper-1",
+        file=audio_file
+    )
     return clean_transcript(response.text)
 
 @app.post("/get_transcript/")
@@ -117,14 +135,12 @@ async def get_transcript(link: YouTubeLink):
     transcript_text = fetch_transcript(video_id)
 
     if not transcript_text:
-        audio_path = f"temp/{video_id}"
-        os.makedirs("temp", exist_ok=True)
-
+        logging.info("Transcript not found, extracting from audio...")
         try:
-            audio_file = download_audio(link.url, audio_path)
-            transcript_text = transcribe_audio_with_openai(audio_file)
-            if os.path.exists(audio_file):
-                os.remove(audio_file)
+            audio_data = download_audio_in_memory(link.url)
+            if not audio_data:
+                raise Exception("Failed to download audio data")
+            transcript_text = transcribe_audio_with_openai(audio_data)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
