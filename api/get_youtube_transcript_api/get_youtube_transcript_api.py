@@ -10,6 +10,8 @@ from pydantic import BaseModel
 from urllib.parse import urlparse, parse_qs
 from dotenv import load_dotenv  
 import logging
+import time
+import random
 
 dotenv_path = os.path.abspath("../../API/.env")
 
@@ -49,28 +51,37 @@ def clean_transcript(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 def fetch_transcript(video_id: str) -> str:
-    try:
-        logging.info(f"Fetching transcript for video ID: {video_id}")
-        transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
-        return clean_transcript(" ".join([entry["text"] for entry in transcript_data]))
-
-    except NoTranscriptFound:
-        logging.warning(f"No transcript found for video ID {video_id}, trying English transcript...")
+    attempt = 0
+    while attempt < 3:
         try:
-            transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
+            logging.info(f"Fetching transcript for video ID: {video_id}")
+            transcript_data = YouTubeTranscriptApi.get_transcript(video_id)
             return clean_transcript(" ".join([entry["text"] for entry in transcript_data]))
+        
         except NoTranscriptFound:
-            logging.error(f"No English transcript available for video ID: {video_id}")
+            logging.warning(f"No transcript found for video ID {video_id}, trying other languages...")
+            try:
+                transcript_data = YouTubeTranscriptApi.get_transcript(video_id, languages=["en", "vi", "es", "fr", "de", "zh", "ja", "ko"])
+                return clean_transcript(" ".join([entry["text"] for entry in transcript_data]))
+            except NoTranscriptFound:
+                logging.error(f"No transcript available for video ID: {video_id}")
+                break
+
         except TranscriptsDisabled:
             logging.error(f"Transcripts are disabled for video ID: {video_id}")
+            break
 
-    except TranscriptsDisabled:
-        logging.error(f"Transcripts are disabled for video ID: {video_id}")
+        except Exception as e:
+            if "429" in str(e): 
+                wait_time = (2 ** attempt) + random.uniform(1, 3)  # Exponential Backoff
+                logging.warning(f"Rate limit hit! Waiting {wait_time:.2f} seconds before retrying...")
+                time.sleep(wait_time)
+                attempt += 1
+            else:
+                logging.critical(f"Unexpected error while fetching transcript for {video_id}: {str(e)}")
+                break 
 
-    except Exception as e:
-        logging.critical(f"Unexpected error while fetching transcript for {video_id}: {str(e)}")
-
-    return ""
+    return "" 
 
 def download_audio(video_url: str, output_path: str) -> str:
     ydl_opts = {
@@ -78,11 +89,14 @@ def download_audio(video_url: str, output_path: str) -> str:
         "postprocessors": [{"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"}],
         "outtmpl": output_path,
     }
-
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([video_url])
-
-    return output_path + ".mp3"
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info_dict = ydl.extract_info(video_url, download=True)
+            output_file = ydl.prepare_filename(info_dict).replace(".webm", ".mp3").replace(".m4a", ".mp3")
+            return output_file
+    except yt_dlp.utils.DownloadError as e:
+        logging.error(f"Failed to download audio: {str(e)}")
+        return ""
 
 def transcribe_audio_with_openai(audio_path: str) -> str:
     with open(audio_path, "rb") as audio_file:
@@ -109,7 +123,8 @@ async def get_transcript(link: YouTubeLink):
         try:
             audio_file = download_audio(link.url, audio_path)
             transcript_text = transcribe_audio_with_openai(audio_file)
-            os.remove(audio_file)
+            if os.path.exists(audio_file):
+                os.remove(audio_file)
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Error processing audio: {str(e)}")
 
