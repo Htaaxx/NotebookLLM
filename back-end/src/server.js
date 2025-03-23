@@ -24,7 +24,7 @@ mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
 
 // Routes
 app.use("/api", webRoutes);
-app.use("/api", uploadRoutes); // minIO
+app.use("/api", uploadRoutes); // Cloudinary
 
 // Start server
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
