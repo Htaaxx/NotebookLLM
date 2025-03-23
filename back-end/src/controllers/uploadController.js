@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config({ path: ".env.local" });
 const cloudinary = require("cloudinary").v2;
 const multer = require("multer");
 
@@ -19,9 +19,14 @@ const uploadFile = async (req, res) => {
         upload(req, res, async (err) => {
             if (err) return res.status(500).json({ error: err.message });
 
+            const { document_id } = req.body;
+
             // Upload buffer to Cloudinary
             cloudinary.uploader.upload_stream(
-                { resource_type: "auto" }, 
+                { 
+                    resource_type: "auto" ,
+                    public_id: document_id || undefined
+                }, 
                 (error, result) => {
                     if (error) return res.status(500).json({ error });
                     res.json({ url: result.secure_url, document_id: result.public_id });

@@ -3,10 +3,10 @@ const { uploadFile, deleteFile } = require("../controllers/uploadController");
 
 const router = express.Router();
 
-// Route upload file lên Cloudinary
+// Route upload file to Cloudinary
 router.post("/upload", uploadFile);
 
-// Route xóa file trên Cloudinary
-router.post("/delete", deleteFile);
+// Route delete file in Cloudinary
+router.delete("/delete", deleteFile);
 
 module.exports = router;
