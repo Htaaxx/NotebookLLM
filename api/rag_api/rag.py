@@ -29,14 +29,17 @@ import io
 # unique id for doc
 from uuid import uuid4
 
+# File implementation
+import json
+import requests
+
+# import cosine similarity
+from sklearn.metrics.pairwise import cosine_similarity
+
 load_dotenv()
 
 app = FastAPI()
-
-# Load embedding model
 hf = SentenceTransformer("all-MiniLM-L6-v2")
-
-# Load LLM Model
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 if not OPENAI_API_KEY:
@@ -51,7 +54,9 @@ REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}"
 
 
 def process_file(file: UploadFile):
-    """Load and process file based on its type."""
+    """
+    Pdf, doc, txt file processor
+    """
     try:
         # Read file content once
         file_content = file.file.read()
@@ -59,9 +64,7 @@ def process_file(file: UploadFile):
         text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
 
         if ext == "pdf":
-            text = extract_text(
-                io.BytesIO(file_content)
-            )  # ✅ Fixed: Correctly passing file content
+            text = extract_text(io.BytesIO(file_content))
             if not text.strip():
                 # If no text found, use OCR
                 response = requests.post(
@@ -131,6 +134,9 @@ def process_file(file: UploadFile):
 
 
 def process_youtube_url(url):
+    """
+    Youtube Link Transcript Extraction
+    """
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
 
     response = requests.post("http://localhost:8003/get_transcript/", json={"url": url})
@@ -158,17 +164,14 @@ def embed_texts(chunks):
     ).tolist()
 
 
-"""
-    Database schema creation
-"""
-
-# Define Redis index schema
 index_name = "redisvl"
 schema = {
     "index": {"name": index_name, "prefix": "chunk"},
     "fields": [
         {"name": "chunk_id", "type": "tag", "attrs": {"sortable": True}},
+        {"name": "doc_id", "type": "tag"},  # Thêm doc_id vào đây
         {"name": "content", "type": "text"},
+        {"name": "is_active", "type": "numeric"},
         {
             "name": "text_embedding",
             "type": "vector",
@@ -182,6 +185,7 @@ schema = {
     ],
 }
 
+
 # Create Redis index
 client = Redis.from_url(REDIS_URL)
 index = SearchIndex.from_dict(schema)
@@ -189,11 +193,55 @@ index.set_client(client)
 index.create(overwrite=True, drop=True)
 
 
+def store_message(conversation_id, role, message):
+    """
+    LLM chat history
+    """
+    key = f"conversation:{conversation_id}"
+    history = client.get(key)
+
+    if history:
+        history = json.loads(history)
+    else:
+        history = []
+
+    # Tính embedding
+    embedding = hf.encode(f"{role}: {message}")
+
+    history.append({"role": role, "message": message, "embedding": embedding.tolist()})
+
+    client.set(key, json.dumps(history), ex=86400)  # Đặt TTL = 24 giờ
+
+def get_relevant_history(query_embedding, conversation_history, top_k=3):
+    """
+    Take relevant chat history and find the most relevant messages.
+    """
+    # Đảm bảo query_embedding là 2D (1, n_features)
+    query_embedding = np.array(query_embedding).reshape(1, -1)
+    
+    # Tính độ tương đồng và sắp xếp
+    relevant = sorted(
+        conversation_history,
+        key=lambda msg: float(cosine_similarity(query_embedding, np.array(msg["embedding"]).reshape(1, -1))),
+        reverse=True,
+    )
+    return relevant[:top_k]
+
+
+
+def get_conversation_history(conversation_id):
+    """
+    Retrieve chat history
+    """
+    key = f"conversation:{conversation_id}"
+    history = client.get(key)
+    if history:
+        return json.loads(history)
+    return []
+
+
 class URLData(BaseModel):
     url: HttpUrl
-
-
-# doc_id: str = Form(...)
 
 
 @app.post("/store_embeddings/")
@@ -216,6 +264,7 @@ async def store_embeddings(file: UploadFile = File(None), url: str = Form(None))
         return {"error": error}
     embeddings = embed_texts(chunks)
 
+    # Temporary
     doc_id = str(uuid4())
 
     # Convert embeddings to Redis-storable format
@@ -224,6 +273,7 @@ async def store_embeddings(file: UploadFile = File(None), url: str = Form(None))
             "chunk_id": f"{doc_id}-{i}",
             "doc_id": doc_id,
             "content": chunk,
+            "is_active": 1,  # Đảm bảo thêm trường is_active
             "text_embedding": np.array(embeddings[i], dtype="float32").tobytes(),
         }
         for i, chunk in enumerate(chunks)
@@ -243,33 +293,57 @@ class QueryRequest(BaseModel):
 
 
 @app.post("/query/")
-async def query_openai(request: QueryRequest):
-    """Retrieve context from Redis and query OpenAI."""
+async def query_openai(request: QueryRequest, user_id: str):
+    """
+    Retrieve context from Redis and query OpenAI.
+    """ 
+    conversation_history = get_conversation_history(user_id)
+
+    # Tạo embedding cho câu hỏi
     query_embedding = hf.encode(f"query: {request.query}")
 
+    # Lấy lịch sử hội thoại liên quan
+    relevant_history = get_relevant_history(query_embedding, conversation_history)
+    formatted_history = "\n".join(
+        [f"{msg['role']}: {msg['message']}" for msg in relevant_history]
+    )
+
+
+    # Truy vấn vector để lấy context
     vector_query = VectorQuery(
         vector=query_embedding,
         vector_field_name="text_embedding",
-        num_results=3,  # increase results to improve document converage
-        return_fields=["chunk_id", "content", "doc_id"],
+        num_results=3,  # tăng số lượng kết quả để cải thiện độ phủ
+        return_fields=["chunk_id", "content", "doc_id", "is_active"],
         return_score=True,
-        filter_conditions=["@is_active:{1}"],
     )
 
     result = index.query(vector_query)
 
-    if not result:
+    # for r in result:
+    #     print(result.get("doc_id"))
+
+
+    filtered_result = [r for r in result if r.get("is_active") == "1"]
+
+    if not filtered_result:
         raise HTTPException(status_code=404, detail="No relevant context found.")
 
+    # Chuẩn bị context từ kết quả tìm kiếm
     context_chunks = []
-    for r in result:
+    for r in filtered_result:
         chunk_id = r["chunk_id"]  # Example: "123abc-0"
         doc_id = chunk_id.split("-")[0]  # Extract doc_id -> "123abc"
-        context_chunks.append(f"[{doc_id}] {r['content']}")  # Format with doc_id
+        context_chunks.append(f"[{doc_id}] {r['content']}")  # Format với doc_id
+
+    print(formatted_history)
 
     context = "\n\n".join(context_chunks)
     full_prompt = f"""
-    Hãy giúp tôi trả lời câu hỏi dựa vào context đã cung cấp
+    Hãy giúp tôi trả lời câu hỏi dựa vào context đã cung cấp. Đây là những tài nguyên bạn có thể dùng để tạo ra câu trả lời:
+
+    **Lịch sử trò chuyện:**
+    {formatted_history}
     
     **Context:**  
     {context}
@@ -278,9 +352,8 @@ async def query_openai(request: QueryRequest):
     {request.query}
     """
 
-    print(full_prompt)
-
     try:
+        # Gửi yêu cầu đến OpenAI với lịch sử hội thoại
         response = openai_client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
@@ -293,6 +366,11 @@ async def query_openai(request: QueryRequest):
             temperature=0.2,
             max_tokens=500,
         )
-        return {"response": response.choices[0].message.content}
+        llm_response = response.choices[0].message.content
+
+        store_message(user_id, "user", request.query)
+        store_message(user_id, "assistant", llm_response)
+
+        return {"response": llm_response}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error querying OpenAI: {str(e)}")
