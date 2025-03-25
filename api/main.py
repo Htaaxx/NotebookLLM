@@ -1,11 +1,11 @@
-from create_mindmap.create_mindmap_api import get_smaller_branches
+from create_mindmap.create_mindmap_api import get_smaller_branches_from_docs
 from get_youtube_transcript_api.get_youtube_transcript_api import get_transcript
 from ocr_image_api.ocr_image_api import ocr
 from extract_file_content_api.extract_file_content_api import extract_text
 from fastapi import FastAPI, File, UploadFile
 from get_youtube_transcript_api.get_youtube_transcript_api import YouTubeLink
 import uvicorn
-
+from typing import List
 # init fastAPI
 app = FastAPI()
 
@@ -13,10 +13,12 @@ app = FastAPI()
 async def read_root():
     return await {"message": "Welcome to the API"}
 
-@app.post("/get_smaller_branches")
-async def get_smaller_branches_api(doc: str):
-    return await get_smaller_branches(doc)
-
+@app.post("/get_smaller_branches_from_docs")
+async def get_smaller_branches_from_docs_api(docs: List[str], num_clusters: int):
+    return await get_smaller_branches_from_docs(docs)
+@app.post("/get_smaller_bracnches_from_branch")
+async def get_smaller_branches_from_branch_api(docs: List[str], num_clusters: int):
+    return await get_smaller_branches_from_docs(docs)
 @app.post("/get_transcript")
 async def get_transcript_api(link: YouTubeLink):
     return await get_transcript(link)
