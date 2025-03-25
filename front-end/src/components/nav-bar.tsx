@@ -34,7 +34,7 @@ export function NavBar() {
     <nav className="flex items-center h-16 px-6 border-b">
       <div className="flex items-center gap-2">
         <Logo className="w-8 h-8" />
-        <span className="font-semibold">NoteGPT</span>
+        <span className="font-semibold">NotebookLLM</span>
       </div>
       <div className="flex gap-8 ml-32">
         <Link href="/defaulPage" className="hover:text-primary">
