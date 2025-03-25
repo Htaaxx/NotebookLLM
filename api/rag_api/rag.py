@@ -31,6 +31,10 @@ from uuid import uuid4
 
 # File implementation
 import json
+import requests
+
+# import cosine similarity
+from sklearn.metrics.pairwise import cosine_similarity
 
 load_dotenv()
 
@@ -165,6 +169,7 @@ schema = {
     "index": {"name": index_name, "prefix": "chunk"},
     "fields": [
         {"name": "chunk_id", "type": "tag", "attrs": {"sortable": True}},
+        {"name": "doc_id", "type": "tag"},  # Thêm doc_id vào đây
         {"name": "content", "type": "text"},
         {"name": "is_active", "type": "numeric"},
         {
@@ -179,6 +184,7 @@ schema = {
         },
     ],
 }
+
 
 # Create Redis index
 client = Redis.from_url(REDIS_URL)
@@ -199,8 +205,28 @@ def store_message(conversation_id, role, message):
     else:
         history = []
 
-    history.append({"role": role, "message": message})
-    client.set(key, json.dumps(history))
+    # Tính embedding
+    embedding = hf.encode(f"{role}: {message}")
+
+    history.append({"role": role, "message": message, "embedding": embedding.tolist()})
+
+    client.set(key, json.dumps(history), ex=86400)  # Đặt TTL = 24 giờ
+
+def get_relevant_history(query_embedding, conversation_history, top_k=3):
+    """
+    Take relevant chat history and find the most relevant messages.
+    """
+    # Đảm bảo query_embedding là 2D (1, n_features)
+    query_embedding = np.array(query_embedding).reshape(1, -1)
+    
+    # Tính độ tương đồng và sắp xếp
+    relevant = sorted(
+        conversation_history,
+        key=lambda msg: float(cosine_similarity(query_embedding, np.array(msg["embedding"]).reshape(1, -1))),
+        reverse=True,
+    )
+    return relevant[:top_k]
+
 
 
 def get_conversation_history(conversation_id):
@@ -269,15 +295,19 @@ class QueryRequest(BaseModel):
 @app.post("/query/")
 async def query_openai(request: QueryRequest, user_id: str):
     """
-    Retrieve context from Redis and query OpenAI. 
-    """
+    Retrieve context from Redis and query OpenAI.
+    """ 
     conversation_history = get_conversation_history(user_id)
-    formatted_history = "\n".join(
-        [f"{msg['role']}: {msg['message']}" for msg in conversation_history]
-    )
 
     # Tạo embedding cho câu hỏi
     query_embedding = hf.encode(f"query: {request.query}")
+
+    # Lấy lịch sử hội thoại liên quan
+    relevant_history = get_relevant_history(query_embedding, conversation_history)
+    formatted_history = "\n".join(
+        [f"{msg['role']}: {msg['message']}" for msg in relevant_history]
+    )
+
 
     # Truy vấn vector để lấy context
     vector_query = VectorQuery(
@@ -290,8 +320,9 @@ async def query_openai(request: QueryRequest, user_id: str):
 
     result = index.query(vector_query)
 
-    for r in result:
-        print(r.get("is_active"))
+    # for r in result:
+    #     print(result.get("doc_id"))
+
 
     filtered_result = [r for r in result if r.get("is_active") == "1"]
 
@@ -304,6 +335,8 @@ async def query_openai(request: QueryRequest, user_id: str):
         chunk_id = r["chunk_id"]  # Example: "123abc-0"
         doc_id = chunk_id.split("-")[0]  # Extract doc_id -> "123abc"
         context_chunks.append(f"[{doc_id}] {r['content']}")  # Format với doc_id
+
+    print(formatted_history)
 
     context = "\n\n".join(context_chunks)
     full_prompt = f"""
@@ -318,8 +351,6 @@ async def query_openai(request: QueryRequest, user_id: str):
     **Câu hỏi của người dùng:**  
     {request.query}
     """
-
-    print(full_prompt)
 
     try:
         # Gửi yêu cầu đến OpenAI với lịch sử hội thoại
