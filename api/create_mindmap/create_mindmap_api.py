@@ -160,3 +160,4 @@ async def get_smaller_branches(doc: str):
         result.append(completion.choices[0].message.content)
         
     return result
+

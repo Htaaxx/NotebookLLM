@@ -14,6 +14,7 @@ import logging
 import time
 import random
 
+
 dotenv_path = os.path.abspath("../../API/.env")
 load_dotenv(dotenv_path)
 
