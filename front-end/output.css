@@ -1816,3 +1816,39 @@ video {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+
+.map-container {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: auto !important;
+  max-height: 80vh !important;
+}
+
+.mind-elixir {
+  height: 100% !important;
+  width: 100% !important;
+  overflow: visible !important;
+}
+
+.map-canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+/* Cải thiện hiển thị node */
+.mind-elixir .me-node {
+  padding: 8px 15px !important;
+  border-radius: 6px !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+/* Màu nền cho node gốc */
+.mind-elixir .me-root {
+  background-color: #4CAF50 !important;
+  color: white !important;
+  font-weight: bold !important;
+}

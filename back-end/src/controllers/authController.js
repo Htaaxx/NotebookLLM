@@ -91,12 +91,14 @@ exports.signin = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save();
 
+    
     // Gửi cả access token và refresh token về client
     res.json({
       message: "Signed in successfully",
       accessToken,
       refreshToken,
-      username: user.username 
+      user_id: user.user_id, 
+      username: user.username
     });
   } catch (error) {
     res.status(500).json({ message: "Error signing in", error });
@@ -194,11 +196,14 @@ exports.createDocument = async (req, res) => {
     
     const newDocument = new Document({ user_id });
     await newDocument.save();
-    res.json({ message: "Document created successfully", document: newDocument });
+    
+    // Return only document_id without a message
+    res.json({ document_id: newDocument.document_id });
   } catch (error) {
     res.status(500).json({ message: "Error creating document", error });
   }
 };
+
 
 // Get Document with User
 exports.getDocumentWithUser = async (req, res) => {
@@ -208,7 +213,8 @@ exports.getDocumentWithUser = async (req, res) => {
           return res.status(400).json({ message: "User ID is required" });
       }
 
-      const documents = await Document.find({ user_id: new ObjectId(user_id) }).select("document_id -_id");
+      // Fixed: Use string comparison directly (no ObjectId conversion)
+      const documents = await Document.find({ user_id }).select("document_id -_id");
       return res.json(documents);
   } catch (error) {
       console.error("Error:", error);

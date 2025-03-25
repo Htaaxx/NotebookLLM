@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import { ZoomIn, ZoomOut, Highlighter } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { MindMapView} from "@/components/mindmap-view"
 import 'react-pdf/dist/esm/Page/TextLayer.css'
 import 'react-pdf/dist/esm/Page/AnnotationLayer.css'
 
@@ -34,16 +35,59 @@ interface RightPanelProps {
 
 const MAX_PDF_SIZE = 100 * 1024 * 1024 // Allow pdf to be only < 100MB
 
+// Nội dung Markdown mặc định được nhúng trực tiếp
+const DEFAULT_MARKDOWN = `# Machine Learning Concepts
+
+## Supervised Learning
+### Classification
+#### Decision Trees
+#### Support Vector Machines
+#### Neural Networks
+### Regression
+#### Linear Regression
+#### Polynomial Regression
+
+## Unsupervised Learning
+### Clustering
+#### K-Means
+#### Hierarchical Clustering
+### Dimensionality Reduction
+#### PCA
+#### t-SNE
+
+## Reinforcement Learning
+### Q-Learning
+### Deep Q Networks
+
+## Deep Learning
+### Neural Networks
+#### Feed Forward Networks
+#### Convolutional Neural Networks
+#### Recurrent Neural Networks
+### Training Techniques
+#### Backpropagation
+#### Gradient Descent
+#### Regularization
+`;
+
 export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   const [scale, setScale] = useState(1.0)
   const [numPages, setNumPages] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [annotations, setAnnotations] = useState<Annotation[]>([])
   const [selectedPage, setSelectedPage] = useState<number | null>(null)
+  const [markdownContent, setMarkdownContent] = useState<string>('')
+  
 
   const selectedPdf = useMemo(() => {
     return selectedFiles.find(
       (file) => file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+    ) || null;
+  }, [selectedFiles]);
+
+  const selectedMarkdownFile = useMemo(() => {
+    return selectedFiles.find(
+      (file) => file.type === "text/markdown" || file.name.toLowerCase().endsWith(".md")
     ) || null;
   }, [selectedFiles]);
   
@@ -61,6 +105,44 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
     setError(null)
   }, [selectedPdf])
 
+  // Đảm bảo useEffect này chạy đúng thứ tự
+  useEffect(() => {
+    if (activePanel === "mindmap") {
+      console.log("MindMap panel active, loading default markdown content");
+      
+      // Đảm bảo reset error state
+      setError(null);
+      
+      // Always set default content first
+      setMarkdownContent(DEFAULT_MARKDOWN);
+      
+      // // If there's a selected file, try to load it
+      // if (selectedMarkdownFile) {
+      //   console.log("Attempting to load markdown from file:", selectedMarkdownFile.name);
+        
+      //   fetch(selectedMarkdownFile.url)
+      //     .then(response => {
+      //       if (!response.ok) {
+      //         throw new Error(`Failed to load markdown: ${response.status}`);
+      //       }
+      //       return response.text();
+      //     })
+      //     .then(text => {
+      //       if (text && text.trim()) {
+      //         console.log("Successfully loaded markdown, length:", text.length);
+      //         setMarkdownContent(text);
+      //       } else {
+      //         console.warn("Loaded empty markdown, keeping default");
+      //       }
+      //     })
+      //     .catch(err => {
+      //       console.error("Failed to load markdown from file:", err);
+      //       setError(`Failed to load markdown: ${err.message}`);
+      //     });
+      // }
+    }
+  }, [activePanel, selectedMarkdownFile]);
+  
   const formattedPdfName = useMemo(() => {
     return selectedPdf?.name.replace(/\.pdf$/i, "")
   }, [selectedPdf?.name])
@@ -100,7 +182,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
 
   if (!activePanel) return null
 
-  if (selectedFiles.length === 0) {
+  if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap")) {
     return (
       <div className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex items-center justify-center">
         <p className="text-lg text-muted-foreground">No chosen file</p>
@@ -185,13 +267,28 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
           </div>
         </>
       )}
-
+  
       {activePanel === "mindmap" && (
-        <div className="h-full bg-muted rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Mind Map View</p>
+        <div
+          className="h-full bg-white rounded-lg grid grid-rows-[auto_1fr]">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-center bg-green-500 text-black py-2 px-4 rounded-md w-full">
+              {selectedMarkdownFile ? selectedMarkdownFile.name : "Machine Learning Concepts"}
+            </h2>
+          </div>
+          <div className="min-h-0 relative">
+            {error ? (
+              <div className="p-4 text-red-500">{error}</div>
+            ) : (
+              <MindMapView 
+                markdownContent={markdownContent}
+                className="absolute inset-0"
+              />
+            )}
+          </div>
         </div>
       )}
-
+  
       {activePanel === "cheatsheet" && (
         <div className="h-full bg-muted rounded-lg p-4">
           <p className="text-sm text-muted-foreground">Cheatsheet View</p>
