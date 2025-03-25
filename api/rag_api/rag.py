@@ -55,64 +55,36 @@ REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}"
 
 def process_file(file: UploadFile):
     """
-    Pdf, doc, txt file processor
+    Process PDF, DOCX, TXT, JPG files and return chunks with metadata.
     """
     try:
-        # Read file content once
+        # Đọc nội dung file
         file_content = file.file.read()
         ext = file.filename.split(".")[-1].lower()
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
 
-        if ext == "pdf":
-            text = extract_text(io.BytesIO(file_content))
-            if not text.strip():
-                # If no text found, use OCR
-                response = requests.post(
-                    "http://localhost:8002/ocr/",
-                    files={
-                        "file": (
-                            file.filename,
-                            io.BytesIO(file_content),
-                            "application/pdf",
-                        )
-                    },
-                )
-                if response.status_code != 200:
-                    return None, f"OCR error: {response.content.decode()}"
-                text = response.json().get("text", "")
-            else:
-                response = requests.post(
-                    "http://localhost:8004/extract_text/",
-                    files={
-                        "file": (
-                            file.filename,
-                            io.BytesIO(file_content),
-                            "application/pdf",
-                        )
-                    },
-                )
-                if response.status_code != 200:
-                    return None, f"Text extraction error: {response.content.decode()}"
-                text_data = response.json().get("pages", [])
-                text = "".join(page["text"] for page in text_data)
+        # Danh sách chunk với metadata
+        chunks_with_metadata = []
 
-        elif ext in ["docx", "txt"]:
+        if ext in ["pdf", "docx", "txt"]:
+            # Gọi API extract_text cho các file PDF, DOCX, TXT
             response = requests.post(
                 "http://localhost:8004/extract_text/",
                 files={
                     "file": (
                         file.filename,
                         io.BytesIO(file_content),
-                        "application/json",
+                        f"application/{ext}",
                     )
                 },
             )
             if response.status_code != 200:
                 return None, f"Text extraction error: {response.content.decode()}"
-            text_data = response.json().get("pages", [])
-            text = "".join(page["text"] for page in text_data)
+
+            # Lấy chunks_with_metadata từ response
+            chunks_with_metadata = response.json().get("chunks", [])
 
         elif ext in ["jpg", "jpeg", "png"]:
+            # Gọi OCR API cho các file hình ảnh
             response = requests.post(
                 "http://localhost:8002/ocr/",
                 files={
@@ -121,16 +93,31 @@ def process_file(file: UploadFile):
             )
             if response.status_code != 200:
                 return None, f"OCR error: {response.content.decode()}"
-            text = response.json().get("text", "")
 
-        if not text:
+            ocr_text = response.json().get("text", "")
+            # Chia văn bản OCR thành các chunk
+            text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
+            ocr_chunks = text_splitter.split_text(ocr_text)
+            for chunk in ocr_chunks:
+                chunks_with_metadata.append({
+                    "page_number": 1,  # Hình ảnh không có khái niệm trang, mặc định là 1
+                    "bounding_box": None,  # OCR không cung cấp bounding box
+                    "text": chunk
+                })
+
+        else:
+            return None, "Unsupported file format"
+
+        # Nếu không có chunk nào, trả về lỗi
+        if not chunks_with_metadata:
             return None, "No text could be extracted from the document"
 
-        chunks = text_splitter.split_text(text)
-        return chunks, None
+        return chunks_with_metadata, None
 
     except Exception as e:
         return None, f"Error processing file: {str(e)}"
+
+
 
 
 def process_youtube_url(url):
@@ -168,22 +155,25 @@ index_name = "redisvl"
 schema = {
     "index": {"name": index_name, "prefix": "chunk"},
     "fields": [
-        {"name": "chunk_id", "type": "tag", "attrs": {"sortable": True}},
-        {"name": "doc_id", "type": "tag"},  # Thêm doc_id vào đây
-        {"name": "content", "type": "text"},
-        {"name": "is_active", "type": "numeric"},
+        {"name": "chunk_id", "type": "tag", "attrs": {"sortable": True}},  # ID của chunk
+        {"name": "doc_id", "type": "tag"},  # ID của tài liệu
+        {"name": "content", "type": "text"},  # Nội dung chunk
+        {"name": "is_active", "type": "numeric"},  # Trạng thái
+        {"name": "page_number", "type": "numeric"},  # Số trang
+        {"name": "bounding_box", "type": "text"},  # Bounding box (JSON)
         {
-            "name": "text_embedding",
+            "name": "text_embedding",  # Embedding vector
             "type": "vector",
             "attrs": {
-                "dims": 384,
-                "distance_metric": "cosine",
-                "algorithm": "hnsw",
+                "dims": 384,  # Kích thước embedding
+                "distance_metric": "cosine",  # Metric để so sánh
+                "algorithm": "hnsw",  # Thuật toán tìm kiếm
                 "datatype": "float32",
             },
         },
     ],
 }
+
 
 
 # Create Redis index
@@ -259,6 +249,8 @@ async def store_embeddings(file: UploadFile = File(None), url: str = Form(None))
 
     if error:
         raise HTTPException(status_code=400, detail=error)
+    
+    print(chunks)
 
     if error:
         return {"error": error}
@@ -269,15 +261,18 @@ async def store_embeddings(file: UploadFile = File(None), url: str = Form(None))
 
     # Convert embeddings to Redis-storable format
     data = [
-        {
-            "chunk_id": f"{doc_id}-{i}",
-            "doc_id": doc_id,
-            "content": chunk,
-            "is_active": 1,  # Đảm bảo thêm trường is_active
-            "text_embedding": np.array(embeddings[i], dtype="float32").tobytes(),
-        }
-        for i, chunk in enumerate(chunks)
-    ]
+    {
+        "chunk_id": f"{doc_id}-{i}",
+        "doc_id": doc_id,
+        "content": chunk["text"],
+        "is_active": 1,  # Đảm bảo thêm trường is_active
+        "page_number": chunk["page_number"],  # Thêm số trang
+        "bounding_box": json.dumps(chunk["bounding_box"]),  # Chuyển bounding box thành JSON
+        "text_embedding": np.array(embeddings[i], dtype="float32").tobytes(),  # Embedding
+    }
+    for i, chunk in enumerate(chunks)
+]
+
 
     keys = index.load(data, id_field="chunk_id")
     return {
@@ -308,22 +303,18 @@ async def query_openai(request: QueryRequest, user_id: str):
         [f"{msg['role']}: {msg['message']}" for msg in relevant_history]
     )
 
-
     # Truy vấn vector để lấy context
     vector_query = VectorQuery(
         vector=query_embedding,
         vector_field_name="text_embedding",
         num_results=3,  # tăng số lượng kết quả để cải thiện độ phủ
-        return_fields=["chunk_id", "content", "doc_id", "is_active"],
+        return_fields=["chunk_id", "doc_id", "page_number", "bounding_box", "content"],
         return_score=True,
     )
 
     result = index.query(vector_query)
 
-    # for r in result:
-    #     print(result.get("doc_id"))
-
-
+    # Lọc các chunk đang hoạt động
     filtered_result = [r for r in result if r.get("is_active") == "1"]
 
     if not filtered_result:
@@ -331,13 +322,27 @@ async def query_openai(request: QueryRequest, user_id: str):
 
     # Chuẩn bị context từ kết quả tìm kiếm
     context_chunks = []
+    ui_data = []  # Lưu thông tin bounding_box và page_number cho UI
+
     for r in filtered_result:
         chunk_id = r["chunk_id"]  # Example: "123abc-0"
         doc_id = chunk_id.split("-")[0]  # Extract doc_id -> "123abc"
-        context_chunks.append(f"[{doc_id}] {r['content']}")  # Format với doc_id
+        page_number = r["page_number"]
+        bounding_box = json.loads(r["bounding_box"])  # Chuyển bounding_box từ JSON thành list
+        content = r["content"]
 
-    print(formatted_history)
+        # Thêm vào context để gửi đến LLM
+        context_chunks.append(f"[{doc_id}] {content}")
 
+        # Thêm thông tin vào dữ liệu UI
+        ui_data.append({
+            "doc_id": doc_id,
+            "page_number": page_number,
+            "bounding_box": bounding_box,
+            "content": content
+        })
+
+    # Xây dựng prompt đầy đủ
     context = "\n\n".join(context_chunks)
     full_prompt = f"""
     Hãy giúp tôi trả lời câu hỏi dựa vào context đã cung cấp. Đây là những tài nguyên bạn có thể dùng để tạo ra câu trả lời:
@@ -368,9 +373,15 @@ async def query_openai(request: QueryRequest, user_id: str):
         )
         llm_response = response.choices[0].message.content
 
+        # Lưu lịch sử hội thoại
         store_message(user_id, "user", request.query)
         store_message(user_id, "assistant", llm_response)
 
-        return {"response": llm_response}
+        # Trả về kết quả, thông tin bounding box và page id
+        return {
+            "response": llm_response,
+            "full_prompt": full_prompt,
+            "chunks": ui_data  # Trả về thông tin bounding box và page_number cho UI
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error querying OpenAI: {str(e)}")
