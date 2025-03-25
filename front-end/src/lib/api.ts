@@ -72,7 +72,8 @@ export const authAPI = {
     const response = await api.post('/signin', { username, password });
     localStorage.setItem('accessToken', response.data.accessToken);
     localStorage.setItem('refreshToken', response.data.refreshToken);
-    localStorage.setItem('username', username);
+    localStorage.setItem('username', response.data.username);
+    localStorage.setItem('user_id', response.data.user_id);
     return response.data;
   },
   

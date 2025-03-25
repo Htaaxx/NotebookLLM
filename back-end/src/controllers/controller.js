@@ -96,6 +96,8 @@ exports.signin = async (req, res) => {
       message: "Signed in successfully",
       accessToken,
       refreshToken,
+      user_id: user.user_id, 
+      username: user.username
     });
   } catch (error) {
     res.status(500).json({ message: "Error signing in", error });
@@ -198,6 +200,7 @@ exports.createDocument = async (req, res) => {
     res.status(500).json({ message: "Error creating document", error });
   }
 };
+
 
 // Get Document with User
 exports.getDocumentWithUser = async (req, res) => {

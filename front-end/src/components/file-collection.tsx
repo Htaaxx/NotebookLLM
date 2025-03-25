@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { documentAPI } from "@/lib/api"
 
 interface FileItem {
   id: string
@@ -49,6 +50,15 @@ interface ChatItem {
 }
 
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
+  const [userID, setUserID] = useState("User");
+
+  useEffect(() => {
+    const storedUserID = localStorage.getItem('user_id');
+    if (storedUserID) {
+      setUserID(storedUserID);
+    }
+  }, []);
+
   const [rootFiles, setRootFiles] = useState<FileItem[]>([])
   const [rootFolders, setRootFolders] = useState<Folder[]>([])
   const [searchQuery, setSearchQuery] = useState("")
@@ -61,30 +71,39 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [chatHistory, setChatHistory] = useState<string[]>([])
 
-  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>, folderId?: string) => {
-    const uploadedFiles = event.target.files
-    if (uploadedFiles) {
-      const newFiles = Array.from(uploadedFiles).map((file) => ({
-        id: Math.random().toString(36).substr(2, 9),
-        name: file.name,
-        selected: false,
-        type: file.type,
-        url: URL.createObjectURL(file),
-        size: file.size,
-      }))
-
+  const handleFileUpload = useCallback(
+    async (event: React.ChangeEvent<HTMLInputElement>, userID: string, folderId?: string) => {
+      const uploadedFiles = event.target.files;
+      if (!uploadedFiles) return;
+      
+      const newFiles = await Promise.all(
+        Array.from(uploadedFiles).map(async (file) => {
+          const documentId = await documentAPI.createDocument(userID);
+          console.log(documentId);
+          return {
+            id: documentId, // Assign the generated document ID
+            name: file.name,
+            selected: false,
+            type: file.type,
+            url: URL.createObjectURL(file),
+            size: file.size,
+          };
+        })
+      );
+  
       if (folderId) {
         setRootFolders((prevFolders) => {
           return updateFolderContents(prevFolders, folderId, (folder) => ({
             ...folder,
             files: [...folder.files, ...newFiles],
-          }))
-        })
+          }));
+        });
       } else {
-        setRootFiles((prev) => [...prev, ...newFiles])
+        setRootFiles((prev) => [...prev, ...newFiles]);
       }
-    }
-  }, [])
+    },
+    []
+  );
 
   const createFolder = useCallback(
     (parentId?: string) => {
@@ -524,7 +543,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               type="file"
               className="hidden"
               multiple
-              onChange={(e) => handleFileUpload(e)}
+              onChange={(e) => handleFileUpload(e,userID)}
             />
           </label>
         </div>
