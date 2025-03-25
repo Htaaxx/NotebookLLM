@@ -96,7 +96,8 @@ exports.signin = async (req, res) => {
       message: "Signed in successfully",
       accessToken,
       refreshToken,
-      username: user.username 
+      username: user.username,
+      user_id: user.user_id
     });
   } catch (error) {
     res.status(500).json({ message: "Error signing in", error });
@@ -194,7 +195,9 @@ exports.createDocument = async (req, res) => {
     
     const newDocument = new Document({ user_id });
     await newDocument.save();
-    res.json({ message: "Document created successfully", document: newDocument });
+    
+    // Return only document_id without a message
+    res.json({ document_id: newDocument.document_id });
   } catch (error) {
     res.status(500).json({ message: "Error creating document", error });
   }
