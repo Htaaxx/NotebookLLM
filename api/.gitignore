@@ -1,0 +1,3 @@
+.env
+extract_file_content_api/__pycache__
+get_youtube_transcript_api/__pycache__
