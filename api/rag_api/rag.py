@@ -308,14 +308,22 @@ async def query_openai(request: QueryRequest, user_id: str):
         vector=query_embedding,
         vector_field_name="text_embedding",
         num_results=3,  # tăng số lượng kết quả để cải thiện độ phủ
-        return_fields=["chunk_id", "doc_id", "page_number", "bounding_box", "content"],
+        return_fields=["chunk_id", "doc_id", "page_number", "bounding_box", "content", "is_active"],
         return_score=True,
     )
 
     result = index.query(vector_query)
 
-    # Lọc các chunk đang hoạt động
-    filtered_result = [r for r in result if r.get("is_active") == "1"]
+    print("Results:", result)
+    for r in result:
+        print("Record:", r)
+        print("is_active value:", r.get("is_active"))
+
+    # Lọc các chunk đang hoạt động 
+    filtered_result = [r for r in result if r.get("is_active") == "1"]  # Convert to int and handle missing field
+
+    print(filtered_result)
+
 
     if not filtered_result:
         raise HTTPException(status_code=404, detail="No relevant context found.")
