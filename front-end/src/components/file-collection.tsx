@@ -325,20 +325,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ document_id: fileId }),
-        });
-  
-        const responseText = await response.text(); // Read as text first
-  
-        if (!response.ok) {
-          console.error("Delete failed:", responseText);
-          throw new Error(`Delete failed: ${response.status} - ${responseText}`);
         }
-  
-        const data = JSON.parse(responseText); // Convert to JSON only if successful
-  
-        console.log("Deleted:", data);
-  
-        // Update UI only if backend deletion is successful
+      );
+
+      const dbDelete = await documentAPI.deleteDocument(JSON.stringify({ document_id: fileId }));
+
         if (folderId) {
           setRootFolders((prevFolders) =>
             updateFolderContents(prevFolders, folderId, (folder) => ({

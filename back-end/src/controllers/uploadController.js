@@ -51,7 +51,10 @@ const deleteFile = async (req, res) => {
         if (!document_id) return res.status(400).json({ error: "Missing document_id" });
 
         await cloudinary.uploader.destroy(document_id);
-        res.json({ message: "Document deleted successfully" });
+        
+        res.json({ 
+            document_id: document_id  // Include the document_id in the response
+        });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
