@@ -27,6 +27,7 @@ const documentSchema = new mongoose.Schema({
   document_id: { type: String, unique: true, default: function () { return new mongoose.Types.ObjectId().toString(); } },
   user_id: { type: String, ref: "User", required: true }, 
   document_name: { type: String, required: false },
+  document_path: { type: String, required: true },
 });
 
 // Models
@@ -189,20 +190,21 @@ exports.getUsers = async (req, res) => {
 
 // Create Document by User
 exports.createDocument = async (req, res) => {
-  const { user_id, document_name } = req.body;
+  const { user_id, document_name, document_path } = req.body;
   try {
     const user = await User.findOne({ user_id });
     if (!user) return res.status(404).json({ message: "User not found" });
     
     const newDocument = new Document({ 
       user_id,
-      document_name: document_name || "Untitled Document" 
+      document_name: document_name || "Untitled Document", 
+      document_path: document_path,
     });
     await newDocument.save();
 
     const documentId = newDocument.document_id.toString();
 
-    res.json({ document_id: documentId, document_name: newDocument.document_name });
+    res.json({ document_id: documentId, document_name: newDocument.document_name, document_path: newDocument.document_path });
   } catch (error) {
     res.status(500).json({ message: "Error creating document", error });
   }

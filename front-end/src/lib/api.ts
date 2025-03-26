@@ -118,8 +118,8 @@ export const authAPI = {
 
 // Các phương thức API cho tài liệu
 export const documentAPI = {
-  createDocument: async (userId: string, documentName: string) => {
-    const response = await api.post('/createDocument', { user_id: userId, document_name: documentName });
+  createDocument: async (userId: string, documentName: string, document_path: string) => {
+    const response = await api.post('/createDocument', { user_id: userId, document_name: documentName , document_path: document_path });
     return response.data;
   },
 

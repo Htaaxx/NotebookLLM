@@ -118,17 +118,17 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   }, [selectedFiles]);
 
   useEffect(() => {
-    if (!selectedPdf) {
+    if (!selectedFiles) {
       setNumPages(null);
       setError(null);
       setScale(1.0);
     }
-  }, [selectedPdf]);
+  }, [selectedFiles]);
 
   useEffect(() => {
     setScale(1.0);
     setError(null);
-  }, [selectedPdf]);
+  }, [selectedFiles]);
 
   // Đảm bảo useEffect này chạy đúng thứ tự
   useEffect(() => {
