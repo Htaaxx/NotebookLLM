@@ -327,9 +327,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           body: JSON.stringify({ document_id: fileId }),
         }
         );
-
-        const dbDelete = await documentAPI.deleteDocument(JSON.stringify({ document_id: fileId }));
-
+        
+        const data = await response.json();
+        const dbDelete = await documentAPI.deleteDocument(data.document_id);
+        
         if (folderId) {
           setRootFolders((prevFolders) =>
             updateFolderContents(prevFolders, folderId, (folder) => ({
