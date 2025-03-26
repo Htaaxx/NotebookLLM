@@ -19,10 +19,8 @@ const uploadFile = async (req, res) => {
         upload(req, res, async (err) => {
             if (err) return res.status(500).json({ error: err.message });
 
-            console.log("Received body:", req.body);
-            console.log("Received file:", req.file);
-
             const { document_id } = req.body;
+
             if (!document_id) return res.status(400).json({ error: "Missing document_id" });
 
             cloudinary.uploader.upload_stream(
