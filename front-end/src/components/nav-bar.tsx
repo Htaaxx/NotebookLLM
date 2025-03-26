@@ -29,7 +29,7 @@ export function NavBar() {
     }
   }
 
-  
+
   return (
     <nav className="flex items-center h-16 px-6 border-b">
       <div className="flex items-center gap-2">

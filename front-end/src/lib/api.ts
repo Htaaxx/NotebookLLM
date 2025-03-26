@@ -27,11 +27,11 @@ api.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    
+
     // Nếu lỗi là 401 (Unauthorized) và chưa thử refresh token
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
-      
+
       try {
         // Lấy refresh token từ localStorage
         const refreshToken = localStorage.getItem('refreshToken');
@@ -40,16 +40,16 @@ api.interceptors.response.use(
           window.location.href = '/signin';
           return Promise.reject(error);
         }
-        
+
         // Gọi API refresh token
         const response = await axios.post(`${API_URL}/refresh`, { refreshToken });
-        
+
         // Lưu token mới vào localStorage
         localStorage.setItem('accessToken', response.data.accessToken);
         if (response.data.refreshToken) {
           localStorage.setItem('refreshToken', response.data.refreshToken);
         }
-        
+
         // Thử lại request ban đầu với token mới
         originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
         return axios(originalRequest);
@@ -61,7 +61,7 @@ api.interceptors.response.use(
         return Promise.reject(refreshError);
       }
     }
-    
+
     return Promise.reject(error);
   }
 );
@@ -76,24 +76,24 @@ export const authAPI = {
     localStorage.setItem('user_id', response.data.user_id);
     return response.data;
   },
-  
+
   signUp: async (username: string, email: string, password: string) => {
-    const response = await api.post('/signup', { 
-      username, 
+    const response = await api.post('/signup', {
+      username,
       email,
-      password 
+      password
     });
     return response.data;
   },
-  
-  googleSignIn: async (userData: { email: string; name: string; id: string}) => {
+
+  googleSignIn: async (userData: { email: string; name: string; id: string }) => {
     const response = await api.post('/auth/google', userData);
     localStorage.setItem('accessToken', response.data.accessToken);
     localStorage.setItem('refreshToken', response.data.refreshToken);
     localStorage.setItem('username', userData.name);
     return response.data;
   },
-  
+
   signOut: async () => {
     const refreshToken = localStorage.getItem('refreshToken');
     try {
@@ -119,10 +119,10 @@ export const authAPI = {
 // Các phương thức API cho tài liệu
 export const documentAPI = {
   createDocument: async (userId: string, documentName: string) => {
-    const response = await api.post('/createDocument', { user_id: userId , document_name: documentName });
+    const response = await api.post('/createDocument', { user_id: userId, document_name: documentName });
     return response.data;
   },
-  
+
   getDocuments: async (userId: string) => {
     const response = await api.post('/getDocumentWithUser', { user_id: userId });
     return response.data;

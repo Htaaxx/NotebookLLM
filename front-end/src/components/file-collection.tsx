@@ -43,15 +43,15 @@ interface Folder {
 
 type DragItem =
   | {
-      type: "file";
-      item: FileItem;
-      parentId: string | null;
-    }
+    type: "file";
+    item: FileItem;
+    parentId: string | null;
+  }
   | {
-      type: "folder";
-      item: Folder;
-      parentId: string | null;
-    };
+    type: "folder";
+    item: Folder;
+    parentId: string | null;
+  };
 
 interface FileCollectionProps {
   onFileSelect: (files: FileItem[]) => void;
@@ -65,18 +65,18 @@ interface ChatItem {
 
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [userID, setUserID] = useState("User");
-  
+
   const handleDisplayUserFiles = useCallback(async (userId: string) => {
     try {
       // Call the API to get all documents for this user
       const documents = await documentAPI.getDocuments(userId);
-      
+
       if (!documents || documents.length === 0) {
         return;
       }
-      
+
       console.log("Documents loaded:", documents);
-      
+
       // Create FileItem objects from the documents
       const fileItems: FileItem[] = documents.map((doc: { document_id: string; document_name: string }) => ({
         id: doc.document_id,
@@ -84,13 +84,13 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         selected: false,
         type: "document",
         url: "", // This will be populated when needed
-        size: 0, 
+        size: 0,
         cloudinaryId: doc.document_id,
       }));
-      
+
       // Update the rootFiles state with the loaded files
       setRootFiles(fileItems);
-      
+
     } catch (error) {
       console.error("Error displaying user files:", error);
     }
@@ -98,12 +98,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
 
   useEffect(() => {
-  const storedUserID = localStorage.getItem("user_id");
-  if (storedUserID) {
-    setUserID(storedUserID);
-    handleDisplayUserFiles(storedUserID);
-  }
-}, [handleDisplayUserFiles]);
+    const storedUserID = localStorage.getItem("user_id");
+    if (storedUserID) {
+      setUserID(storedUserID);
+      handleDisplayUserFiles(storedUserID);
+    }
+  }, [handleDisplayUserFiles]);
 
   const [rootFiles, setRootFiles] = useState<FileItem[]>([]);
   const [rootFolders, setRootFolders] = useState<Folder[]>([]);
@@ -158,7 +158,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     }
   };
 
-  
+
   const handleFileUpload = useCallback(
     async (
       event: React.ChangeEvent<HTMLInputElement>,
@@ -167,7 +167,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     ) => {
       const uploadedFiles = event.target.files;
       if (!uploadedFiles) return;
-  
+
       const newFiles = await Promise.all(
         Array.from(uploadedFiles).map(async (file) => {
           try {
@@ -176,10 +176,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             if (!response || !response.document_id) {
               throw new Error("Failed to generate document ID");
             }
-  
+
             const documentId = response.document_id;
             console.log("Document ID extracted:", documentId);
-  
+
             // Upload file to Cloudinary
             const uploadedFile = await handleUpload(file, documentId);
             return uploadedFile;
@@ -189,16 +189,16 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           }
         })
       );
-  
+
       const validFiles: FileItem[] = newFiles.filter(
         (file): file is FileItem => file !== null
       );
-  
+
       if (validFiles.length === 0) {
         console.warn("No valid files were uploaded.");
         return;
       }
-  
+
       // Update UI state for folders or root files
       if (folderId) {
         setRootFolders((prevFolders) =>
@@ -213,7 +213,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     },
     []
   );
-  
+
 
   const createFolder = useCallback(
     (parentId?: string) => {
@@ -326,9 +326,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           },
           body: JSON.stringify({ document_id: fileId }),
         }
-      );
+        );
 
-      const dbDelete = await documentAPI.deleteDocument(JSON.stringify({ document_id: fileId }));
+        const dbDelete = await documentAPI.deleteDocument(JSON.stringify({ document_id: fileId }));
 
         if (folderId) {
           setRootFolders((prevFolders) =>
@@ -546,7 +546,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             type="file"
             className="hidden"
             multiple
-            onChange={(e) => handleFileUpload(e,userID, folder.id)}
+            onChange={(e) => handleFileUpload(e, userID, folder.id)}
           />
         </div>
       )}
@@ -654,9 +654,8 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         {chatboxes.map((chatbox) => (
           <div
             key={chatbox.id}
-            className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${
-              currentChatId === chatbox.id ? "bg-gray-200" : ""
-            }`}
+            className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${currentChatId === chatbox.id ? "bg-gray-200" : ""
+              }`}
             onClick={() => switchChatbox(chatbox.id)}
           >
             <MessageSquare className="w-4 h-4 text-gray-400" />
