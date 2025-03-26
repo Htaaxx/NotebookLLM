@@ -11,6 +11,7 @@ router.post("/refresh", authController.refresh);
 
 router.post("/createDocument", authController.createDocument);
 router.post("/getDocumentWithUser", authController.getDocumentWithUser);
+router.post("/deleteDocument", authController.deleteDocument);
 
 router.get("/dashboard", verifyToken, authController.dashboard);
 router.get("/users", authController.getUsers);
