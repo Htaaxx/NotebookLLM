@@ -43,15 +43,15 @@ interface Folder {
 
 type DragItem =
   | {
-    type: "file";
-    item: FileItem;
-    parentId: string | null;
-  }
+      type: "file";
+      item: FileItem;
+      parentId: string | null;
+    }
   | {
-    type: "folder";
-    item: Folder;
-    parentId: string | null;
-  };
+      type: "folder";
+      item: Folder;
+      parentId: string | null;
+    };
 
 interface FileCollectionProps {
   onFileSelect: (files: FileItem[]) => void;
@@ -62,6 +62,23 @@ interface ChatItem {
   name: string;
   messages: string[];
 }
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024; // 100MB
+
+const validateFileSize = (file: File): string | null => {
+  if (file.type.startsWith("image/") && file.size > MAX_IMAGE_SIZE) {
+    return `Image "${file.name}" exceeds the maximum size of 10MB!`;
+  }
+  if (file.type.startsWith("video/") && file.size > MAX_VIDEO_SIZE) {
+    return `Video "${file.name}" exceeds the maximum size of 100MB!`;
+  }
+  if (!file.type.startsWith("image/") && !file.type.startsWith("video/") && file.size > MAX_FILE_SIZE) {
+    return `File "${file.name}" exceeds the maximum size of 100MB!`;
+  }
+  return null;
+};
 
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [userID, setUserID] = useState("User");
@@ -78,24 +95,24 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       console.log("Documents loaded:", documents);
 
       // Create FileItem objects from the documents
-      const fileItems: FileItem[] = documents.map((doc: { document_id: string; document_name: string }) => ({
-        id: doc.document_id,
-        name: doc.document_name || "Untitled Document",
-        selected: false,
-        type: "document",
-        url: "", // This will be populated when needed
-        size: 0,
-        cloudinaryId: doc.document_id,
-      }));
+      const fileItems: FileItem[] = documents.map(
+        (doc: { document_id: string; document_name: string }) => ({
+          id: doc.document_id,
+          name: doc.document_name || "Untitled Document",
+          selected: false,
+          type: "document",
+          url: "", // This will be populated when needed
+          size: 0,
+          cloudinaryId: doc.document_id,
+        })
+      );
 
       // Update the rootFiles state with the loaded files
       setRootFiles(fileItems);
-
     } catch (error) {
       console.error("Error displaying user files:", error);
     }
   }, []);
-
 
   useEffect(() => {
     const storedUserID = localStorage.getItem("user_id");
@@ -158,7 +175,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     }
   };
 
-
   const handleFileUpload = useCallback(
     async (
       event: React.ChangeEvent<HTMLInputElement>,
@@ -168,11 +184,30 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       const uploadedFiles = event.target.files;
       if (!uploadedFiles) return;
 
+      const invalidFiles: string[] = [];
+      const validFilesArray: File[] = [];
+
+      Array.from(uploadedFiles).forEach((file) => {
+        const error = validateFileSize(file);
+        if (error) {
+          invalidFiles.push(error);
+        } else {
+          validFilesArray.push(file);
+        }
+      });
+
+      if (invalidFiles.length > 0) {
+        alert(invalidFiles.join("\n"));
+        return;
+      }
+
       const newFiles = await Promise.all(
-        Array.from(uploadedFiles).map(async (file) => {
+        validFilesArray.map(async (file) => {
           try {
-            // Ensure document ID is created before uploading the file
-            const response = await documentAPI.createDocument(userID, file.name);
+            const response = await documentAPI.createDocument(
+              userID,
+              file.name
+            );
             if (!response || !response.document_id) {
               throw new Error("Failed to generate document ID");
             }
@@ -180,12 +215,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             const documentId = response.document_id;
             console.log("Document ID extracted:", documentId);
 
-            // Upload file to Cloudinary
             const uploadedFile = await handleUpload(file, documentId);
             return uploadedFile;
           } catch (error) {
             console.error("Error uploading file:", error);
-            return null; // Prevent invalid files from being added
+            return null;
           }
         })
       );
@@ -195,11 +229,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       );
 
       if (validFiles.length === 0) {
-        console.warn("No valid files were uploaded.");
+        console.warn("No valid files were uploaded!!!");
         return;
       }
 
-      // Update UI state for folders or root files
+      // Cập nhật UI state
       if (folderId) {
         setRootFolders((prevFolders) =>
           updateFolderContents(prevFolders, folderId, (folder) => ({
@@ -213,7 +247,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     },
     []
   );
-
 
   const createFolder = useCallback(
     (parentId?: string) => {
@@ -325,12 +358,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ document_id: fileId }),
-        }
-        );
-        
+        });
+
         const data = await response.json();
         const dbDelete = await documentAPI.deleteDocument(data.document_id);
-        
+
         if (folderId) {
           setRootFolders((prevFolders) =>
             updateFolderContents(prevFolders, folderId, (folder) => ({
@@ -655,8 +687,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         {chatboxes.map((chatbox) => (
           <div
             key={chatbox.id}
-            className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${currentChatId === chatbox.id ? "bg-gray-200" : ""
-              }`}
+            className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${
+              currentChatId === chatbox.id ? "bg-gray-200" : ""
+            }`}
             onClick={() => switchChatbox(chatbox.id)}
           >
             <MessageSquare className="w-4 h-4 text-gray-400" />
