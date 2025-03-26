@@ -195,7 +195,10 @@ exports.createDocument = async (req, res) => {
     
     const newDocument = new Document({ user_id });
     await newDocument.save();
-    res.json({ message: "Document created successfully", document: newDocument });
+
+    const documentId = newDocument.document_id.toString();
+
+    res.json({ document_id: documentId });
   } catch (error) {
     res.status(500).json({ message: "Error creating document", error });
   }

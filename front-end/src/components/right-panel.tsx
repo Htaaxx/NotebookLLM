@@ -113,33 +113,30 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
       // Đảm bảo reset error state
       setError(null);
       
-      // Always set default content first
-      setMarkdownContent(DEFAULT_MARKDOWN);
-      
-      // // If there's a selected file, try to load it
-      // if (selectedMarkdownFile) {
-      //   console.log("Attempting to load markdown from file:", selectedMarkdownFile.name);
+      // If there's a selected file, try to load it
+      if (selectedMarkdownFile) {
+        console.log("Attempting to load markdown from file:", selectedMarkdownFile.name);
         
-      //   fetch(selectedMarkdownFile.url)
-      //     .then(response => {
-      //       if (!response.ok) {
-      //         throw new Error(`Failed to load markdown: ${response.status}`);
-      //       }
-      //       return response.text();
-      //     })
-      //     .then(text => {
-      //       if (text && text.trim()) {
-      //         console.log("Successfully loaded markdown, length:", text.length);
-      //         setMarkdownContent(text);
-      //       } else {
-      //         console.warn("Loaded empty markdown, keeping default");
-      //       }
-      //     })
-      //     .catch(err => {
-      //       console.error("Failed to load markdown from file:", err);
-      //       setError(`Failed to load markdown: ${err.message}`);
-      //     });
-      // }
+        fetch(selectedMarkdownFile.url)
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Failed to load markdown: ${response.status}`);
+            }
+            return response.text();
+          })
+          .then(text => {
+            if (text && text.trim()) {
+              console.log("Successfully loaded markdown, length:", text.length);
+              setMarkdownContent(text);
+            } else {
+              console.warn("Loaded empty markdown, keeping default");
+            }
+          })
+          .catch(err => {
+            console.error("Failed to load markdown from file:", err);
+            setError(`Failed to load markdown: ${err.message}`);
+          });
+      }
     }
   }, [activePanel, selectedMarkdownFile]);
   

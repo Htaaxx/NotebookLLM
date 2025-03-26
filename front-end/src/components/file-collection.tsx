@@ -137,7 +137,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
       const newFiles = await Promise.all(
         Array.from(uploadedFiles).map(async (file) => {
-          const documentId = await documentAPI.createDocument(userID);
+          const response = await documentAPI.createDocument(userID);
+          const documentId = response.document_id;
+          console.log("Document ID extracted:", documentId);
           return handleUpload(file, documentId);
         })
       );
