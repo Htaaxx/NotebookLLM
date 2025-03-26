@@ -37,8 +37,8 @@ async def ocr_api(file: UploadFile = File(...)):
 async def get_LLM_response_api(docs: QueryRequest, user_id: str):
     return await query_openai(docs, user_id)
 @app.post("/store_embeddings")
-async def store_embeddings_api(file: UploadFile = File(None), url: str = Form(None)):
-    return await store_embeddings(file, url)
+async def store_embeddings_api(documentID: str = None, file: UploadFile = File(None), url: str = Form(None)):
+    return await store_embeddings(documentID, file, url)
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

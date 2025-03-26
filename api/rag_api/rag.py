@@ -223,9 +223,9 @@ class URLData(BaseModel):
 
 
 @app.post("/store_embeddings/")
-async def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
+async def store_embeddings(documentID: str = None, file: UploadFile = File(None), url: str = Form(None)):
     # Process file or URL
-    if file is None and url is None:
+    if file is None and url is None and documentID is None:
         raise HTTPException(status_code=400, detail="No file or URL provided")
 
     chunks, error = [], None
@@ -246,7 +246,8 @@ async def store_embeddings(file: UploadFile = File(None), url: str = Form(None))
     embeddings = embed_texts(chunks['chunks'])
     print('len embeddings:', len(embeddings))
     # Temporary
-    doc_id = str(uuid4())
+    
+    doc_id = documentID
 
     # Convert embeddings to Redis-storable format
     data = [
@@ -324,11 +325,8 @@ async def query_openai(request: QueryRequest, user_id: str):
         page_number = r["page_number"]
         bounding_box = json.loads(r["bounding_box"])  # Chuyển bounding_box từ JSON thành list
         content = r["content"]
-
-        # Thêm vào context để gửi đến LLM
-        context_chunks.append(f"[{doc_id}] {content}")
-
-        # Thêm thông tin vào dữ liệu UI
+        
+         # Thêm thông tin vào dữ liệu UI
         ui_data.append({
             "doc_id": doc_id,
             "page_number": page_number,
@@ -336,6 +334,11 @@ async def query_openai(request: QueryRequest, user_id: str):
             "content": content
         })
 
+
+        # Thêm vào context để gửi đến LLM
+        context_chunks.append(f"[{doc_id}] {content} {ui_data}")
+
+       
     # Xây dựng prompt đầy đủ
     context = "\n\n".join(context_chunks)
     full_prompt = f"""
@@ -349,6 +352,7 @@ async def query_openai(request: QueryRequest, user_id: str):
     
     **Câu hỏi của người dùng:**  
     {request.query}
+
     """
 
     try:
@@ -358,7 +362,7 @@ async def query_openai(request: QueryRequest, user_id: str):
             messages=[
                 {
                     "role": "system",
-                    "content": "Bạn là một trợ lý AI có thể trả lời các câu hỏi dựa trên dữ liệu được cung cấp.",
+                    "content": f"Trả lời chi tiết câu hỏi: '{request.query}' bằng cách chỉ sử dụng thông tin từ tài liệu trích dẫn. Dưới đây là các tài liệu tham khảo có thể sử dụng:{context}. Mọi câu trả lời phải có trích dẫn dưới dạng [1], [2], [3]... tương ứng với tài liệu được sử dụng. Nếu một thông tin không có trong tài liệu, không được gán sai trích dẫn cho nó.",
                 },
                 {"role": "user", "content": full_prompt},
             ],
