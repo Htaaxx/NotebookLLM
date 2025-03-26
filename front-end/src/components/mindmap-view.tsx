@@ -90,7 +90,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className }: Mi
     // Construct the path to the file in the public directory
     const publicPath = `/mindmaps/${fileName}`;
     console.log("Loading markdown from public path:", publicPath);
-    
+
     return fetch(publicPath)
       .then(response => {
         if (!response.ok) {
@@ -123,7 +123,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className }: Mi
 
   // Convert markdown content to MindElixir data structure
   const parseMarkdownToMindMap = (markdown: string): MindElixirData => {
-    
+
     if (!markdown || markdown.trim() === "") {
       markdown = DEFAULT_MARKDOWN;
     }
@@ -149,25 +149,25 @@ export function MindMapView({ markdownContent, markdownFilePath, className }: Mi
           }
           const newNode: TopicNode = { id: generateId(), topic, children: [] };
           const currentParent = currentParentStack[currentParentStack.length - 1]
-          if (!currentParent.children) {currentParent.children = []}
+          if (!currentParent.children) { currentParent.children = [] }
           currentParent.children.push(newNode)
           currentParentStack.push(newNode)
           currentLevel = level
         }
       })
 
-      return {nodeData: rootNode as any}
+      return { nodeData: rootNode as any }
     } catch (err) {
       console.error('Error parsing markdown:', err)
       setError('Failed to parse markdown content')
-      return {nodeData: { id: 'error', topic: 'Error', children: [] }}
+      return { nodeData: { id: 'error', topic: 'Error', children: [] } }
     }
   }
 
   // Initialize MindElixir when content changes
   useEffect(() => {
     // Skip if prerequisites aren't met
-    if (!containerRef.current ) return;
+    if (!containerRef.current) return;
     const container = containerRef.current;
     const contentToUse = loadedContent || DEFAULT_MARKDOWN;
 
@@ -193,21 +193,21 @@ export function MindMapView({ markdownContent, markdownFilePath, className }: Mi
       while (container.firstChild) {
         container.removeChild(container.firstChild);
       }
-      
+
       // Parse markdown to mind map structure
       const parsedData = parseMarkdownToMindMap(contentToUse);
-      const options = {el: container, direction: 2, draggable: true, contextMenu: true, toolBar: true, nodeMenu: true, keypress: true,};
+      const options = { el: container, direction: 2, draggable: true, contextMenu: true, toolBar: true, nodeMenu: true, keypress: true, };
       const me = new MindElixir(options) as MindElixirInstance;
       container._mindElixirInstance = me;
       me.init(parsedData as any);
-      
+
       return () => {
-        if (!container) return; 
+        if (!container) return;
         try {
           const instance = container._mindElixirInstance;
           if (instance) {
             delete container._mindElixirInstance;
-            
+
             setTimeout(() => {
               try {
                 instance.destroy && instance.destroy();
@@ -225,7 +225,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className }: Mi
       setError(`Failed to initialize mind map: ${err instanceof Error ? err.message : String(err)}`);
     }
   }, [markdownContent]);
-  
+
 
   // Render component
   return (
@@ -235,10 +235,10 @@ export function MindMapView({ markdownContent, markdownFilePath, className }: Mi
           <div>Error: {error}</div>
         </div>
       ) : (
-        <div 
-          ref={containerRef} 
+        <div
+          ref={containerRef}
           className="w-full h-full border border-gray-200 rounded map-container"
-          style={{ 
+          style={{
             position: 'relative',
             overflow: 'hidden',
             maxHeight: '80vh'

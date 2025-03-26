@@ -17,7 +17,7 @@ const handler = NextAuth({
       },
       async authorize(credentials) {
         if (!credentials?.username || !credentials?.password) return null
-        
+
         try {
           // Use your existing auth API
           const data = await authAPI.signIn(credentials.username, credentials.password)
