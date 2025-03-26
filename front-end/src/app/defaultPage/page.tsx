@@ -23,7 +23,7 @@ export default function Home() {
   const handleFileSelection = useCallback((files: FileItem[]) => {
     setSelectedFiles(files);
   }, []);
-  
+
   const handleViewChange = useCallback((view: "preview" | "mindmap" | "cheatsheet" | null) => {
     setActivePanel((prev) => (prev === view ? null : view))
   }, [])

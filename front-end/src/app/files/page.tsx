@@ -40,9 +40,8 @@ export default function FilesPage() {
           <Card>
             <CardContent className="p-6">
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center ${
-                  dragActive ? "border-primary bg-primary/5" : "border-gray-300"
-                }`}
+                className={`border-2 border-dashed rounded-lg p-8 text-center ${dragActive ? "border-primary bg-primary/5" : "border-gray-300"
+                  }`}
                 onDragEnter={handleDrag}
                 onDragLeave={handleDrag}
                 onDragOver={handleDrag}
