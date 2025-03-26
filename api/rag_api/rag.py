@@ -287,7 +287,6 @@ class QueryRequest(BaseModel):
     query: str
 
 
-@app.post("/query/")
 async def query_openai(request: QueryRequest, user_id: str):
     """
     Retrieve context from Redis and query OpenAI.
