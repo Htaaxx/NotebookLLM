@@ -127,7 +127,7 @@ def get_smaller_branches_from_docs(docs: List[str], num_clusters: int):
     kmeans_predictions = kmeans_model.fit_predict(embeddings)
     combined_chunks = combine_chunks(all_chunks, kmeans_predictions)
 
-    open_ai_key = os.getenv('OPENAI_API_KEY_MINDMAP')
+    open_ai_key = os.getenv('OPENAI_API_KEY')
     client = OpenAI(api_key= open_ai_key)
     result = []
     for i in range(num_clusters):
@@ -156,10 +156,10 @@ def read_txt_file(file_path):
 def write_txt_file(file_path, text):
     with open(file_path, "w") as f:
         f.write(text)
-doc1 = read_txt_file("doc1.txt")
-doc2 = read_txt_file("doc2.txt")
-print(doc1 )
-print(doc2)
-branches = get_smaller_branches_from_docs([doc1, doc2], 5)
-for i in range(len(branches)):
-    write_txt_file(f"branch_{i}.txt", branches[i])
+# doc1 = read_txt_file("doc1.txt")
+# doc2 = read_txt_file("doc2.txt")
+# print(doc1 )
+# print(doc2)
+# branches = get_smaller_branches_from_docs([doc1, doc2], 5)
+# for i in range(len(branches)):
+#     write_txt_file(f"branch_{i}.txt", branches[i])
