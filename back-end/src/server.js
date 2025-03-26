@@ -9,7 +9,7 @@ const uploadRoutes = require("./routes/upload"); // Import Cloudinary routes
 const app = express();
 const PORT = process.env.PORT || 5000;
 // Change the URI to your own database.
-const MONGO_URI = "mongodb+srv://itsthang333:090304@cluster0.192xz.mongodb.net/NotebookMLv2?retryWrites=true&w=majority&appName=Cluster0";
+const MONGO_URI = process.env.MONGO_URI ;
 
 // Middleware
 app.use(express.json());
