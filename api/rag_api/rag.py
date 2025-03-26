@@ -34,7 +34,9 @@ import requests
 # import cosine similarity
 from sklearn.metrics.pairwise import cosine_similarity
 # api
-from ..extract_file_content_api.extract_file_content_api import extract_text
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
+from extract_file_content_api.extract_file_content_api import extract_text
 
 # load_dotenv()
 
@@ -67,7 +69,7 @@ def process_file(file: UploadFile):
 
         if ext in ["pdf", "docx", "txt"]:
             # Gọi API extract_text cho các file PDF, DOCX, TXT
-            chunks_with_metadata = extract_text(file)
+            chunks_with_metadata = extract_text(file_content, file.filename)
 
         elif ext in ["jpg", "jpeg", "png"]:
             # Gọi OCR API cho các file hình ảnh
@@ -221,7 +223,7 @@ class URLData(BaseModel):
 
 
 @app.post("/store_embeddings/")
-def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
+async def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
     # Process file or URL
     if file is None and url is None:
         raise HTTPException(status_code=400, detail="No file or URL provided")
@@ -236,12 +238,13 @@ def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
     if error:
         raise HTTPException(status_code=400, detail=error)
     
-    print(chunks)
+    # print(chunks)
+    # print('type chunk:',type(chunks))
 
     if error:
         return {"error": error}
-    embeddings = embed_texts(chunks)
-
+    embeddings = embed_texts(chunks['chunks'])
+    print('len embeddings:', len(embeddings))
     # Temporary
     doc_id = str(uuid4())
 
@@ -250,21 +253,19 @@ def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
     {
         "chunk_id": f"{doc_id}-{i}",
         "doc_id": doc_id,
-        "content": chunk["text"],
+        "content": chunk.get("text", ""),  # Nội dung chunk
         "is_active": 1,  # Đảm bảo thêm trường is_active
         "page_number": chunk["page_number"],  # Thêm số trang
         "bounding_box": json.dumps(chunk["bounding_box"]),  # Chuyển bounding box thành JSON
         "text_embedding": np.array(embeddings[i], dtype="float32").tobytes(),  # Embedding
     }
-    for i, chunk in enumerate(chunks)
-]
-
+    for i, chunk in enumerate(chunks['chunks'])]
 
     keys = index.load(data, id_field="chunk_id")
     return {
         "message": "Embeddings stored successfully",
         "doc_id": doc_id,
-        "num_chunks": len(chunks),
+        "num_chunks": len(chunks['chunks']),
         "keys": keys,
     }
 
@@ -379,15 +380,15 @@ async def query_openai(request: QueryRequest, user_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error querying OpenAI: {str(e)}")
     
-import io
-from starlette.datastructures import UploadFile
+# import io
+# from starlette.datastructures import UploadFile
 
-file_path = '/Users/nghia.vo/university/ML/NotebookLLM/api/create_mindmap/doc2.txt'
-with open(file_path, 'rb') as f:
-    file_content = f.read()
+# file_path = '/Users/nghia.vo/university/ML/NotebookLLM/api/create_mindmap/doc2.txt'
+# with open(file_path, 'rb') as f:
+#     file_content = f.read()
 
-file = UploadFile(filename='doc2.txt', file=io.BytesIO(file_content))
+# file = UploadFile(filename='doc2.txt', file=io.BytesIO(file_content))
 
-# Ensure store_embeddings is awaited if it is an async function
-emb = store_embeddings(file=file)
-print(emb)
+# # Ensure store_embeddings is awaited if it is an async function
+# emb = store_embeddings(file=file)
+# print(emb)
