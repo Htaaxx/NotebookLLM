@@ -13,4 +13,4 @@ RUN pip install pip==25.0.1 && \
 
 COPY . .
 
-CMD ["python", "./api/main.py"]
+CMD ["python", "./main.py"]
