@@ -30,6 +30,7 @@ interface FileItem {
   url: string;
   size: number;
   cloudinaryId: string;
+  FilePath: string;
 }
 
 interface Folder {
@@ -87,28 +88,95 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     try {
       // Call the API to get all documents for this user
       const documents = await documentAPI.getDocuments(userId);
-
+  
       if (!documents || documents.length === 0) {
         return;
       }
-
+  
       console.log("Documents loaded:", documents);
-
-      // Create FileItem objects from the documents
-      const fileItems: FileItem[] = documents.map(
-        (doc: { document_id: string; document_name: string }) => ({
-          id: doc.document_id,
-          name: doc.document_name || "Untitled Document",
-          selected: false,
-          type: "document",
-          url: "", // This will be populated when needed
-          size: 0,
-          cloudinaryId: doc.document_id,
-        })
-      );
-
-      // Update the rootFiles state with the loaded files
-      setRootFiles(fileItems);
+  
+      // Group documents by filepath to create folder structure
+      const filesByPath: Record<string, any[]> = {};
+  
+      documents.forEach((doc: { document_id: string; document_name: string; document_path?: string }) => {
+        const path: string = doc.document_path || "root";
+        if (!filesByPath[path]) {
+          filesByPath[path] = [];
+        }
+        filesByPath[path].push(doc);
+      });
+  
+      // Start with empty root files and folders
+      const newRootFiles: FileItem[] = [];
+      const newRootFolders: Folder[] = [];
+  
+      // Process each path
+      Object.keys(filesByPath).forEach((path) => {
+        if (path === "root") {
+          // These are files directly in the root
+          newRootFiles.push(
+            ...filesByPath[path].map((doc) => ({
+              id: doc.document_id,
+              name: doc.document_name || "Untitled Document",
+              selected: false,
+              type: "document",
+              url: "", // To be populated when needed
+              size: 0,
+              cloudinaryId: doc.document_id,
+              FilePath: "root",
+            }))
+          );
+        } else {
+          // These are files in folders
+          const pathParts = path.split("/").filter((part) => part !== "root");
+          
+          // Create the folder structure
+          let currentFolders = newRootFolders;
+          let currentPath = "";
+          
+          // Build folders for each path segment
+          pathParts.forEach((folderName, index) => {
+            currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
+            
+            // Find or create this folder
+            let folder = currentFolders.find((f) => f.name === folderName);
+            if (!folder) {
+              folder = {
+                id: Math.random().toString(36).substr(2, 9),
+                name: folderName,
+                files: [],
+                folders: [],
+                selected: false,
+                expanded: true, // Expand by default for better visibility
+              };
+              currentFolders.push(folder);
+            }
+            
+            // If this is the last part of the path, add files to this folder
+            if (index === pathParts.length - 1) {
+              folder.files.push(
+                ...filesByPath[path].map((doc) => ({
+                  id: doc.document_id,
+                  name: doc.document_name || "Untitled Document",
+                  selected: false,
+                  type: "document",
+                  url: "", // To be populated when needed
+                  size: 0,
+                  cloudinaryId: doc.document_id,
+                  FilePath: path,
+                }))
+              );
+            }
+            
+            // Move to next level for next iteration
+            currentFolders = folder.folders;
+          });
+        }
+      });
+  
+      // Update the state
+      setRootFiles(newRootFiles);
+      setRootFolders(newRootFolders);
     } catch (error) {
       console.error("Error displaying user files:", error);
     }
@@ -135,6 +203,41 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [newChatName, setNewChatName] = useState("");
   const [currentChatId, setCurrentChatId] = useState<string | null>(null);
   const [chatHistory, setChatHistory] = useState<string[]>([]);
+
+  // Function to get file path based on folder hierarchy
+const getFilePath = useCallback(
+  (folderId?: string): string => {
+    if (!folderId) {
+      return "root";
+    }
+
+    // Helper function to find path to a specific folder
+    const findFolderPath = (
+      folders: Folder[],
+      targetId: string,
+      currentPath: string = "root"
+    ): string | null => {
+      for (const folder of folders) {
+        if (folder.id === targetId) {
+          return currentPath + "/" + folder.name;
+        }
+
+        // Check in subfolders
+        const path = findFolderPath(
+          folder.folders,
+          targetId,
+          currentPath + "/" + folder.name
+        );
+        if (path) return path;
+      }
+      return null;
+    };
+
+    const path = findFolderPath(rootFolders, folderId);
+    return path || "root";
+  },
+  [rootFolders]
+);
 
   const handleUpload = async (
     file: File,
@@ -168,6 +271,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         url: data.url,
         size: file.size,
         cloudinaryId: data.document_id,
+        FilePath: data.file_path,
       };
     } catch (error) {
       console.error("Upload error:", error);
@@ -183,10 +287,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     ) => {
       const uploadedFiles = event.target.files;
       if (!uploadedFiles) return;
-
+  
       const invalidFiles: string[] = [];
       const validFilesArray: File[] = [];
-
+  
       Array.from(uploadedFiles).forEach((file) => {
         const error = validateFileSize(file);
         if (error) {
@@ -195,27 +299,40 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           validFilesArray.push(file);
         }
       });
-
+  
       if (invalidFiles.length > 0) {
         alert(invalidFiles.join("\n"));
         return;
       }
-
+  
+      // Generate the file path for this upload
+      const filePath = getFilePath(folderId);
+      console.log("Uploading to path:", filePath);
+  
       const newFiles = await Promise.all(
         validFilesArray.map(async (file) => {
           try {
+            // Pass the filePath to createDocument
             const response = await documentAPI.createDocument(
               userID,
-              file.name
+              file.name,
+              filePath,
             );
+            
             if (!response || !response.document_id) {
               throw new Error("Failed to generate document ID");
             }
-
+  
             const documentId = response.document_id;
             console.log("Document ID extracted:", documentId);
-
+  
             const uploadedFile = await handleUpload(file, documentId);
+            
+            // Make sure FilePath is included in the file item
+            if (uploadedFile) {
+              uploadedFile.FilePath = filePath;
+            }
+            
             return uploadedFile;
           } catch (error) {
             console.error("Error uploading file:", error);
@@ -223,17 +340,17 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           }
         })
       );
-
+  
       const validFiles: FileItem[] = newFiles.filter(
         (file): file is FileItem => file !== null
       );
-
+  
       if (validFiles.length === 0) {
         console.warn("No valid files were uploaded!!!");
         return;
       }
-
-      // Cập nhật UI state
+  
+      // Update UI state
       if (folderId) {
         setRootFolders((prevFolders) =>
           updateFolderContents(prevFolders, folderId, (folder) => ({
@@ -245,7 +362,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         setRootFiles((prev) => [...prev, ...validFiles]);
       }
     },
-    []
+    [getFilePath]
   );
 
   const createFolder = useCallback(

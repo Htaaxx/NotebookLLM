@@ -198,7 +198,7 @@ exports.createDocument = async (req, res) => {
     const newDocument = new Document({ 
       user_id,
       document_name: document_name || "Untitled Document", 
-      document_path: document_path,
+      document_path: document_path || "root",
     });
     await newDocument.save();
 
