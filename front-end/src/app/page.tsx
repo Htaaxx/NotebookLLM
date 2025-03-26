@@ -25,7 +25,7 @@ export default function Home() {
           <div className="p-3 bg-white dark:bg-gray-800 rounded-full shadow-md">
             <Logo className="h-12 w-12 text-green-600 dark:text-green-500" />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">NotebookLLM</h1>
+          <h1 className="text-3xl font-bold tracking-tight">NoteUS</h1>
           <p className="text-gray-500 dark:text-gray-400 text-center max-w-xs">Your AI-powered note-taking assistant</p>
         </div>
         <AuthUI />
