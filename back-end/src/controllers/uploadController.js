@@ -57,4 +57,26 @@ const deleteFile = async (req, res) => {
     }
 };
 
-module.exports = { uploadFile, deleteFile };
+// API get list file - document_id
+const getFiles = async (req, res) => {
+    try {
+        const { document_ids } = req.body;
+
+        if (!Array.isArray(document_ids) || document_ids.length === 0) {
+            return res.status(400).json({ error: "document_ids must be a non-empty array" });
+        }
+
+        const options = { max_results: 50 };
+
+        const result = await cloudinary.api.resources(options);
+
+        const matchedFiles = result.resources.filter(file => document_ids.includes(file.public_id));
+
+        res.json({ files: matchedFiles });
+    } catch (error) {
+        console.error("Error fetching files:", error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+module.exports = { uploadFile, deleteFile, getFiles};
