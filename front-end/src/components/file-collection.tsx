@@ -65,13 +65,45 @@ interface ChatItem {
 
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [userID, setUserID] = useState("User");
-
-  useEffect(() => {
-    const storedUserID = localStorage.getItem("user_id");
-    if (storedUserID) {
-      setUserID(storedUserID);
+  
+  const handleDisplayUserFiles = useCallback(async (userId: string) => {
+    try {
+      // Call the API to get all documents for this user
+      const documents = await documentAPI.getDocuments(userId);
+      
+      if (!documents || documents.length === 0) {
+        return;
+      }
+      
+      console.log("Documents loaded:", documents);
+      
+      // Create FileItem objects from the documents
+      const fileItems: FileItem[] = documents.map((doc: { document_id: string; document_name: string }) => ({
+        id: doc.document_id,
+        name: doc.document_name || "Untitled Document",
+        selected: false,
+        type: "document",
+        url: "", // This will be populated when needed
+        size: 0, 
+        cloudinaryId: doc.document_id,
+      }));
+      
+      // Update the rootFiles state with the loaded files
+      setRootFiles(fileItems);
+      
+    } catch (error) {
+      console.error("Error displaying user files:", error);
     }
   }, []);
+
+
+  useEffect(() => {
+  const storedUserID = localStorage.getItem("user_id");
+  if (storedUserID) {
+    setUserID(storedUserID);
+    handleDisplayUserFiles(storedUserID);
+  }
+}, [handleDisplayUserFiles]);
 
   const [rootFiles, setRootFiles] = useState<FileItem[]>([]);
   const [rootFolders, setRootFolders] = useState<Folder[]>([]);
@@ -126,6 +158,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     }
   };
 
+  
   const handleFileUpload = useCallback(
     async (
       event: React.ChangeEvent<HTMLInputElement>,
@@ -139,7 +172,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         Array.from(uploadedFiles).map(async (file) => {
           try {
             // Ensure document ID is created before uploading the file
-            const response = await documentAPI.createDocument(userID);
+            const response = await documentAPI.createDocument(userID, file.name);
             if (!response || !response.document_id) {
               throw new Error("Failed to generate document ID");
             }

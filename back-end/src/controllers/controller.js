@@ -4,7 +4,7 @@ const mongoose = require("mongoose");
 require("dotenv").config();
 
 const JWT_SECRET = process.env.JWT_SECRET || "your_jwt_secret";
-const MONGO_URI = "mongodb+srv://itsthang333:090304@cluster0.192xz.mongodb.net/NotebookMLv2?retryWrites=true&w=majority&appName=Cluster0";
+const MONGO_URI = process.env.MONGO_URI ;
 const REFRESH_SECRET = process.env.REFRESH_SECRET || "your_refresh_secret";
 
 // Kết nối MongoDB
@@ -26,6 +26,7 @@ const userSchema = new mongoose.Schema({
 const documentSchema = new mongoose.Schema({
   document_id: { type: String, unique: true, default: function () { return new mongoose.Types.ObjectId().toString(); } },
   user_id: { type: String, ref: "User", required: true }, 
+  document_name: { type: String, required: false },
 });
 
 // Models
@@ -188,17 +189,20 @@ exports.getUsers = async (req, res) => {
 
 // Create Document by User
 exports.createDocument = async (req, res) => {
-  const { user_id } = req.body;
+  const { user_id, document_name } = req.body;
   try {
     const user = await User.findOne({ user_id });
     if (!user) return res.status(404).json({ message: "User not found" });
     
-    const newDocument = new Document({ user_id });
+    const newDocument = new Document({ 
+      user_id,
+      document_name: document_name || "Untitled Document" 
+    });
     await newDocument.save();
 
     const documentId = newDocument.document_id.toString();
 
-    res.json({ document_id: documentId });
+    res.json({ document_id: documentId, document_name: newDocument.document_name });
   } catch (error) {
     res.status(500).json({ message: "Error creating document", error });
   }
@@ -208,16 +212,37 @@ exports.createDocument = async (req, res) => {
 // Get Document with User
 exports.getDocumentWithUser = async (req, res) => {
   try {
-      const { user_id } = req.body;
-      if (!user_id) {
-          return res.status(400).json({ message: "User ID is required" });
-      }
+    const { user_id } = req.body;
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
 
-      const documents = await Document.find({ user_id: new ObjectId(user_id) }).select("document_id -_id");
-      return res.json(documents);
+    const documents = await Document.find({ user_id })
+      .select("document_id document_name -_id");
+    
+    return res.json(documents);
   } catch (error) {
-      console.error("Error:", error);
-      res.status(500).json({ message: "Internal Server Error" });
+    console.error("Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 };
 
+// Delete Document by document_id
+exports.deleteDocument = async (req, res) => {
+  try{
+    const { document_id } = req.body;
+    if (!document_id) {
+      return res.status(400).json({ message: "Document ID is required" });
+    }
+
+    const document = await Document.findOneAndDelete({ document_id });
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    res.json({ message: "Document deleted successfully" });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
