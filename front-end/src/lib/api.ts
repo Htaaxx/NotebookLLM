@@ -126,6 +126,11 @@ export const documentAPI = {
   getDocuments: async (userId: string) => {
     const response = await api.post('/getDocumentWithUser', { user_id: userId });
     return response.data;
+  },
+
+  deleteDocument: async (documentId: string) => {
+    const response = await api.post('/deleteDocument', { document_id: documentId });
+    return response.data;
   }
 };
 

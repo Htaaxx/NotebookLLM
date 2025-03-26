@@ -226,3 +226,23 @@ exports.getDocumentWithUser = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+// Delete Document by document_id
+exports.deleteDocument = async (req, res) => {
+  try{
+    const { document_id } = req.body;
+    if (!document_id) {
+      return res.status(400).json({ message: "Document ID is required" });
+    }
+
+    const document = await Document.findOneAndDelete({ document_id });
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+
+    res.json({ message: "Document deleted successfully" });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};

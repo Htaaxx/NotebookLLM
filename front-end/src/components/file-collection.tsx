@@ -210,10 +210,8 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       } else {
         setRootFiles((prev) => [...prev, ...validFiles]);
       }
-
-      handleDisplayUserFiles(userID);
     },
-    [handleDisplayUserFiles]
+    []
   );
   
 
