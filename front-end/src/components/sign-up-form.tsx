@@ -71,7 +71,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="johndoe" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
+                <Input placeholder="Enter username" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -85,7 +85,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
               <FormLabel>Email</FormLabel>
               <FormControl>
                 <Input
-                  placeholder="name@example.com"
+                  placeholder="Enter email"
                   className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
                   {...field}
                 />
@@ -103,7 +103,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
               <FormControl>
                 <Input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Enter password"
                   className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
                   {...field}
                 />

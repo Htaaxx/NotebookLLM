@@ -62,7 +62,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="johndoe" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
+                <Input placeholder="Enter username" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -77,7 +77,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
               <FormControl>
                 <Input
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Enter password"
                   className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
                   {...field}
                 />
