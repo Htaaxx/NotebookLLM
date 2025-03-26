@@ -194,17 +194,17 @@ def extract_text_from_txt(file_path: str):
     return chunks_with_metadata
 
 
-async def extract_text(file: UploadFile = File(...)):
+def extract_text(file_content: str, filename: str): 
     """
     Process file and return chunks with metadata.
     """
-    file_extension = file.filename.split(".")[-1].lower()
+    file_extension = filename.split(".")[-1].lower()
     if file_extension not in ["pdf", "docx", "txt"]:
         raise HTTPException(status_code=400, detail="Only supports PDF, DOCX, TXT")
 
-    file_path = f"temp_{file.filename}"
+    file_path = f"temp_{filename}"
     with open(file_path, "wb") as f:
-        f.write(await file.read())
+        f.write(file_content)
 
     chunks_with_metadata = []
 
@@ -224,7 +224,7 @@ async def extract_text(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail="No text extracted from the file")
 
     return {
-        "file_id": file.filename,
+        "file_id": filename,
         "chunks": chunks_with_metadata,
     }
 
