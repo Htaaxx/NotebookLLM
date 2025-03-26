@@ -10,8 +10,6 @@ from pydantic import BaseModel, HttpUrl
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from pdfminer.high_level import extract_text
-
 # Redis
 from redisvl.query import VectorQuery
 from redisvl.index import SearchIndex
@@ -22,7 +20,7 @@ import numpy as np
 import openai
 
 # env
-from dotenv import load_dotenv
+
 import requests
 import io
 
@@ -35,8 +33,10 @@ import requests
 
 # import cosine similarity
 from sklearn.metrics.pairwise import cosine_similarity
+# api
+from ..extract_file_content_api.extract_file_content_api import extract_text
 
-load_dotenv()
+# load_dotenv()
 
 app = FastAPI()
 hf = SentenceTransformer("all-MiniLM-L6-v2")
@@ -67,21 +67,7 @@ def process_file(file: UploadFile):
 
         if ext in ["pdf", "docx", "txt"]:
             # Gọi API extract_text cho các file PDF, DOCX, TXT
-            response = requests.post(
-                "http://localhost:8004/extract_text/",
-                files={
-                    "file": (
-                        file.filename,
-                        io.BytesIO(file_content),
-                        f"application/{ext}",
-                    )
-                },
-            )
-            if response.status_code != 200:
-                return None, f"Text extraction error: {response.content.decode()}"
-
-            # Lấy chunks_with_metadata từ response
-            chunks_with_metadata = response.json().get("chunks", [])
+            chunks_with_metadata = extract_text(file)
 
         elif ext in ["jpg", "jpeg", "png"]:
             # Gọi OCR API cho các file hình ảnh
@@ -235,7 +221,7 @@ class URLData(BaseModel):
 
 
 @app.post("/store_embeddings/")
-async def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
+def store_embeddings(file: UploadFile = File(None), url: str = Form(None)):
     # Process file or URL
     if file is None and url is None:
         raise HTTPException(status_code=400, detail="No file or URL provided")
@@ -392,3 +378,16 @@ async def query_openai(request: QueryRequest, user_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error querying OpenAI: {str(e)}")
+    
+import io
+from starlette.datastructures import UploadFile
+
+file_path = '/Users/nghia.vo/university/ML/NotebookLLM/api/create_mindmap/doc2.txt'
+with open(file_path, 'rb') as f:
+    file_content = f.read()
+
+file = UploadFile(filename='doc2.txt', file=io.BytesIO(file_content))
+
+# Ensure store_embeddings is awaited if it is an async function
+emb = store_embeddings(file=file)
+print(emb)

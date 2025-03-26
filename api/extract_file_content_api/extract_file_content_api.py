@@ -194,7 +194,6 @@ def extract_text_from_txt(file_path: str):
     return chunks_with_metadata
 
 
-@app.post("/extract_text/", response_model=FileContentResponse)
 async def extract_text(file: UploadFile = File(...)):
     """
     Process file and return chunks with metadata.
