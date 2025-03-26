@@ -1,0 +1,143 @@
+# RAG
+## Định nghĩa
+- là kỹ thuật kết hợp LLM với external knowledge
+- Truy xuất thông tin từ external knowledge cùng với LLM để trả lời câu hỏi
+
+## **Retrieval-Augmented Generation (RAG) Pipeline**
+
+1. **Create Vector database:** Đầu tiên, convert toàn bộ dữ liệu tri thức thành các vector và lưu trữ chúng vào một vector database.
+2. **User input:** User cung cấp 1 câu truy vấn (query) bằng ngôn ngữ tự nhiên nhằm tìm kiếm câu trả lời hoặc để hoàn thành câu truy vấn đó.
+3. **Information retrieval:** Cơ chế retrieval quét toàn vộ vector trong database để xác định các phân đoạn tri thức (chính là paragraphs) nào có ngữ nghĩa tương đồng với câu truy vấn của người dùng. Các paragraphs này sau đó được vào LLM để làm tăng context cho quá trình sinh ra câu trả lời.
+4. **Combining data:** Các paragraphs được lấy sau quá trình retrieval từ database được kết hợp với câu query ban đầu của user tạo thành 1 câu prompt.
+5. **Generate text:** Câu prompt được bổ sung thêm context sau đó được đưa qua LLM để sinh ra câu phản hồi cuối cùng theo context bổ sung.
+
+# Xây dựng một hệ thống RAG
+
+Bao gồm 3 giai đoạn
+
+- Ingestion: nhét kiến thức nề vào database
+- Retrieval: lấy data từ database mà liên quan đến nội query
+- Synthesis: đưa context và query vào LLM
+
+![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/1bc216bb-bb76-4f15-9b48-c2b7a5dcb962/f068abba-2afa-44c2-b1b8-3ac357ef17b4/image.png)
+
+3 bước:
+
+- collect data
+- preprocess
+- indexing and store in database
+
+### Chunking
+
+- Là quá trình phân documents thành các chunking (các đoạn con) nhưng vẫn giữ nguyên ý nghĩa.
+- Khi chunking cần phải đảm bảo các chunks đủ dài để tiết kiệm bộ nhớ nhưng cũng cần phải đủ nhỏ để thông tin chunks chính xác hơn.
+- **Làm thế nào để biết một chunks có độ dài hợp lý hay không?**
+    - thử và đánh giá? (pp ncc)
+    - **sentence splitting**
+        - naive splitting
+        - NLTK (Natural language toolkit)
+        - spacy
+        - vncorenlp
+    - **recursive chunking:** If a chunk exceeds this limit, it is further split recursively.
+
+### Embedding
+
+biến đổi cả câu query của user và các documents trong kho tri thức thành một định dạng, một không gian vector để có thể so sánh về mức độ liên quan giữa chúng
+
+- **Nên sử dụng loại embedding nào?**
+    - Sparse embedding: đòi hỏi ít tính toán chuyên sâu, nhưng không đặt nặng về mặt ngữ nghĩa
+    - Semantic/Dense embedding: tính toán nặng hơn nhưng sẽ có ngữ nghĩa
+    
+
+Sentence embedding:
+
+- Sentence transformer là một biến thể của BERT, thiết kế embedding cho toàn bộ câu
+- **Objective**:
+    - BERT, là một bài toán với mục tiêu dựa đoán từ được giấu trong câu, hoặc từ tiếp theo của đoạn văn  (Masked prediction và Next sentence prediction)
+    - Trong khi sentence embedding, mang bài toán khá tương tự với face recognition, khi Sentence Transformers sử dụng Siamese or triplet networks.
+        - Siamese: tối ưu khoảng cách cái câu gần nghĩa với nhau
+        - triplet networks: một cặp "anchor" và "positive" (các câu tương tự nhau) và một câu "negative" (không tương tự).
+- **Fine-Tuning for Specific Tasks:** Sentence Transformers thường được fine-tuning cho các tasks cụ thể chẳng hạn như Semantic Similarity, Paraphrase identification hay là Retrieval Information. Việc fine-tuning này tập trung hơn vào việc hiểu nắm bắt nghĩa cả câu (sentence-level).
+
+Tóm lại, BERT là mô hình biểu diễn ngôn ngữ cho nhiều mục đích chung, tập trung vào ngữ cảnh theo word-level, còn Sentence Transformers được điều chỉnh đặc biệt để hiểu và so sánh ý nghĩa của cả câu, làm cho chúng hiệu quả hơn đối với các nhiệm vụ đòi hỏi nắm bắt được ngữ nghĩa của toàn bộ câu.
+
+## Retrieval
+
+Có 3 kiểu retrieval:
+
+- Standard
+- Sentence window
+- Auto-merging
+
+### Standard/Naive approach
+
+Cách này là éo làm gì với document hết, document là gì thì chunk là cái đó.
+
+![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/1bc216bb-bb76-4f15-9b48-c2b7a5dcb962/d13901d9-e028-41ee-945f-beccbb649da7/image.png)
+
+- ưu điểm
+    - đơn giản
+    - đồng nhất
+- khuyết điểm
+    - hạn chế trong hiểu ngữ cảnh
+    - các phản hồi được sinh ra không thể tối ưu.
+    
+
+### Sentence-window retrieval/ small to large chunking
+
+- chia nhỏ documents thành các đơn vị nhỏ, chẳng hạn như câu hoặc nhóm nhỏ các câu (smaller-chunks).
+- Nó tách riêng embeddings cho task retrieval (là các chunks nhỏ hơn được lưu trữ trong Vector DB) nhưng nó sẽ được thêm lại vào ngữ cảnh xung quanh của các smaller-chunks được truy xuất.
+
+![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/1bc216bb-bb76-4f15-9b48-c2b7a5dcb962/dd1ffc68-7182-4c3d-b408-8f181892873f/image.png)
+
+- Truy xuất các câu phù hợp nhất với câu query thông qua tìm kiếm độ tương đồng và thay thế câu được truy xuất bằng cách bổ sung ngữ cảnh xung quanh nó
+
+![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/1bc216bb-bb76-4f15-9b48-c2b7a5dcb962/602b5cab-e88f-4a9e-ba76-0577739eec72/image.png)
+
+- Ưu điểm
+    - nâng cao độ cụ thể trong retrieval
+    - giàu ngữ cảnh hơn trong quá trình tổng hợp
+    - cân bằng
+- khuyết điểm
+    - độ phức tạp cao hơn
+    - vẫn còn trường hợp thiếu context
+
+### **Auto-merging Retriever / Hierarchical Retriever**
+
+- Auto-merging retrieval mục đích kể kết hợp (merge) thông tin từ nhiều nguồn hoặc nhiều đoạn văn bản để tạo ra để tạo ra phản hồi đầy đủ, phù hợp với ngữ cảnh hơn cho một câu query. Phương pháp này đặc biệt hữu ích khi không có tài liệu hay phân đoạn nào của văn bản có thể trả lời đầy đủ ý của câu query mà câu trả lời phải kết hợp thông tin từ nhiều nguồn/ phân đoạn lại với nhau.
+
+![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/1bc216bb-bb76-4f15-9b48-c2b7a5dcb962/aee8f017-dfbe-458b-991c-655f1f931441/image.png)
+
+- Nó cho phép các chunks nhỏ hơn được merge thành các chunks to hơn:
+    1. It breaks the document into multiple chunks of text (in the example above, with chunk size of 512).
+    2. Further, it breaks the “parent” chunks into smaller “child” chunks (size 128).
+    3. When querying, it starts by retrieving smaller chunks based on embedding similarity.
+    4. If the majority of the subset of these chunks are selected by embedding similarity, then it return the parent chunk else the selected child chunks only.
+- Ưu điểm
+    - ngữ cảnh toàn diện hơn
+    - giảm phân mảnh
+    - tích hợp nội dung động
+- khuyết điểm
+    - Sự phức tạp trong việc phân cấp và xác định ngưỡng
+    - rủi ro khái quát quá mức cần thiết
+    - độ phức tạp cao
+- Làm sao để xác định chunk size?
+    
+    Không có đáp án chính xác
+    
+- Làm cách nào để xác định ngưỡng
+
+### **Ensemble retriever và Reranking**
+
+Thử nhiều kích thước chunk cùng 1 lúc, và sử dụng phương pháp ranking nào đấy để lấy kết quả cuối cùng:
+
+- gộp chunks khác size lại với nhau, rồi xếp hạng tụi nó
+
+Quá trình diễn ra như sau:
+
+- chia nhỏ documents thành các chunks có kích thước khác nhau, ví dụ 128, 256, 512, 1024
+- tìm các chunk có liên quan từ mỗi bộ retriever, sau đó tập hợp chúng lại với nhau để truy xuất.
+- sử dụng bộ ranker để rank lại kết quả
+- Bạn có thể hình dung quá trình như ảnh dưới đây.
+
+![image.png](https://prod-files-secure.s3.us-west-2.amazonaws.com/1bc216bb-bb76-4f15-9b48-c2b7a5dcb962/7e362c53-da42-4c3b-9a3f-d2365e73f164/image.png)

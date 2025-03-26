@@ -134,33 +134,53 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     ) => {
       const uploadedFiles = event.target.files;
       if (!uploadedFiles) return;
-
+  
       const newFiles = await Promise.all(
         Array.from(uploadedFiles).map(async (file) => {
-          const response = await documentAPI.createDocument(userID);
-          const documentId = response.document_id;
-          console.log("Document ID extracted:", documentId);
-          return handleUpload(file, documentId);
+          try {
+            // Ensure document ID is created before uploading the file
+            const response = await documentAPI.createDocument(userID);
+            if (!response || !response.document_id) {
+              throw new Error("Failed to generate document ID");
+            }
+  
+            const documentId = response.document_id;
+            console.log("Document ID extracted:", documentId);
+  
+            // Upload file to Cloudinary
+            const uploadedFile = await handleUpload(file, documentId);
+            return uploadedFile;
+          } catch (error) {
+            console.error("Error uploading file:", error);
+            return null; // Prevent invalid files from being added
+          }
         })
       );
-
+  
       const validFiles: FileItem[] = newFiles.filter(
         (file): file is FileItem => file !== null
       );
-
+  
+      if (validFiles.length === 0) {
+        console.warn("No valid files were uploaded.");
+        return;
+      }
+  
+      // Update UI state for folders or root files
       if (folderId) {
-        setRootFolders((prevFolders) => {
-          return updateFolderContents(prevFolders, folderId, (folder) => ({
+        setRootFolders((prevFolders) =>
+          updateFolderContents(prevFolders, folderId, (folder) => ({
             ...folder,
             files: [...folder.files, ...validFiles],
-          }));
-        });
+          }))
+        );
       } else {
         setRootFiles((prev) => [...prev, ...validFiles]);
       }
     },
     []
   );
+  
 
   const createFolder = useCallback(
     (parentId?: string) => {
@@ -264,16 +284,40 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   );
 
   const deleteFile = useCallback(
-    (fileId: string, folderId?: string) => {
-      if (folderId) {
-        setRootFolders((prevFolders) => {
-          return updateFolderContents(prevFolders, folderId, (folder) => ({
-            ...folder,
-            files: folder.files.filter((file) => file.id !== fileId),
-          }));
+    async (fileId: string, folderId?: string) => {
+      try {
+        const response = await fetch("http://localhost:5000/user/delete", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ document_id: fileId }),
         });
-      } else {
-        setRootFiles((files) => files.filter((file) => file.id !== fileId));
+  
+        const responseText = await response.text(); // Read as text first
+  
+        if (!response.ok) {
+          console.error("Delete failed:", responseText);
+          throw new Error(`Delete failed: ${response.status} - ${responseText}`);
+        }
+  
+        const data = JSON.parse(responseText); // Convert to JSON only if successful
+  
+        console.log("Deleted:", data);
+  
+        // Update UI only if backend deletion is successful
+        if (folderId) {
+          setRootFolders((prevFolders) =>
+            updateFolderContents(prevFolders, folderId, (folder) => ({
+              ...folder,
+              files: folder.files.filter((file) => file.id !== fileId),
+            }))
+          );
+        } else {
+          setRootFiles((files) => files.filter((file) => file.id !== fileId));
+        }
+      } catch (error) {
+        console.error("Error deleting file:", error);
       }
     },
     [updateFolderContents]
@@ -478,7 +522,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             type="file"
             className="hidden"
             multiple
-            onChange={(e) => handleFileUpload(e, folder.id)}
+            onChange={(e) => handleFileUpload(e,userID, folder.id)}
           />
         </div>
       )}
