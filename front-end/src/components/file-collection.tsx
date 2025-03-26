@@ -1,43 +1,57 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useCallback, useEffect } from "react"
-import { Search, ChevronRight, ChevronDown, File, Trash2, Plus, MessageSquare } from "lucide-react"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { documentAPI } from "@/lib/api"
+import type React from "react";
+import { useState, useCallback, useEffect } from "react";
+import {
+  Search,
+  ChevronRight,
+  ChevronDown,
+  File,
+  Trash2,
+  Plus,
+  MessageSquare,
+} from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { documentAPI } from "@/lib/api";
 
 interface FileItem {
-  id: string
-  name: string
-  selected: boolean
-  type: string
-  url: string
-  size: number
+  id: string;
+  name: string;
+  selected: boolean;
+  type: string;
+  url: string;
+  size: number;
+  cloudinaryId: string;
 }
 
 interface Folder {
-  id: string
-  name: string
-  files: FileItem[]
-  folders: Folder[]
-  selected: boolean
-  expanded: boolean
+  id: string;
+  name: string;
+  files: FileItem[];
+  folders: Folder[];
+  selected: boolean;
+  expanded: boolean;
 }
 
 type DragItem =
   | {
-      type: "file"
-      item: FileItem
-      parentId: string | null
+      type: "file";
+      item: FileItem;
+      parentId: string | null;
     }
   | {
-      type: "folder"
-      item: Folder
-      parentId: string | null
-    }
+      type: "folder";
+      item: Folder;
+      parentId: string | null;
+    };
 
 interface FileCollectionProps {
   onFileSelect: (files: FileItem[]) => void;
@@ -53,53 +67,94 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [userID, setUserID] = useState("User");
 
   useEffect(() => {
-    const storedUserID = localStorage.getItem('user_id');
+    const storedUserID = localStorage.getItem("user_id");
     if (storedUserID) {
       setUserID(storedUserID);
     }
   }, []);
 
-  const [rootFiles, setRootFiles] = useState<FileItem[]>([])
-  const [rootFolders, setRootFolders] = useState<Folder[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [newFolderName, setNewFolderName] = useState("")
-  const [showNewFolderInput, setShowNewFolderInput] = useState<boolean | string>(false)
-  const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
-  const [chatboxes, setChatboxes] = useState<ChatItem[]>([])
-  const [showNewChatInput, setShowNewChatInput] = useState<boolean>(false)
-  const [newChatName, setNewChatName] = useState("")
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
-  const [chatHistory, setChatHistory] = useState<string[]>([])
+  const [rootFiles, setRootFiles] = useState<FileItem[]>([]);
+  const [rootFolders, setRootFolders] = useState<Folder[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newFolderName, setNewFolderName] = useState("");
+  const [showNewFolderInput, setShowNewFolderInput] = useState<
+    boolean | string
+  >(false);
+  const [draggedItem, setDraggedItem] = useState<DragItem | null>(null);
+  const [chatboxes, setChatboxes] = useState<ChatItem[]>([]);
+  const [showNewChatInput, setShowNewChatInput] = useState<boolean>(false);
+  const [newChatName, setNewChatName] = useState("");
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null);
+  const [chatHistory, setChatHistory] = useState<string[]>([]);
+
+  const handleUpload = async (
+    file: File,
+    documentId: string
+  ): Promise<FileItem | null> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("document_id", documentId);
+
+    try {
+      const response = await fetch("http://localhost:5000/user/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const responseText = await response.text();
+
+      if (!response.ok) {
+        console.error("Upload failed:", responseText);
+        throw new Error(`Upload failed: ${response.status} - ${responseText}`);
+      }
+
+      const data = JSON.parse(responseText);
+      console.log("Uploaded:", data);
+
+      return {
+        id: data.document_id,
+        name: file.name,
+        selected: false,
+        type: file.type,
+        url: data.url,
+        size: file.size,
+        cloudinaryId: data.document_id,
+      };
+    } catch (error) {
+      console.error("Upload error:", error);
+      return null;
+    }
+  };
 
   const handleFileUpload = useCallback(
-    async (event: React.ChangeEvent<HTMLInputElement>, userID: string, folderId?: string) => {
+    async (
+      event: React.ChangeEvent<HTMLInputElement>,
+      userID: string,
+      folderId?: string
+    ) => {
       const uploadedFiles = event.target.files;
       if (!uploadedFiles) return;
-      
+
       const newFiles = await Promise.all(
         Array.from(uploadedFiles).map(async (file) => {
           const documentId = await documentAPI.createDocument(userID);
-          console.log(documentId);
-          return {
-            id: documentId, // Assign the generated document ID
-            name: file.name,
-            selected: false,
-            type: file.type,
-            url: URL.createObjectURL(file),
-            size: file.size,
-          };
+          return handleUpload(file, documentId);
         })
       );
-  
+
+      const validFiles: FileItem[] = newFiles.filter(
+        (file): file is FileItem => file !== null
+      );
+
       if (folderId) {
         setRootFolders((prevFolders) => {
           return updateFolderContents(prevFolders, folderId, (folder) => ({
             ...folder,
-            files: [...folder.files, ...newFiles],
+            files: [...folder.files, ...validFiles],
           }));
         });
       } else {
-        setRootFiles((prev) => [...prev, ...newFiles]);
+        setRootFiles((prev) => [...prev, ...validFiles]);
       }
     },
     []
@@ -115,38 +170,42 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           folders: [],
           selected: false,
           expanded: false,
-        }
+        };
         if (parentId) {
           setRootFolders((prevFolders) => {
             return updateFolderContents(prevFolders, parentId, (folder) => ({
               ...folder,
               folders: [...folder.folders, newFolder],
-            }))
-          })
+            }));
+          });
         } else {
-          setRootFolders((prev) => [...prev, newFolder])
+          setRootFolders((prev) => [...prev, newFolder]);
         }
-        setNewFolderName("")
-        setShowNewFolderInput(false)
+        setNewFolderName("");
+        setShowNewFolderInput(false);
       }
     },
-    [newFolderName],
-  )
+    [newFolderName]
+  );
 
   const updateFolderContents = useCallback(
-    (folders: Folder[], folderId: string, updateFn: (folder: Folder) => Folder): Folder[] => {
+    (
+      folders: Folder[],
+      folderId: string,
+      updateFn: (folder: Folder) => Folder
+    ): Folder[] => {
       return folders.map((folder) => {
         if (folder.id === folderId) {
-          return updateFn(folder)
+          return updateFn(folder);
         }
         return {
           ...folder,
           folders: updateFolderContents(folder.folders, folderId, updateFn),
-        }
-      })
+        };
+      });
     },
-    [],
-  )
+    []
+  );
 
   const toggleFolder = useCallback(
     (folderId: string) => {
@@ -154,11 +213,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         return updateFolderContents(prevFolders, folderId, (folder) => ({
           ...folder,
           expanded: !folder.expanded,
-        }))
-      })
+        }));
+      });
     },
-    [updateFolderContents],
-  )
+    [updateFolderContents]
+  );
 
   const toggleFolderSelection = useCallback(
     (folderId: string) => {
@@ -166,13 +225,19 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         return updateFolderContents(prevFolders, folderId, (folder) => ({
           ...folder,
           selected: !folder.selected,
-          files: folder.files.map((file) => ({ ...file, selected: !folder.selected })),
-          folders: folder.folders.map((subFolder) => ({ ...subFolder, selected: !folder.selected })),
-        }))
-      })
+          files: folder.files.map((file) => ({
+            ...file,
+            selected: !folder.selected,
+          })),
+          folders: folder.folders.map((subFolder) => ({
+            ...subFolder,
+            selected: !folder.selected,
+          })),
+        }));
+      });
     },
-    [updateFolderContents],
-  )
+    [updateFolderContents]
+  );
 
   const toggleFileSelection = useCallback(
     (fileId: string, folderId?: string) => {
@@ -180,17 +245,21 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         setRootFolders((prevFolders) => {
           return updateFolderContents(prevFolders, folderId, (folder) => ({
             ...folder,
-            files: folder.files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
-          }))
-        })
+            files: folder.files.map((file) =>
+              file.id === fileId ? { ...file, selected: !file.selected } : file
+            ),
+          }));
+        });
       } else {
         setRootFiles((files) =>
-          files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
-        )
+          files.map((file) =>
+            file.id === fileId ? { ...file, selected: !file.selected } : file
+          )
+        );
       }
     },
-    [updateFolderContents],
-  )
+    [updateFolderContents]
+  );
 
   const deleteFile = useCallback(
     (fileId: string, folderId?: string) => {
@@ -199,14 +268,14 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           return updateFolderContents(prevFolders, folderId, (folder) => ({
             ...folder,
             files: folder.files.filter((file) => file.id !== fileId),
-          }))
-        })
+          }));
+        });
       } else {
-        setRootFiles((files) => files.filter((file) => file.id !== fileId))
+        setRootFiles((files) => files.filter((file) => file.id !== fileId));
       }
     },
-    [updateFolderContents],
-  )
+    [updateFolderContents]
+  );
 
   const deleteFolder = useCallback(
     (folderId: string, parentId?: string) => {
@@ -215,87 +284,110 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           return updateFolderContents(prevFolders, parentId, (folder) => ({
             ...folder,
             folders: folder.folders.filter((f) => f.id !== folderId),
-          }))
-        })
+          }));
+        });
       } else {
-        setRootFolders((folders) => folders.filter((f) => f.id !== folderId))
+        setRootFolders((folders) => folders.filter((f) => f.id !== folderId));
       }
     },
-    [updateFolderContents],
-  )
+    [updateFolderContents]
+  );
 
   const handleDragStart = (
     e: React.DragEvent,
     item: FileItem | Folder,
     type: "file" | "folder",
-    parentId: string | null,
+    parentId: string | null
   ) => {
-    e.stopPropagation()
-    setDraggedItem({ type, item, parentId } as DragItem)
-  }
+    e.stopPropagation();
+    setDraggedItem({ type, item, parentId } as DragItem);
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    e.stopPropagation()
-  }
+    e.preventDefault();
+    e.stopPropagation();
+  };
 
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>, targetFolderId?: string) => {
-      e.preventDefault()
-      e.stopPropagation()
+      e.preventDefault();
+      e.stopPropagation();
 
-      if (!draggedItem) return
+      if (!draggedItem) return;
 
       // Prevent dropping a folder into itself or its descendants
-      if (draggedItem.type === "folder" && isDescendant(draggedItem.item as Folder, targetFolderId)) {
-        return
+      if (
+        draggedItem.type === "folder" &&
+        isDescendant(draggedItem.item as Folder, targetFolderId)
+      ) {
+        return;
       }
 
       // Remove from source
       if (draggedItem.parentId) {
         setRootFolders((prevFolders) => {
-          return updateFolderContents(prevFolders, draggedItem.parentId!, (folder) => ({
-            ...folder,
-            files: folder.files.filter((f) => f.id !== draggedItem.item.id),
-            folders: folder.folders.filter((f) => f.id !== draggedItem.item.id),
-          }))
-        })
+          return updateFolderContents(
+            prevFolders,
+            draggedItem.parentId!,
+            (folder) => ({
+              ...folder,
+              files: folder.files.filter((f) => f.id !== draggedItem.item.id),
+              folders: folder.folders.filter(
+                (f) => f.id !== draggedItem.item.id
+              ),
+            })
+          );
+        });
       } else {
         if (draggedItem.type === "file") {
-          setRootFiles((files) => files.filter((f) => f.id !== draggedItem.item.id))
+          setRootFiles((files) =>
+            files.filter((f) => f.id !== draggedItem.item.id)
+          );
         } else {
-          setRootFolders((folders) => folders.filter((f) => f.id !== draggedItem.item.id))
+          setRootFolders((folders) =>
+            folders.filter((f) => f.id !== draggedItem.item.id)
+          );
         }
       }
 
       // Add to target
       if (targetFolderId) {
         setRootFolders((prevFolders) => {
-          return updateFolderContents(prevFolders, targetFolderId, (folder) => ({
-            ...folder,
-            files: draggedItem.type === "file" ? [...folder.files, draggedItem.item as FileItem] : folder.files,
-            folders: draggedItem.type === "folder" ? [...folder.folders, draggedItem.item as Folder] : folder.folders,
-          }))
-        })
+          return updateFolderContents(
+            prevFolders,
+            targetFolderId,
+            (folder) => ({
+              ...folder,
+              files:
+                draggedItem.type === "file"
+                  ? [...folder.files, draggedItem.item as FileItem]
+                  : folder.files,
+              folders:
+                draggedItem.type === "folder"
+                  ? [...folder.folders, draggedItem.item as Folder]
+                  : folder.folders,
+            })
+          );
+        });
       } else {
         // Drop to root level
         if (draggedItem.type === "file") {
-          setRootFiles((prev) => [...prev, draggedItem.item as FileItem])
+          setRootFiles((prev) => [...prev, draggedItem.item as FileItem]);
         } else {
-          setRootFolders((prev) => [...prev, draggedItem.item as Folder])
+          setRootFolders((prev) => [...prev, draggedItem.item as Folder]);
         }
       }
 
-      setDraggedItem(null)
+      setDraggedItem(null);
     },
-    [draggedItem, updateFolderContents],
-  )
+    [draggedItem, updateFolderContents]
+  );
 
   const isDescendant = (folder: Folder, targetId?: string): boolean => {
-    if (!targetId) return false
-    if (folder.id === targetId) return true
-    return folder.folders.some((f) => isDescendant(f, targetId))
-  }
+    if (!targetId) return false;
+    if (folder.id === targetId) return true;
+    return folder.folders.some((f) => isDescendant(f, targetId));
+  };
 
   const renderFolder = (folder: Folder, parentId: string | null = null) => (
     <div
@@ -307,10 +399,20 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       onDrop={(e) => handleDrop(e, folder.id)}
     >
       <div className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1">
-        <button onClick={() => toggleFolder(folder.id)} className="text-gray-500">
-          {folder.expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+        <button
+          onClick={() => toggleFolder(folder.id)}
+          className="text-gray-500"
+        >
+          {folder.expanded ? (
+            <ChevronDown className="w-4 h-4" />
+          ) : (
+            <ChevronRight className="w-4 h-4" />
+          )}
         </button>
-        <Checkbox checked={folder.selected} onCheckedChange={() => toggleFolderSelection(folder.id)} />
+        <Checkbox
+          checked={folder.selected}
+          onCheckedChange={() => toggleFolderSelection(folder.id)}
+        />
         <span className="text-sm truncate flex-grow">{folder.name}</span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -319,8 +421,14 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-background">
-            <DropdownMenuItem onSelect={() => setShowNewFolderInput(folder.id)}>Add Subfolder</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => document.getElementById(`file-upload-${folder.id}`)?.click()}>
+            <DropdownMenuItem onSelect={() => setShowNewFolderInput(folder.id)}>
+              Add Subfolder
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onSelect={() =>
+                document.getElementById(`file-upload-${folder.id}`)?.click()
+              }
+            >
               Add File
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -337,7 +445,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
       {folder.expanded && (
         <div className="ml-6 space-y-1">
-          {folder.folders.map((subFolder) => renderFolder(subFolder, folder.id))}
+          {folder.folders.map((subFolder) =>
+            renderFolder(subFolder, folder.id)
+          )}
           {folder.files.map((file) => (
             <div
               key={file.id}
@@ -346,9 +456,17 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               onDragStart={(e) => handleDragStart(e, file, "file", folder.id)}
             >
               <MessageSquare className="w-4 h-4 text-gray-400" />
-              <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id, folder.id)} />
+              <Checkbox
+                checked={file.selected}
+                onCheckedChange={() => toggleFileSelection(file.id, folder.id)}
+              />
               <span className="text-sm truncate flex-grow">{file.name}</span>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id, folder.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => deleteFile(file.id, folder.id)}
+              >
                 <Trash2 className="w-4 h-4 text-red-500" />
               </Button>
             </div>
@@ -363,7 +481,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         </div>
       )}
     </div>
-  )
+  );
 
   useEffect(() => {
     const allSelectedFiles = [
@@ -377,38 +495,41 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     return [
       ...folder.files.filter((file) => file.selected),
       ...folder.folders.flatMap((subFolder) => getAllSelectedFiles(subFolder)),
-    ]
-  }
+    ];
+  };
 
   const createNewChat = () => {
     const newChatbox = {
       id: Math.random().toString(36).substr(2, 9),
-      name: newChatName || 'New Chatbox',
+      name: newChatName || "New Chatbox",
       messages: [],
-    }
-    setChatboxes((prevChatboxes) => [...prevChatboxes, newChatbox])
-    setNewChatName("")
-    setShowNewChatInput(false)
-  }
+    };
+    setChatboxes((prevChatboxes) => [...prevChatboxes, newChatbox]);
+    setNewChatName("");
+    setShowNewChatInput(false);
+  };
 
   const switchChatbox = (chatboxId: string) => {
-    setCurrentChatId(chatboxId)
-    const selectedChatbox = chatboxes.find(chatbox => chatbox.id === chatboxId)
+    setCurrentChatId(chatboxId);
+    const selectedChatbox = chatboxes.find(
+      (chatbox) => chatbox.id === chatboxId
+    );
     if (selectedChatbox) {
-      setChatHistory(selectedChatbox.messages)
+      setChatHistory(selectedChatbox.messages);
     }
-    console.log('Switched to chatbox:', chatboxId)
-  }
+    console.log("Switched to chatbox:", chatboxId);
+  };
 
   const deleteChatbox = (chatboxId: string) => {
-    setChatboxes((prevChatboxes) => prevChatboxes.filter(chatbox => chatbox.id !== chatboxId))
-    console.log('Deleted chatbox:', chatboxId)
-  }
+    setChatboxes((prevChatboxes) =>
+      prevChatboxes.filter((chatbox) => chatbox.id !== chatboxId)
+    );
+    console.log("Deleted chatbox:", chatboxId);
+  };
 
   return (
     <div className="w-64 border-r h-[calc(100vh-64px)] p-4 flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-      </div>
+      <div className="flex items-center justify-between"></div>
 
       <div className="space-y-2">
         <Input
@@ -417,7 +538,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-        <Button variant="secondary" className="w-full h-8 text-sm bg-green-500 hover:bg-green-500 text-black">
+        <Button
+          variant="secondary"
+          className="w-full h-8 text-sm bg-green-500 hover:bg-green-500 text-black"
+        >
           <Search className="w-4 h-4 mr-2" />
           Search in File(s)
         </Button>
@@ -432,7 +556,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-background bg-white">
-            <DropdownMenuItem onSelect={() => setShowNewChatInput(true)}>Create New Chat</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setShowNewChatInput(true)}>
+              Create New Chat
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -445,26 +571,32 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             onChange={(e) => setNewChatName(e.target.value)}
             className="h-8 text-sm"
           />
-          <Button
-            size="sm"
-            className="h-8"
-            onClick={() => createNewChat()}
-          >
+          <Button size="sm" className="h-8" onClick={() => createNewChat()}>
             Create
           </Button>
         </div>
       )}
 
-      <div className="-mt-2 space-y-1 overflow-auto flex-1" style={{ maxHeight: '150px' }}>
+      <div
+        className="-mt-2 space-y-1 overflow-auto flex-1"
+        style={{ maxHeight: "150px" }}
+      >
         {chatboxes.map((chatbox) => (
           <div
             key={chatbox.id}
-            className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${currentChatId === chatbox.id ? 'bg-gray-200' : ''}`}
+            className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${
+              currentChatId === chatbox.id ? "bg-gray-200" : ""
+            }`}
             onClick={() => switchChatbox(chatbox.id)}
           >
             <MessageSquare className="w-4 h-4 text-gray-400" />
             <span className="text-sm truncate flex-grow">{chatbox.name}</span>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteChatbox(chatbox.id)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0"
+              onClick={() => deleteChatbox(chatbox.id)}
+            >
               <Trash2 className="w-4 h-4 text-red-500" />
             </Button>
           </div>
@@ -481,8 +613,14 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="bg-background bg-white">
-              <DropdownMenuItem onSelect={() => setShowNewFolderInput(true)}>Add Folder</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => document.getElementById("root-file-upload")?.click()}>
+              <DropdownMenuItem onSelect={() => setShowNewFolderInput(true)}>
+                Add Folder
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() =>
+                  document.getElementById("root-file-upload")?.click()
+                }
+              >
                 Add File
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -500,14 +638,24 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             <Button
               size="sm"
               className="h-8"
-              onClick={() => createFolder(typeof showNewFolderInput === "string" ? showNewFolderInput : undefined)}
+              onClick={() =>
+                createFolder(
+                  typeof showNewFolderInput === "string"
+                    ? showNewFolderInput
+                    : undefined
+                )
+              }
             >
               Create
             </Button>
           </div>
         )}
 
-        <div className="space-y-1" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e)}>
+        <div
+          className="space-y-1"
+          onDragOver={handleDragOver}
+          onDrop={(e) => handleDrop(e)}
+        >
           {rootFolders.map((folder) => renderFolder(folder))}
           {rootFiles.map((file) => (
             <div
@@ -517,9 +665,17 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               onDragStart={(e) => handleDragStart(e, file, "file", null)}
             >
               <MessageSquare className="w-4 h-4 text-gray-400" />
-              <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id)} />
+              <Checkbox
+                checked={file.selected}
+                onCheckedChange={() => toggleFileSelection(file.id)}
+              />
               <span className="text-sm truncate flex-grow">{file.name}</span>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0"
+                onClick={() => deleteFile(file.id)}
+              >
                 <Trash2 className="w-4 h-4 text-red-500" />
               </Button>
             </div>
@@ -543,12 +699,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               type="file"
               className="hidden"
               multiple
-              onChange={(e) => handleFileUpload(e,userID)}
+              onChange={(e) => handleFileUpload(e, userID)}
             />
           </label>
         </div>
       </div>
     </div>
-  )
+  );
 }
-

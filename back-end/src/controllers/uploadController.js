@@ -19,24 +19,32 @@ const uploadFile = async (req, res) => {
         upload(req, res, async (err) => {
             if (err) return res.status(500).json({ error: err.message });
 
-            const { document_id } = req.body;
+            console.log("Received body:", req.body);
+            console.log("Received file:", req.file);
 
-            // Upload buffer to Cloudinary
+            const { document_id } = req.body;
+            if (!document_id) return res.status(400).json({ error: "Missing document_id" });
+
             cloudinary.uploader.upload_stream(
                 { 
-                    resource_type: "auto" ,
+                    resource_type: "auto",
                     public_id: document_id || undefined
                 }, 
                 (error, result) => {
-                    if (error) return res.status(500).json({ error });
+                    if (error) {
+                        console.error("Cloudinary upload error:", error);
+                        return res.status(500).json({ error });
+                    }
                     res.json({ url: result.secure_url, document_id: result.public_id });
                 }
             ).end(req.file.buffer);
         });
     } catch (error) {
+        console.error("Server error:", error);
         res.status(500).json({ error: error.message });
     }
 };
+
 
 // API delete file in Cloudinary
 const deleteFile = async (req, res) => {
