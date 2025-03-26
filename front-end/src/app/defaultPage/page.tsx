@@ -24,8 +24,6 @@ export default function Home() {
     setSelectedFiles(files);
   }, []);
   
-  
-
   const handleViewChange = useCallback((view: "preview" | "mindmap" | "cheatsheet" | null) => {
     setActivePanel((prev) => (prev === view ? null : view))
   }, [])
