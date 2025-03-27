@@ -9,6 +9,7 @@ router.post("/upload", uploadFile);
 // Route delete file in Cloudinary
 router.delete("/delete", deleteFile);
 
+// Route get list files in Cloudinary
 router.post("/getFiles", getFiles);
 
 module.exports = router;

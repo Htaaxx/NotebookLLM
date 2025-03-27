@@ -64,7 +64,7 @@ const validateFileSize = (file: File): string | null => {
     return `Video "${file.name}" exceeds the maximum size of 100MB!`
   }
   if (!file.type.startsWith("image/") && !file.type.startsWith("video/") && file.size > MAX_FILE_SIZE) {
-    return `File "${file.name}" exceeds the maximum size of 100MB!`
+    return `File "${file.name}" exceeds the maximum size of 10MB!`
   }
   return null
 }
