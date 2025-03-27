@@ -198,13 +198,17 @@ exports.createDocument = async (req, res) => {
     const newDocument = new Document({ 
       user_id,
       document_name: document_name || "Untitled Document", 
-      document_path: document_path || "root",
+      document_path: document_path || "root" 
     });
     await newDocument.save();
 
     const documentId = newDocument.document_id.toString();
 
-    res.json({ document_id: documentId, document_name: newDocument.document_name, document_path: newDocument.document_path });
+    res.json({ 
+      document_id: documentId, 
+      document_name: newDocument.document_name, 
+      document_path: newDocument.document_path 
+    });
   } catch (error) {
     res.status(500).json({ message: "Error creating document", error });
   }
@@ -215,13 +219,11 @@ exports.createDocument = async (req, res) => {
 exports.getDocumentWithUser = async (req, res) => {
   try {
     const { user_id } = req.body;
-    if (!user_id) {
-      return res.status(400).json({ message: "User ID is required" });
-    }
-
-    const documents = await Document.find({ user_id })
-      .select("document_id document_name -_id");
     
+    // Đảm bảo document_url được chọn
+    const documents = await Document.find({ user_id })
+      .select("document_id document_name document_path -_id");
+      
     return res.json(documents);
   } catch (error) {
     console.error("Error:", error);
@@ -248,3 +250,37 @@ exports.deleteDocument = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
+
+// Update Document
+exports.updateDocument = async (req, res) => {
+  try {
+    const { document_id, document_name, document_path } = req.body;
+    
+    if (!document_id) {
+      return res.status(400).json({ message: "Document ID is required" });
+    }
+    
+    const updateData = {};
+    if (document_name) updateData.document_name = document_name;
+    if (document_path) updateData.document_path = document_path;
+    
+    const document = await Document.findOneAndUpdate(
+      { document_id }, 
+      updateData, 
+      { new: true }
+    );
+    
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+    
+    res.json({ 
+      message: "Document updated successfully",
+      document
+    });
+  } catch (error) {
+    console.error("Error updating document:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+

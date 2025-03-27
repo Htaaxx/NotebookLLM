@@ -135,6 +135,14 @@ export const documentAPI = {
   deleteDocument: async (documentId: string) => {
     const response = await api.post('/deleteDocument', { document_id: documentId });
     return response.data;
+  },
+
+  updateDocument: async (documentId: string, updateData: any) => {
+    const response = await api.post('/updateDocument', { 
+      document_id: documentId,
+      ...updateData
+    });
+    return response.data;
   }
 };
 

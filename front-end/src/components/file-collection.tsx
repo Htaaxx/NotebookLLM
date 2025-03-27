@@ -98,8 +98,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       // Group documents by filepath to create folder structure
       const filesByPath: Record<string, any[]> = {};
   
-      documents.forEach((doc: { document_id: string; document_name: string; document_path?: string }) => {
-        const path: string = doc.document_path || "root";
+      documents.forEach((doc: { document_id: string; document_name: string; document_path: string }) => {
+        const path = doc.document_path || "root";
+        
+        // Kiểm tra nếu path hợp lệ
+        console.log(`Document ${doc.document_id} has path: ${path}`);
+        
         if (!filesByPath[path]) {
           filesByPath[path] = [];
         }
@@ -108,70 +112,70 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   
       // Start with empty root files and folders
       const newRootFiles: FileItem[] = [];
+      
+      // Add files directly in the root
+      if (filesByPath["root"]) {
+        filesByPath["root"].forEach((doc) => {
+          newRootFiles.push({
+            id: doc.document_id,
+            name: doc.document_name || "Untitled Document",
+            selected: false,
+            type: "document",
+            url: "", // Sẽ được cập nhật khi cần
+            size: 0,
+            cloudinaryId: doc.document_id,
+            FilePath: "root"
+          });
+        });
+      }
+
       const newRootFolders: Folder[] = [];
   
-      // Process each path
+      // Process each path to create folder structure
       Object.keys(filesByPath).forEach((path) => {
-        if (path === "root") {
-          // These are files directly in the root
-          newRootFiles.push(
-            ...filesByPath[path].map((doc) => ({
-              id: doc.document_id,
-              name: doc.document_name || "Untitled Document",
+        if (path === "root") return;
+        
+        const pathParts = path.split("/").filter(p => p !== "root");
+        if (pathParts.length === 0) return;
+        
+        let currentFolders = newRootFolders;
+        let folder = null;
+        
+        // Traverse the path to create folders
+        pathParts.forEach((folderName, index) => {
+          folder = currentFolders.find(f => f.name === folderName);
+          
+          if (!folder) {
+            folder = {
+              id: Math.random().toString(36).substr(2, 9),
+              name: folderName,
+              files: [],
+              folders: [],
               selected: false,
-              type: "document",
-              url: "", // To be populated when needed
-              size: 0,
-              cloudinaryId: doc.document_id,
-              FilePath: "root",
-            }))
-          );
-        } else {
-          // These are files in folders
-          const pathParts = path.split("/").filter((part) => part !== "root");
+              expanded: true,
+            };
+            currentFolders.push(folder);
+          }
           
-          // Create the folder structure
-          let currentFolders = newRootFolders;
-          let currentPath = "";
-          
-          // Build folders for each path segment
-          pathParts.forEach((folderName, index) => {
-            currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
-            
-            // Find or create this folder
-            let folder = currentFolders.find((f) => f.name === folderName);
-            if (!folder) {
-              folder = {
-                id: Math.random().toString(36).substr(2, 9),
-                name: folderName,
-                files: [],
-                folders: [],
+          // Add files to the last folder
+          if (index === pathParts.length - 1) {
+            folder.files.push(
+              ...filesByPath[path].map((doc) => ({
+                id: doc.document_id,
+                name: doc.document_name || "Untitled Document",
                 selected: false,
-                expanded: true, // Expand by default for better visibility
-              };
-              currentFolders.push(folder);
-            }
-            
-            // If this is the last part of the path, add files to this folder
-            if (index === pathParts.length - 1) {
-              folder.files.push(
-                ...filesByPath[path].map((doc) => ({
-                  id: doc.document_id,
-                  name: doc.document_name || "Untitled Document",
-                  selected: false,
-                  type: "document",
-                  url: "", // To be populated when needed
-                  size: 0,
-                  cloudinaryId: doc.document_id,
-                  FilePath: path,
-                }))
-              );
-            }
-            
-            // Move to next level for next iteration
-            currentFolders = folder.folders;
-          });
-        }
+                type: "document",
+                url: "", 
+                size: 0,
+                cloudinaryId: doc.document_id,
+                FilePath: path,
+              }))
+            );
+          }
+          
+          // Update the current folders
+          currentFolders = folder.folders;
+        });
       });
   
       // Update the state
@@ -318,19 +322,20 @@ const getFilePath = useCallback(
               file.name,
               filePath,
             );
-            
+
             if (!response || !response.document_id) {
               throw new Error("Failed to generate document ID");
             }
   
             const documentId = response.document_id;
-            console.log("Document ID extracted:", documentId);
+            console.log("Document ID:", documentId, "with path:", response.document_path);
   
             const uploadedFile = await handleUpload(file, documentId);
             
             // Make sure FilePath is included in the file item
             if (uploadedFile) {
-              uploadedFile.FilePath = filePath;
+              uploadedFile.FilePath = response.document_path || filePath;
+              console.log("Final file with path:", uploadedFile.FilePath);
             }
             
             return uploadedFile;
