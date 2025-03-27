@@ -1,5 +1,5 @@
 const express = require("express");
-const { uploadFile, deleteFile } = require("../controllers/uploadController");
+const { uploadFile, deleteFile, getFiles } = require("../controllers/uploadController");
 
 const router = express.Router();
 
@@ -8,5 +8,7 @@ router.post("/upload", uploadFile);
 
 // Route delete file in Cloudinary
 router.delete("/delete", deleteFile);
+
+router.post("/getFiles", getFiles);
 
 module.exports = router;

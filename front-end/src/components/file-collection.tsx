@@ -84,107 +84,144 @@ const validateFileSize = (file: File): string | null => {
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [userID, setUserID] = useState("User");
 
-  const handleDisplayUserFiles = useCallback(async (userId: string) => {
-    try {
-      // Call the API to get all documents for this user
-      const documents = await documentAPI.getDocuments(userId);
+  // Helper function to determine file type from name
+const getFileTypeFromName = (filename: string): string => {
+  if (!filename) return "document";
   
-      if (!documents || documents.length === 0) {
-        return;
-      }
+  const extension = filename.split('.').pop()?.toLowerCase();
   
-      console.log("Documents loaded:", documents);
+  if (!extension) return "document";
   
-      // Group documents by filepath to create folder structure
-      const filesByPath: Record<string, any[]> = {};
+  if (['pdf'].includes(extension)) return "application/pdf";
+  if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(extension)) return "image/" + extension;
+  if (['mp4', 'webm', 'mov'].includes(extension)) return "video/" + extension;
+  if (['md', 'markdown'].includes(extension)) return "text/markdown";
   
-      documents.forEach((doc: { document_id: string; document_name: string; document_path: string }) => {
-        const path = doc.document_path || "root";
-        
-        // Kiểm tra nếu path hợp lệ
-        console.log(`Document ${doc.document_id} has path: ${path}`);
-        
-        if (!filesByPath[path]) {
-          filesByPath[path] = [];
-        }
-        filesByPath[path].push(doc);
-      });
-  
-      // Start with empty root files and folders
-      const newRootFiles: FileItem[] = [];
-      
-      // Add files directly in the root
-      if (filesByPath["root"]) {
-        filesByPath["root"].forEach((doc) => {
-          newRootFiles.push({
-            id: doc.document_id,
-            name: doc.document_name || "Untitled Document",
-            selected: false,
-            type: "document",
-            url: "", // Sẽ được cập nhật khi cần
-            size: 0,
-            cloudinaryId: doc.document_id,
-            FilePath: "root"
-          });
-        });
-      }
+  return "document";
+};
 
-      const newRootFolders: Folder[] = [];
-  
-      // Process each path to create folder structure
-      Object.keys(filesByPath).forEach((path) => {
-        if (path === "root") return;
+
+
+const handleDisplayUserFiles = useCallback(async (userId: string) => {
+  try {
+    // Call the API to get all documents for this user
+    console.log("Loading documents for user:", userId);
+    const documents = await documentAPI.getDocuments(userId);
+
+    if (!documents || documents.length === 0) {
+      console.log("No documents found for user");
+      return;
+    }
+
+    console.log("Documents loaded:", documents.length);
+
+    // Group documents by filepath to create folder structure
+    const filesByPath: Record<string, any[]> = {};
+
+    documents.forEach((doc: { document_id: string; document_name: string; document_path: string }) => {
+      const path = doc.document_path || "root";
+      
+      // Check path validity
+      console.log(`Document ${doc.document_id} has path: ${path}`);
+      
+      if (!filesByPath[path]) {
+        filesByPath[path] = [];
+      }
+      filesByPath[path].push(doc);
+    });
+
+    // Start with empty root files and folders
+    const newRootFiles: FileItem[] = [];
+    const newRootFolders: Folder[] = [];
+    
+    // Add files directly in the root
+    if (filesByPath["root"]) {
+      filesByPath["root"].forEach((doc) => {
+
+       
+        const cloudinaryURL = `https://res.cloudinary.com/dvaefmfem/image/upload/${doc.document_id}`;
+        console.log("Cloudinary URL:", cloudinaryURL);
         
-        const pathParts = path.split("/").filter(p => p !== "root");
-        if (pathParts.length === 0) return;
+        // Determine file type based on name
+        const fileType = doc.document_name ? getFileTypeFromName(doc.document_name) : "document";
         
-        let currentFolders = newRootFolders;
-        let folder = null;
+        newRootFiles.push({
+          id: doc.document_id,
+          name: doc.document_name || "Untitled Document",
+          selected: false,
+          type: fileType,
+          url: cloudinaryURL,  // Set the URL for preview
+          size: 0,
+          cloudinaryId: doc.document_id,
+          FilePath: "root"
+        });
+      });
+    }
+    
+    // Process each path to create folder structure
+    Object.keys(filesByPath).forEach((path) => {
+      if (path === "root") return;
+      
+      const pathParts = path.split("/").filter(p => p !== "root");
+      if (pathParts.length === 0) return;
+      
+      let currentFolders = newRootFolders;
+      let folder = null;
+      
+      // Traverse the path to create folders
+      pathParts.forEach((folderName, index) => {
+        folder = currentFolders.find(f => f.name === folderName);
         
-        // Traverse the path to create folders
-        pathParts.forEach((folderName, index) => {
-          folder = currentFolders.find(f => f.name === folderName);
-          
-          if (!folder) {
-            folder = {
-              id: Math.random().toString(36).substr(2, 9),
-              name: folderName,
-              files: [],
-              folders: [],
-              selected: false,
-              expanded: true,
-            };
-            currentFolders.push(folder);
-          }
-          
-          // Add files to the last folder
-          if (index === pathParts.length - 1) {
-            folder.files.push(
-              ...filesByPath[path].map((doc) => ({
+        if (!folder) {
+          folder = {
+            id: Math.random().toString(36).substr(2, 9),
+            name: folderName,
+            files: [],
+            folders: [],
+            selected: false,
+            expanded: true,
+          };
+          currentFolders.push(folder);
+        }
+        
+        // Add files to the last folder
+        if (index === pathParts.length - 1) {
+          folder.files.push(
+            ...filesByPath[path].map((doc) => {
+              // Generate URL for Cloudinary resource
+              const cloudinaryURL = `https://res.cloudinary.com/dvaefmfem/image/upload/${doc.document_id}`;
+              
+              // Determine file type based on name
+              const fileType = doc.document_name ? getFileTypeFromName(doc.document_name) : "document";
+              
+              return {
                 id: doc.document_id,
                 name: doc.document_name || "Untitled Document",
                 selected: false,
-                type: "document",
-                url: "", 
+                type: fileType,
+                url: cloudinaryURL,  // Set the URL for preview
                 size: 0,
                 cloudinaryId: doc.document_id,
                 FilePath: path,
-              }))
-            );
-          }
-          
-          // Update the current folders
-          currentFolders = folder.folders;
-        });
+              };
+            })
+          );
+        }
+        
+        // Update the current folders
+        currentFolders = folder.folders;
       });
-  
-      // Update the state
-      setRootFiles(newRootFiles);
-      setRootFolders(newRootFolders);
-    } catch (error) {
-      console.error("Error displaying user files:", error);
-    }
-  }, []);
+    });
+
+    console.log("Setting state with files:", newRootFiles.length, "and folders:", newRootFolders.length);
+    
+    // Update the state
+    setRootFiles(newRootFiles);
+    setRootFolders(newRootFolders);
+  } catch (error) {
+    console.error("Error displaying user files:", error);
+  }
+}, []);
 
   useEffect(() => {
     const storedUserID = localStorage.getItem("user_id");
