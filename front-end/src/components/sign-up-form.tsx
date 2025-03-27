@@ -71,7 +71,11 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             <FormItem>
               <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="Enter username" className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm" {...field} />
+                <Input
+                  placeholder="Enter username"
+                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -142,7 +146,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" variant="default" disabled={isLoading}>
+        <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isLoading}>
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

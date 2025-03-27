@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { NavBar } from "@//components/nav-bar"
+import { NavBar } from "@/components/nav-bar"
 import { FileCollection } from "@/components/file-collection"
 import { ChatBox } from "@/components/chat-box"
 import { RightPanel } from "@/components/right-panel"
@@ -21,18 +21,20 @@ export default function Home() {
   const [activePanel, setActivePanel] = useState<"preview" | "mindmap" | "cheatsheet" | null>(null)
 
   const handleFileSelection = useCallback((files: FileItem[]) => {
-    setSelectedFiles(files);
-  }, []);
+    setSelectedFiles(files)
+  }, [])
 
   const handleViewChange = useCallback((view: "preview" | "mindmap" | "cheatsheet" | null) => {
     setActivePanel((prev) => (prev === view ? null : view))
   }, [])
 
   return (
-    <main className="h-screen flex flex-col">
+    <main className="h-screen flex flex-col bg-gray-50">
       <NavBar />
       <div className="flex flex-1 relative">
-        <FileCollection onFileSelect={handleFileSelection} />
+        <div className="w-64 border-r h-[calc(100vh-64px)] bg-white">
+          <FileCollection onFileSelect={handleFileSelection} />
+        </div>
         <div className={`transition-all duration-300 ${activePanel ? "w-[42%]" : "flex-1"}`}>
           <ChatBox />
         </div>

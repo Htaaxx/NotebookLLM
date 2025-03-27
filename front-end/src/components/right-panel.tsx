@@ -33,42 +33,6 @@ interface RightPanelProps {
   selectedFiles: FileItem[];
 }
 
-
-// Nội dung Markdown mặc định được nhúng trực tiếp
-// const DEFAULT_MARKDOWN = `# Machine Learning Concepts
-
-// ## Supervised Learning
-// ### Classification
-// #### Decision Trees
-// #### Support Vector Machines
-// #### Neural Networks
-// ### Regression
-// #### Linear Regression
-// #### Polynomial Regression
-
-// ## Unsupervised Learning
-// ### Clustering
-// #### K-Means
-// #### Hierarchical Clustering
-// ### Dimensionality Reduction
-// #### PCA
-// #### t-SNE
-
-// ## Reinforcement Learning
-// ### Q-Learning
-// ### Deep Q Networks
-
-// ## Deep Learning
-// ### Neural Networks
-// #### Feed Forward Networks
-// #### Convolutional Neural Networks
-// #### Recurrent Neural Networks
-// ### Training Techniques
-// #### Backpropagation
-// #### Gradient Descent
-// #### Regularization
-// `;
-
 export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   const [scale, setScale] = useState(1.0);
   const [numPages, setNumPages] = useState<number | null>(null);

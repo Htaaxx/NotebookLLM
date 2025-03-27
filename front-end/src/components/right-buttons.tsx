@@ -14,7 +14,7 @@ export function RightButtons({ onViewChange, activeView }: RightButtonsProps) {
         variant={activeView === "preview" ? "default" : "outline"}
         size="icon"
         onClick={() => onViewChange(activeView === "preview" ? null : "preview")}
-        className="rounded-full w-10 h-10"
+        className={`rounded-full w-10 h-10 ${activeView === "preview" ? "bg-green-600 hover:bg-green-700" : "hover:text-green-600 hover:border-green-600"}`}
       >
         <FileText className="w-4 h-4" />
       </Button>
@@ -22,7 +22,7 @@ export function RightButtons({ onViewChange, activeView }: RightButtonsProps) {
         variant={activeView === "mindmap" ? "default" : "outline"}
         size="icon"
         onClick={() => onViewChange(activeView === "mindmap" ? null : "mindmap")}
-        className="rounded-full w-10 h-10"
+        className={`rounded-full w-10 h-10 ${activeView === "mindmap" ? "bg-green-600 hover:bg-green-700" : "hover:text-green-600 hover:border-green-600"}`}
       >
         <Network className="w-4 h-4" />
       </Button>
@@ -30,10 +30,11 @@ export function RightButtons({ onViewChange, activeView }: RightButtonsProps) {
         variant={activeView === "cheatsheet" ? "default" : "outline"}
         size="icon"
         onClick={() => onViewChange(activeView === "cheatsheet" ? null : "cheatsheet")}
-        className="rounded-full w-10 h-10"
+        className={`rounded-full w-10 h-10 ${activeView === "cheatsheet" ? "bg-green-600 hover:bg-green-700" : "hover:text-green-600 hover:border-green-600"}`}
       >
         <BookOpen className="w-4 h-4" />
       </Button>
     </div>
   )
 }
+
