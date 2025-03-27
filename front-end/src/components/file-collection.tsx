@@ -100,6 +100,15 @@ const getFileTypeFromName = (filename: string): string => {
   return "document";
 };
 
+const getFileExtension = (filename: string): string => {
+  if (!filename) return "";
+  
+  // Get the last part after the dot
+  const extensionMatch = filename.match(/\.[^.]+$/);
+  
+  // Return the extension with the dot, or empty string if no extension
+  return extensionMatch ? extensionMatch[0].toLowerCase() : "";
+};
 
 
 const handleDisplayUserFiles = useCallback(async (userId: string) => {
@@ -139,7 +148,7 @@ const handleDisplayUserFiles = useCallback(async (userId: string) => {
       filesByPath["root"].forEach((doc) => {
 
        
-        const cloudinaryURL = `https://res.cloudinary.com/dvaefmfem/image/upload/${doc.document_id}`;
+        const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${doc.document_id}${getFileExtension(doc.document_name)}`;
         console.log("Cloudinary URL:", cloudinaryURL);
         
         // Determine file type based on name
@@ -189,7 +198,7 @@ const handleDisplayUserFiles = useCallback(async (userId: string) => {
           folder.files.push(
             ...filesByPath[path].map((doc) => {
               // Generate URL for Cloudinary resource
-              const cloudinaryURL = `https://res.cloudinary.com/dvaefmfem/image/upload/${doc.document_id}`;
+              const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${doc.document_id}`;
               
               // Determine file type based on name
               const fileType = doc.document_name ? getFileTypeFromName(doc.document_name) : "document";
