@@ -75,7 +75,11 @@ const validateFileSize = (file: File): string | null => {
   if (file.type.startsWith("video/") && file.size > MAX_VIDEO_SIZE) {
     return `Video "${file.name}" exceeds the maximum size of 100MB!`;
   }
-  if (!file.type.startsWith("image/") && !file.type.startsWith("video/") && file.size > MAX_FILE_SIZE) {
+  if (
+    !file.type.startsWith("image/") &&
+    !file.type.startsWith("video/") &&
+    file.size > MAX_FILE_SIZE
+  ) {
     return `File "${file.name}" exceeds the maximum size of 100MB!`;
   }
   return null;
@@ -88,28 +92,34 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     try {
       // Call the API to get all documents for this user
       const documents = await documentAPI.getDocuments(userId);
-  
+
       if (!documents || documents.length === 0) {
         return;
       }
-  
+
       console.log("Documents loaded:", documents);
-  
+
       // Group documents by filepath to create folder structure
       const filesByPath: Record<string, any[]> = {};
-  
-      documents.forEach((doc: { document_id: string; document_name: string; document_path?: string }) => {
-        const path: string = doc.document_path || "root";
-        if (!filesByPath[path]) {
-          filesByPath[path] = [];
+
+      documents.forEach(
+        (doc: {
+          document_id: string;
+          document_name: string;
+          document_path?: string;
+        }) => {
+          const path: string = doc.document_path || "root";
+          if (!filesByPath[path]) {
+            filesByPath[path] = [];
+          }
+          filesByPath[path].push(doc);
         }
-        filesByPath[path].push(doc);
-      });
-  
+      );
+
       // Start with empty root files and folders
       const newRootFiles: FileItem[] = [];
       const newRootFolders: Folder[] = [];
-  
+
       // Process each path
       Object.keys(filesByPath).forEach((path) => {
         if (path === "root") {
@@ -129,15 +139,17 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         } else {
           // These are files in folders
           const pathParts = path.split("/").filter((part) => part !== "root");
-          
+
           // Create the folder structure
           let currentFolders = newRootFolders;
           let currentPath = "";
-          
+
           // Build folders for each path segment
           pathParts.forEach((folderName, index) => {
-            currentPath = currentPath ? `${currentPath}/${folderName}` : folderName;
-            
+            currentPath = currentPath
+              ? `${currentPath}/${folderName}`
+              : folderName;
+
             // Find or create this folder
             let folder = currentFolders.find((f) => f.name === folderName);
             if (!folder) {
@@ -151,7 +163,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               };
               currentFolders.push(folder);
             }
-            
+
             // If this is the last part of the path, add files to this folder
             if (index === pathParts.length - 1) {
               folder.files.push(
@@ -167,13 +179,13 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
                 }))
               );
             }
-            
+
             // Move to next level for next iteration
             currentFolders = folder.folders;
           });
         }
       });
-  
+
       // Update the state
       setRootFiles(newRootFiles);
       setRootFolders(newRootFolders);
@@ -205,39 +217,39 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [chatHistory, setChatHistory] = useState<string[]>([]);
 
   // Function to get file path based on folder hierarchy
-const getFilePath = useCallback(
-  (folderId?: string): string => {
-    if (!folderId) {
-      return "root";
-    }
-
-    // Helper function to find path to a specific folder
-    const findFolderPath = (
-      folders: Folder[],
-      targetId: string,
-      currentPath: string = "root"
-    ): string | null => {
-      for (const folder of folders) {
-        if (folder.id === targetId) {
-          return currentPath + "/" + folder.name;
-        }
-
-        // Check in subfolders
-        const path = findFolderPath(
-          folder.folders,
-          targetId,
-          currentPath + "/" + folder.name
-        );
-        if (path) return path;
+  const getFilePath = useCallback(
+    (folderId?: string): string => {
+      if (!folderId) {
+        return "root";
       }
-      return null;
-    };
 
-    const path = findFolderPath(rootFolders, folderId);
-    return path || "root";
-  },
-  [rootFolders]
-);
+      // Helper function to find path to a specific folder
+      const findFolderPath = (
+        folders: Folder[],
+        targetId: string,
+        currentPath: string = "root"
+      ): string | null => {
+        for (const folder of folders) {
+          if (folder.id === targetId) {
+            return currentPath + "/" + folder.name;
+          }
+
+          // Check in subfolders
+          const path = findFolderPath(
+            folder.folders,
+            targetId,
+            currentPath + "/" + folder.name
+          );
+          if (path) return path;
+        }
+        return null;
+      };
+
+      const path = findFolderPath(rootFolders, folderId);
+      return path || "root";
+    },
+    [rootFolders]
+  );
 
   const handleUpload = async (
     file: File,
@@ -248,30 +260,54 @@ const getFilePath = useCallback(
     formData.append("document_id", documentId);
 
     try {
-      const response = await fetch("http://localhost:5000/user/upload", {
+      const uploadPromise = fetch("http://localhost:5000/user/upload", {
         method: "POST",
         body: formData,
       });
 
-      const responseText = await response.text();
+      const embeddingsPromise = fetch(
+        "http://localhost:8000/docs#/default/store_embeddings_api_store_embeddings_post",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
 
-      if (!response.ok) {
-        console.error("Upload failed:", responseText);
-        throw new Error(`Upload failed: ${response.status} - ${responseText}`);
+      const [uploadResponse, embeddingsResponse] = await Promise.all([
+        uploadPromise,
+        embeddingsPromise,
+      ]);
+
+      const uploadText = await uploadResponse.text();
+      if (!uploadResponse.ok) {
+        console.error("Upload failed:", uploadText);
+        throw new Error(
+          `Upload failed: ${uploadResponse.status} - ${uploadText}`
+        );
       }
+      const uploadData = JSON.parse(uploadText);
 
-      const data = JSON.parse(responseText);
-      console.log("Uploaded:", data);
+      const embeddingsText = await embeddingsResponse.text();
+      if (!embeddingsResponse.ok) {
+        console.error("Embeddings API failed:", embeddingsText);
+        throw new Error(
+          `Embeddings API failed: ${embeddingsResponse.status} - ${embeddingsText}`
+        );
+      }
+      const embeddingsData = JSON.parse(embeddingsText);
+
+      console.log("Uploaded:", uploadData);
+      console.log("Embeddings stored:", embeddingsData);
 
       return {
-        id: data.document_id,
+        id: uploadData.document_id,
         name: file.name,
         selected: false,
         type: file.type,
-        url: data.url,
+        url: uploadData.url,
         size: file.size,
-        cloudinaryId: data.document_id,
-        FilePath: data.file_path,
+        cloudinaryId: uploadData.document_id,
+        FilePath: uploadData.file_path,
       };
     } catch (error) {
       console.error("Upload error:", error);
@@ -287,10 +323,10 @@ const getFilePath = useCallback(
     ) => {
       const uploadedFiles = event.target.files;
       if (!uploadedFiles) return;
-  
+
       const invalidFiles: string[] = [];
       const validFilesArray: File[] = [];
-  
+
       Array.from(uploadedFiles).forEach((file) => {
         const error = validateFileSize(file);
         if (error) {
@@ -299,16 +335,16 @@ const getFilePath = useCallback(
           validFilesArray.push(file);
         }
       });
-  
+
       if (invalidFiles.length > 0) {
         alert(invalidFiles.join("\n"));
         return;
       }
-  
+
       // Generate the file path for this upload
       const filePath = getFilePath(folderId);
       console.log("Uploading to path:", filePath);
-  
+
       const newFiles = await Promise.all(
         validFilesArray.map(async (file) => {
           try {
@@ -316,23 +352,23 @@ const getFilePath = useCallback(
             const response = await documentAPI.createDocument(
               userID,
               file.name,
-              filePath,
+              filePath
             );
-            
+
             if (!response || !response.document_id) {
               throw new Error("Failed to generate document ID");
             }
-  
+
             const documentId = response.document_id;
             console.log("Document ID extracted:", documentId);
-  
+
             const uploadedFile = await handleUpload(file, documentId);
-            
+
             // Make sure FilePath is included in the file item
             if (uploadedFile) {
               uploadedFile.FilePath = filePath;
             }
-            
+
             return uploadedFile;
           } catch (error) {
             console.error("Error uploading file:", error);
@@ -340,16 +376,16 @@ const getFilePath = useCallback(
           }
         })
       );
-  
+
       const validFiles: FileItem[] = newFiles.filter(
         (file): file is FileItem => file !== null
       );
-  
+
       if (validFiles.length === 0) {
         console.warn("No valid files were uploaded!!!");
         return;
       }
-  
+
       // Update UI state
       if (folderId) {
         setRootFolders((prevFolders) =>
