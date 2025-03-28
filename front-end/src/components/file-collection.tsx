@@ -2,12 +2,13 @@
 
 import type React from "react"
 import { useState, useCallback, useEffect } from "react"
-import { Search, ChevronRight, ChevronDown, type File, Trash2, Plus, MessageSquare } from "lucide-react"
+import { Search, ChevronRight, ChevronDown, Trash2, Plus, MessageSquare } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { documentAPI } from "@/lib/api"
+import { useLanguage } from "@/lib/language-context"
 import "../styles/file-collection.css"
 
 interface FileItem {
@@ -70,6 +71,8 @@ const validateFileSize = (file: File): string | null => {
 }
 
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
+  // Existing state and functions
+  const { t } = useLanguage()
   const [userID, setUserID] = useState("User")
 
   // Helper function to determine file type from name
@@ -612,9 +615,19 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               <Plus className="w-4 h-4" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-background">
-            <DropdownMenuItem onSelect={() => setShowNewFolderInput(folder.id)}>Add Subfolder</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => document.getElementById(`file-upload-${folder.id}`)?.click()}>
+          <DropdownMenuContent align="end" className="bg-white shadow-lg">
+            <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(folder.id)}>
+              Add Subfolder
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="cursor-pointer"
+              onSelect={() => {
+                const fileInput = document.getElementById(`file-upload-${folder.id}`)
+                if (fileInput) {
+                  fileInput.click()
+                }
+              }}
+            >
               Add File
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -628,6 +641,15 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           <Trash2 className="w-4 h-4 text-red-500" />
         </Button>
       </div>
+
+      {/* Always render the file input, but only show folder content when expanded */}
+      <input
+        id={`file-upload-${folder.id}`}
+        type="file"
+        className="hidden"
+        multiple
+        onChange={(e) => handleFileUpload(e, userID, folder.id)}
+      />
 
       {folder.expanded && (
         <div className="ml-6 space-y-1">
@@ -647,13 +669,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               </Button>
             </div>
           ))}
-          <input
-            id={`file-upload-${folder.id}`}
-            type="file"
-            className="hidden"
-            multiple
-            onChange={(e) => handleFileUpload(e, userID, folder.id)}
-          />
         </div>
       )}
     </div>
@@ -700,24 +715,24 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   }
 
   return (
-    <div className="file-collection-container w-64 border-r h-[calc(100vh-64px)] p-4 flex flex-col gap-3">
+    <div className="file-collection-container w-64 border-r h-[calc(100vh-64px)] p-4 flex flex-col gap-3 bg-white text-black">
       <div className="flex items-center justify-between"></div>
 
       <div className="space-y-2">
         <Input
-          placeholder="Search All"
+          placeholder={t("searchAll")}
           className="h-8 text-sm"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
         <Button variant="secondary" className="w-full h-8 text-sm bg-green-500 hover:bg-green-500 text-black">
           <Search className="w-4 h-4 mr-2" />
-          Search in File(s)
+          {t("searchInFiles")}
         </Button>
       </div>
 
       <div className="mt-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium">Chat</h3>
+        <h3 className="text-sm font-medium">{t("chat")}</h3>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="h-8 px-2">
@@ -725,7 +740,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="bg-background bg-white">
-            <DropdownMenuItem onSelect={() => setShowNewChatInput(true)}>Create New Chat</DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => setShowNewChatInput(true)}>{t("createNewChat")}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -739,11 +754,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             className="h-8 text-sm"
           />
           <Button size="sm" className="h-8" onClick={() => createNewChat()}>
-            Create
+            {t("create")}
           </Button>
         </div>
       )}
 
+      {/* Chat boxes section */}
       <div className="-mt-2 space-y-1 overflow-auto flex-1" style={{ maxHeight: "150px" }}>
         {chatboxes.map((chatbox) => (
           <div
@@ -764,16 +780,21 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
       <div className="mt-2 flex-1 overflow-auto">
         <div className="flex items-center justify-between mb-2 sticky top-0 bg-white z-10">
-          <h3 className="text-sm font-medium">File Collection</h3>
+          <h3 className="text-sm font-medium">{t("fileCollection")}</h3>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 px-2">
                 <Plus className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-background bg-white">
-              <DropdownMenuItem onSelect={() => setShowNewFolderInput(true)}>Add Folder</DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => document.getElementById("root-file-upload")?.click()}>
+            <DropdownMenuContent align="end" className="bg-white shadow-lg">
+              <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(true)}>
+                Add Folder
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onSelect={() => document.getElementById("root-file-upload")?.click()}
+              >
                 Add File
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -793,11 +814,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               className="h-8"
               onClick={() => createFolder(typeof showNewFolderInput === "string" ? showNewFolderInput : undefined)}
             >
-              Create
+              {t("create")}
             </Button>
           </div>
         )}
 
+        {/* File and folder list */}
         <div className="space-y-1" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e)}>
           {rootFolders.map((folder) => renderFolder(folder))}
           {rootFiles.map((file) => (
@@ -819,16 +841,16 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       </div>
 
       <div className="mt-4">
-        <h3 className="text-sm font-medium mb-2">Quick Upload</h3>
+        <h3 className="text-sm font-medium mb-2">{t("quickUpload")}</h3>
         <div
           className="border-2 border-dashed rounded-lg p-4 text-center"
           onDragOver={handleDragOver}
           onDrop={(e) => handleDrop(e)}
         >
-          <p className="text-sm text-muted-foreground">Drop File Here</p>
+          <p className="text-sm text-muted-foreground">{t("dropFileHere")}</p>
           <p className="text-sm text-muted-foreground"> - or - </p>
           <label className="cursor-pointer text-sm text-primary hover:underline">
-            Click to Upload
+            {t("clickToUpload")}
             <input
               id="root-file-upload"
               type="file"

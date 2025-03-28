@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    /* Original user variables */
+    /* Fixed light theme variables - no dark mode */
     --background: #ffffff;
     --foreground: #171717;
     --border: 214.3 31.8% 91.4%;
@@ -29,37 +29,13 @@
     --destructive-foreground: 210 40% 98%;
   }
 
-  .dark {
-    /* Original user variables */
-    --background: #0a0a0a;
-    --foreground: #ededed;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 142.1 76.2% 36.3%;
-
-    /* Additional variables for components */
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 142.1 70.6% 45.3%;
-    --primary-foreground: 144.9 80.4% 10%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-  }
-
   * {
     border-color: hsl(var(--border));
   }
 }
 
-@media (prefers-color-scheme: dark) {
+/* Remove dark mode media query */
+/* @media (prefers-color-scheme: dark) {
   :root:not(.light) {
     --background: #0a0a0a;
     --foreground: #ededed;
@@ -67,7 +43,6 @@
     --input: 217.2 32.6% 17.5%;
     --ring: 142.1 76.2% 36.3%;
 
-    /* Additional variables for components */
     --card: 222.2 84% 4.9%;
     --card-foreground: 210 40% 98%;
     --popover: 222.2 84% 4.9%;
@@ -83,7 +58,7 @@
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
   }
-}
+} */
 
 body {
   color: var(--foreground);
@@ -98,9 +73,5 @@ body {
       linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
     background-size: 20px 20px;
   }
-
-  .dark .bg-grid-pattern {
-    background-image: linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
-  }
 }
+

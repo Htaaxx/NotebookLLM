@@ -69,13 +69,9 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel className="text-black">Username</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Enter username"
-                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-                  {...field}
-                />
+                <Input placeholder="Enter username" className="bg-white text-black border-gray-300" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -86,13 +82,9 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel className="text-black">Email</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Enter email"
-                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-                  {...field}
-                />
+                <Input placeholder="Enter email" className="bg-white text-black border-gray-300" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -103,12 +95,12 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel className="text-black">Password</FormLabel>
               <FormControl>
                 <Input
                   type="password"
                   placeholder="Enter password"
-                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  className="bg-white text-black border-gray-300"
                   {...field}
                 />
               </FormControl>
@@ -120,24 +112,18 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
           control={form.control}
           name="terms"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
+            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border bg-white">
               <FormControl>
                 <Checkbox checked={field.value} onCheckedChange={field.onChange} />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel>
+                <FormLabel className="text-black">
                   I agree to the{" "}
-                  <a
-                    href="#"
-                    className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 underline-offset-4 hover:underline"
-                  >
+                  <a href="#" className="text-green-600 hover:text-green-700 underline-offset-4 hover:underline">
                     terms of service
                   </a>{" "}
                   and{" "}
-                  <a
-                    href="#"
-                    className="text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400 underline-offset-4 hover:underline"
-                  >
+                  <a href="#" className="text-green-600 hover:text-green-700 underline-offset-4 hover:underline">
                     privacy policy
                   </a>
                 </FormLabel>

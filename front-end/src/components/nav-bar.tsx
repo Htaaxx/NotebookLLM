@@ -5,6 +5,8 @@ import Link from "next/link"
 import { UserCircle, ChevronDown } from "lucide-react"
 import { Logo } from "./logo"
 import { authAPI } from "../lib/api"
+import { useLanguage } from "@/lib/language-context"
+import type { Language } from "@/lib/i18n"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -16,6 +18,7 @@ import {
 export function NavBar() {
   const [userName, setUserName] = useState("User")
   const [isScrolled, setIsScrolled] = useState(false)
+  const { language, setLanguage, t } = useLanguage()
 
   useEffect(() => {
     const storedUsername = localStorage.getItem("username")
@@ -42,6 +45,10 @@ export function NavBar() {
     }
   }
 
+  const changeLanguage = (lang: Language) => {
+    setLanguage(lang)
+  }
+
   // Determine if we're on a specific page to highlight the active nav item
   const isActivePage = (path: string) => {
     if (typeof window !== "undefined") {
@@ -52,7 +59,7 @@ export function NavBar() {
 
   return (
     <nav
-      className={`flex items-center h-16 px-6 border-b sticky top-0 z-50 bg-white transition-shadow ${
+      className={`flex items-center h-16 px-6 border-b sticky top-0 z-50 bg-white text-black transition-shadow ${
         isScrolled ? "shadow-md" : ""
       }`}
     >
@@ -64,49 +71,52 @@ export function NavBar() {
       <div className="flex gap-8 ml-12">
         <Link
           href="/defaultPage"
-          className={`hover:text-green-600 transition-colors py-1 border-b-2 ${
+          className={`hover:text-green-600 transition-colors py-1 border-b-2 text-black ${
             isActivePage("defaultPage") ? "border-green-600 text-green-600" : "border-transparent"
           }`}
         >
-          CHATBOX
+          {t("chatbox")}
         </Link>
         <Link
           href="/files"
-          className={`hover:text-green-600 transition-colors py-1 border-b-2 ${
+          className={`hover:text-green-600 transition-colors py-1 border-b-2 text-black ${
             isActivePage("files") ? "border-green-600 text-green-600" : "border-transparent"
           }`}
         >
-          FILES
+          {t("files")}
         </Link>
         <Link
           href="/flashcard"
-          className={`hover:text-green-600 transition-colors py-1 border-b-2 ${
+          className={`hover:text-green-600 transition-colors py-1 border-b-2 text-black ${
             isActivePage("flashcard") ? "border-green-600 text-green-600" : "border-transparent"
           }`}
         >
-          FLASHCARD
+          {t("flashcard")}
         </Link>
       </div>
 
       <div className="ml-auto relative">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors">
+            <button className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors text-black">
               <UserCircle className="w-6 h-6" />
               <span className="text-sm font-medium">{userName}</span>
               <ChevronDown className="w-4 h-4 text-gray-500" />
             </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56" align="end">
-            <div className="p-2 border-b text-sm font-medium">{userName}</div>
-            <DropdownMenuItem className="cursor-pointer">Profile</DropdownMenuItem>
-            <DropdownMenuItem className="cursor-pointer">Settings</DropdownMenuItem>
+          <DropdownMenuContent className="w-56 bg-white text-black" align="end">
+            <DropdownMenuItem
+              className="cursor-pointer text-black"
+              onClick={() => changeLanguage(language === "en" ? "vi" : "en")}
+            >
+              {t("language")}: {language.toUpperCase()}
+            </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50"
               onClick={handleSignOut}
             >
-              Sign Out
+              {t("signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

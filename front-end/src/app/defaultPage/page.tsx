@@ -29,13 +29,13 @@ export default function Home() {
   }, [])
 
   return (
-    <main className="h-screen flex flex-col bg-gray-50">
+    <main className="h-screen flex flex-col bg-white text-black">
       <NavBar />
       <div className="flex flex-1 relative">
         <div className="w-64 border-r h-[calc(100vh-64px)] bg-white">
           <FileCollection onFileSelect={handleFileSelection} />
         </div>
-        <div className={`transition-all duration-300 ${activePanel ? "w-[42%]" : "flex-1"}`}>
+        <div className={`transition-all duration-300 bg-white ${activePanel ? "w-[42%]" : "flex-1"}`}>
           <ChatBox />
         </div>
         <RightButtons onViewChange={handleViewChange} activeView={activePanel} />

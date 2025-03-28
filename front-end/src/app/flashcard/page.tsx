@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react"
+import { useLanguage } from "@/lib/language-context"
 
 interface Flashcard {
   id: string
@@ -17,6 +18,7 @@ export default function FlashcardPage() {
   const [cards, setCards] = useState<Flashcard[]>([])
   const [currentCard, setCurrentCard] = useState(0)
   const [isFlipped, setIsFlipped] = useState(false)
+  const { t } = useLanguage()
 
   const addCard = () => {
     const newCard = {
@@ -42,7 +44,7 @@ export default function FlashcardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white text-black">
       <NavBar />
       <main className="container mx-auto p-6">
         <div className="max-w-4xl mx-auto space-y-6">
@@ -56,9 +58,7 @@ export default function FlashcardPage() {
               </Card>
             ) : (
               <Card>
-                <CardContent className="p-12 text-center text-gray-500">
-                  No flashcards yet. Create one below!
-                </CardContent>
+                <CardContent className="p-12 text-center text-gray-500">{t("noFlashcards")}</CardContent>
               </Card>
             )}
           </div>
@@ -70,7 +70,7 @@ export default function FlashcardPage() {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="text-sm text-gray-500">
-                Card {currentCard + 1} of {cards.length}
+                {t("card")} {currentCard + 1} {t("of")} {cards.length}
               </span>
               <Button variant="outline" size="icon" onClick={nextCard} disabled={currentCard === cards.length - 1}>
                 <ChevronRight className="h-4 w-4" />
@@ -82,13 +82,13 @@ export default function FlashcardPage() {
           <Card>
             <CardContent className="p-6">
               <div className="space-y-4">
-                <h2 className="text-xl font-semibold mb-4">Create New Flashcard</h2>
+                <h2 className="text-xl font-semibold mb-4">{t("createNewFlashcard")}</h2>
                 <div className="space-y-4">
-                  <Input placeholder="Front of card" className="mb-2" />
-                  <Input placeholder="Back of card" className="mb-4" />
+                  <Input placeholder={t("frontOfCard")} className="mb-2" />
+                  <Input placeholder={t("backOfCard")} className="mb-4" />
                   <Button onClick={addCard}>
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Card
+                    {t("addCard")}
                   </Button>
                 </div>
               </div>
@@ -99,3 +99,4 @@ export default function FlashcardPage() {
     </div>
   )
 }
+

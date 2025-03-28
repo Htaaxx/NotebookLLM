@@ -1,0 +1,177 @@
+// Define the available languages
+export type Language = "en" | "vi"
+
+// Define the translation keys structure
+export interface Translations {
+  // Navigation
+  chatbox: string
+  files: string
+  flashcard: string
+
+  // User menu
+  language: string
+  signOut: string
+
+  // File collection
+  searchAll: string
+  searchInFiles: string
+  chat: string
+  createNewChat: string
+  fileCollection: string
+  addFolder: string
+  addFile: string
+  create: string
+  quickUpload: string
+  dropFileHere: string
+  clickToUpload: string
+
+  // Chat
+  chatSettings: string
+  typeMessage: string
+  send: string
+  regenerate: string
+
+  // Right panel
+  noChosenFile: string
+
+  // File page
+  uploadFiles: string
+  dragAndDrop: string
+  chooseFiles: string
+  toUpload: string
+  supportedFiles: string
+  googleDrive: string
+  importFromDrive: string
+  youtube: string
+  importFromYoutube: string
+  copyAndPasteText: string
+  pasteText: string
+  words: string
+  saveText: string
+
+  // Flashcard page
+  noFlashcards: string
+  card: string
+  of: string
+  createNewFlashcard: string
+  frontOfCard: string
+  backOfCard: string
+  addCard: string
+}
+
+// Define the translations
+export const translations: Record<Language, Translations> = {
+  en: {
+    // Navigation
+    chatbox: "CHATBOX",
+    files: "FILES",
+    flashcard: "FLASHCARD",
+
+    // User menu
+    language: "Language",
+    signOut: "Sign Out",
+
+    // File collection
+    searchAll: "Search All",
+    searchInFiles: "Search in File(s)",
+    chat: "Chat",
+    createNewChat: "Create New Chat",
+    fileCollection: "File Collection",
+    addFolder: "Add Folder",
+    addFile: "Add File",
+    create: "Create",
+    quickUpload: "Quick Upload",
+    dropFileHere: "Drop File Here",
+    clickToUpload: "Click to Upload",
+
+    // Chat
+    chatSettings: "Chat settings",
+    typeMessage: "Type your message here...",
+    send: "Send",
+    regenerate: "Regen",
+
+    // Right panel
+    noChosenFile: "No chosen file",
+
+    // File page
+    uploadFiles: "Upload Files",
+    dragAndDrop: "Drag and drop or",
+    chooseFiles: "choose files",
+    toUpload: "to upload",
+    supportedFiles: "Supported files: PDF, txt, Markdown, Audio files (e.g., mp3)",
+    googleDrive: "Google Drive",
+    importFromDrive: "Import from Drive",
+    youtube: "YouTube",
+    importFromYoutube: "Import from YouTube",
+    copyAndPasteText: "Copy and Paste Text",
+    pasteText: "Paste your text here (up to 1000 words)",
+    words: "words",
+    saveText: "Save Text",
+
+    // Flashcard page
+    noFlashcards: "No flashcards yet. Create one below!",
+    card: "Card",
+    of: "of",
+    createNewFlashcard: "Create New Flashcard",
+    frontOfCard: "Front of card",
+    backOfCard: "Back of card",
+    addCard: "Add Card",
+  },
+  vi: {
+    // Navigation
+    chatbox: "HỘP CHAT",
+    files: "TỆP",
+    flashcard: "THẺ GHI NHỚ",
+
+    // User menu
+    language: "Ngôn ngữ",
+    signOut: "Đăng Xuất",
+
+    // File collection
+    searchAll: "Tìm kiếm tất cả",
+    searchInFiles: "Tìm kiếm trong tệp",
+    chat: "Trò chuyện",
+    createNewChat: "Tạo cuộc trò chuyện mới",
+    fileCollection: "Bộ sưu tập tệp",
+    addFolder: "Thêm thư mục",
+    addFile: "Thêm tệp",
+    create: "Tạo",
+    quickUpload: "Tải lên nhanh",
+    dropFileHere: "Thả tệp vào đây",
+    clickToUpload: "Nhấp để tải lên",
+
+    // Chat
+    chatSettings: "Cài đặt trò chuyện",
+    typeMessage: "Nhập tin nhắn của bạn tại đây...",
+    send: "Gửi",
+    regenerate: "Tạo lại",
+
+    // Right panel
+    noChosenFile: "Không có tệp nào được chọn",
+
+    // File page
+    uploadFiles: "Tải lên tệp",
+    dragAndDrop: "Kéo và thả hoặc",
+    chooseFiles: "chọn tệp",
+    toUpload: "để tải lên",
+    supportedFiles: "Các tệp được hỗ trợ: PDF, txt, Markdown, tệp âm thanh (ví dụ: mp3)",
+    googleDrive: "Google Drive",
+    importFromDrive: "Nhập từ Drive",
+    youtube: "YouTube",
+    importFromYoutube: "Nhập từ YouTube",
+    copyAndPasteText: "Sao chép và dán văn bản",
+    pasteText: "Dán văn bản của bạn tại đây (tối đa 1000 từ)",
+    words: "từ",
+    saveText: "Lưu văn bản",
+
+    // Flashcard page
+    noFlashcards: "Chưa có thẻ ghi nhớ nào. Tạo một thẻ bên dưới!",
+    card: "Thẻ",
+    of: "của",
+    createNewFlashcard: "Tạo thẻ ghi nhớ mới",
+    frontOfCard: "Mặt trước của thẻ",
+    backOfCard: "Mặt sau của thẻ",
+    addCard: "Thêm thẻ",
+  },
+}
+

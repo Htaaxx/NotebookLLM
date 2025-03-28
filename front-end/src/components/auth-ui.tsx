@@ -32,17 +32,17 @@ export default function AuthUI() {
     <div className="flex flex-col items-center">
       {/* Logo and App Name */}
       <div className="flex flex-col items-center mb-6">
-        <div className="p-3 bg-white dark:bg-gray-800 rounded-full shadow-md mb-2">
-          <Logo className="h-12 w-12 text-green-600 dark:text-green-500" />
+        <div className="p-3 bg-white rounded-full shadow-md mb-2">
+          <Logo className="h-12 w-12 text-green-600" />
         </div>
         <h1 className="text-3xl font-bold tracking-tight text-center text-white">NoteUS</h1>
-        <p className="text-gray-300 dark:text-gray-400 text-center max-w-xs">Your AI-powered note-taking assistant</p>
+        <p className="text-gray-300 text-center max-w-xs">Your AI-powered note-taking assistant</p>
       </div>
 
-      <Card className="w-full border-0 shadow-xl backdrop-blur-sm bg-white/90 dark:bg-gray-900/90">
+      <Card className="w-full border-0 shadow-xl bg-white text-black">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
-          <CardDescription className="text-center">
+          <CardTitle className="text-2xl text-center text-black">Welcome back</CardTitle>
+          <CardDescription className="text-center text-gray-600">
             {activeTab === "signin" ? "Sign in to your account to continue" : "Create an account to get started"}
           </CardDescription>
         </CardHeader>
@@ -51,7 +51,7 @@ export default function AuthUI() {
             <div className="grid grid-cols-2 gap-6">
               <button
                 type="button"
-                className="inline-flex w-full items-center justify-center rounded-lg border bg-white px-5 py-2.5 text-center text-sm font-medium text-black hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-[#24292F]/50 disabled:opacity-50 dark:hover:bg-[#050708]/30 dark:focus:ring-gray-500"
+                className="inline-flex w-full items-center justify-center rounded-lg border bg-white px-5 py-2.5 text-center text-sm font-medium text-black hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-[#24292F]/50 disabled:opacity-50"
                 onClick={() => handleOAuthSignIn("google")}
               >
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -76,7 +76,7 @@ export default function AuthUI() {
               </button>
               <button
                 type="button"
-                className="inline-flex w-full items-center justify-center rounded-lg border bg-white px-5 py-2.5 text-center text-sm font-medium text-black hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-[#24292F]/50 disabled:opacity-50 dark:hover:bg-[#050708]/30 dark:focus:ring-gray-500"
+                className="inline-flex w-full items-center justify-center rounded-lg border bg-white px-5 py-2.5 text-center text-sm font-medium text-black hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-[#24292F]/50 disabled:opacity-50"
                 onClick={() => handleOAuthSignIn("github")}
               >
                 <svg className="mr-2 h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
@@ -94,13 +94,17 @@ export default function AuthUI() {
                 <Separator className="w-full" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">OR SIGN IN WITH OUR ACCOUNT</span>
+                <span className="bg-white px-2 text-gray-600">OR SIGN IN WITH OUR ACCOUNT</span>
               </div>
             </div>
-            <Tabs defaultValue="signin" value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign In</TabsTrigger>
-                <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <Tabs defaultValue="signin" value={activeTab} onValueChange={setActiveTab} className="text-black">
+              <TabsList className="grid w-full grid-cols-2 bg-gray-100">
+                <TabsTrigger value="signin" className="text-black data-[state=active]:bg-white">
+                  Sign In
+                </TabsTrigger>
+                <TabsTrigger value="signup" className="text-black data-[state=active]:bg-white">
+                  Sign Up
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="signin">
                 <SignInForm onSuccess={handleAuthSuccess} />

@@ -14,9 +14,9 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen relative">
+    <main className="min-h-screen relative bg-white">
       {/* Navigation */}
-      <nav className="flex items-center justify-between p-4 max-w-7xl mx-auto">
+      <nav className="flex items-center justify-between p-4 max-w-7xl mx-auto bg-white text-black">
         <div className="flex items-center gap-2">
           <Logo className="h-8 w-8 text-green-600" />
           <span className="font-bold text-xl">NoteUS</span>
@@ -83,11 +83,7 @@ export default function Home() {
           </div>
           <div className="relative">
             <div className="aspect-[4/3] bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
-              <img
-                src="/NoteUSDashboard.png"
-                alt="NoteUS Dashboard Preview"
-                className="w-full h-full object-contain"
-              />
+              <img src="/NoteUSDashboard.png" alt="NoteUS Dashboard Preview" className="w-full h-full object-contain" />
             </div>
             <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-green-100 rounded-full flex items-center justify-center">
               <MessageSquare className="h-10 w-10 text-green-600" />

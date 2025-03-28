@@ -54,19 +54,15 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {error && <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md">{error}</div>}
+        {error && <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">{error}</div>}
         <FormField
           control={form.control}
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel className="text-black">Username</FormLabel>
               <FormControl>
-                <Input
-                  placeholder="Enter username"
-                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
-                  {...field}
-                />
+                <Input placeholder="Enter username" className="bg-white text-black border-gray-300" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -77,12 +73,12 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
           name="password"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Password</FormLabel>
+              <FormLabel className="text-black">Password</FormLabel>
               <FormControl>
                 <Input
                   type="password"
                   placeholder="Enter password"
-                  className="bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm"
+                  className="bg-white text-black border-gray-300"
                   {...field}
                 />
               </FormControl>
@@ -91,11 +87,7 @@ export function SignInForm({ onSuccess }: SignInFormProps) {
           )}
         />
         <div className="text-right">
-          <Button
-            variant="link"
-            className="p-0 h-auto font-normal text-green-600 hover:text-green-700 dark:text-green-500 dark:hover:text-green-400"
-            type="button"
-          >
+          <Button variant="link" className="p-0 h-auto font-normal text-green-600 hover:text-green-700" type="button">
             Forgot password?
           </Button>
         </div>

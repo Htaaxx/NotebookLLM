@@ -6,11 +6,13 @@ import { useState, useRef, useEffect } from "react"
 import { ChevronDown, ChevronUp, Send, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useLanguage } from "@/lib/language-context"
 
 export function ChatBox() {
   const [showSettings, setShowSettings] = useState(false)
   const [message, setMessage] = useState("")
   const [chatHistory, setChatHistory] = useState<string[]>([])
+  const { t } = useLanguage()
 
   const chatEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -38,7 +40,7 @@ export function ChatBox() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)]">
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-white text-black">
       {/* Chat Messages */}
       <div className="flex-1 p-4 overflow-y-auto">
         {chatHistory.map((msg, index) => (
@@ -50,20 +52,20 @@ export function ChatBox() {
       </div>
 
       {/* Chat Input */}
-      <div className="border-t p-4">
+      <div className="border-t p-4 bg-white">
         <div className="flex items-center justify-between mb-2">
           <button
             onClick={() => setShowSettings(!showSettings)}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
           >
-            Chat settings
+            {t("chatSettings")}
             {showSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
           </button>
         </div>
 
         {showSettings && (
           <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm">Chat settings panel</p>
+            <p className="text-sm">{t("chatSettings")}</p>
           </div>
         )}
 
@@ -71,16 +73,16 @@ export function ChatBox() {
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type your message here..."
-            className="flex-1"
+            placeholder={t("typeMessage")}
+            className="flex-1 bg-white text-black border-gray-300"
           />
           <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
             <Send className="w-4 h-4 mr-2" />
-            Send
+            {t("send")}
           </Button>
-          <Button type="button" variant="outline">
+          <Button type="button" variant="outline" className="border-gray-300 text-black">
             <RefreshCw className="w-4 h-4 mr-2" />
-            Regen
+            {t("regenerate")}
           </Button>
         </form>
       </div>
