@@ -655,28 +655,77 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [updateFolderContents, searchResults],
   )
 
-  const deleteFolder = useCallback(
-    (folderId: string, parentId?: string) => {
-      if (parentId) {
-        setRootFolders((prevFolders) => {
-          return updateFolderContents(prevFolders, parentId, (folder) => ({
-            ...folder,
-            folders: folder.folders.filter((f) => f.id !== folderId),
-          }))
-        })
-      } else {
-        setRootFolders((folders) => folders.filter((f) => f.id !== folderId))
-      }
+  // Find the deleteFolder function and replace it with this improved version that recursively deletes all files
 
-      // Also remove from search results if present
-      if (searchResults) {
-        setSearchResults({
-          ...searchResults,
-          folders: searchResults.folders.filter((folder) => folder.id !== folderId),
-        })
+  // Replace the existing deleteFolder function with this implementation:
+  const deleteFolder = useCallback(
+    async (folderId: string, parentId?: string) => {
+      try {
+        // First, collect all file IDs within this folder and its subfolders
+        const folderToDelete = findFolderById(rootFolders, folderId)
+        if (!folderToDelete) {
+          console.error("Folder not found:", folderId)
+          return
+        }
+
+        // Recursively collect all file IDs in the folder and its subfolders
+        const filesToDelete: string[] = []
+        const collectFilesRecursively = (folder: FolderType) => {
+          // Add files directly in this folder
+          folder.files.forEach((file) => filesToDelete.push(file.id))
+
+          // Process subfolders
+          folder.folders.forEach((subfolder) => collectFilesRecursively(subfolder))
+        }
+
+        collectFilesRecursively(folderToDelete)
+
+        // Delete all files from storage and database
+        for (const fileId of filesToDelete) {
+          try {
+            // Delete from storage
+            await fetch("http://localhost:5000/user/delete", {
+              method: "DELETE",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ document_id: fileId }),
+            })
+
+            // Delete from database
+            await documentAPI.deleteDocument(fileId)
+            console.log("Deleted file:", fileId)
+          } catch (error) {
+            console.error("Error deleting file:", fileId, error)
+          }
+        }
+
+        console.log(`Deleted ${filesToDelete.length} files from folder ${folderId}`)
+
+        // Now remove the folder from UI state
+        if (parentId) {
+          setRootFolders((prevFolders) => {
+            return updateFolderContents(prevFolders, parentId, (folder) => ({
+              ...folder,
+              folders: folder.folders.filter((f) => f.id !== folderId),
+            }))
+          })
+        } else {
+          setRootFolders((folders) => folders.filter((f) => f.id !== folderId))
+        }
+
+        // Also remove from search results if present
+        if (searchResults) {
+          setSearchResults({
+            ...searchResults,
+            folders: searchResults.folders.filter((folder) => folder.id !== folderId),
+          })
+        }
+      } catch (error) {
+        console.error("Error deleting folder:", error)
       }
     },
-    [updateFolderContents, searchResults],
+    [updateFolderContents, searchResults, rootFolders],
   )
 
   const handleDragStart = (
