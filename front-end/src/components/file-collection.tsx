@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useState, useCallback, useEffect } from "react"
-import { Search, ChevronRight, ChevronDown, Trash2, Plus, MessageSquare, X } from "lucide-react"
+import { Search, ChevronRight, ChevronDown, Trash2, Plus, MessageSquare, X, FileText, Folder } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -10,7 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { documentAPI } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
 import { searchFiles, searchChats } from "@/lib/search-utils"
-import type { FileItem, Folder, ChatItem, DragItem } from "../types/app-types"
+import type { FileItem, Folder as FolderType, ChatItem, DragItem } from "../types/app-types"
 import "../styles/file-collection.css"
 
 interface FileCollectionProps {
@@ -39,11 +39,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const { t } = useLanguage()
   const [userID, setUserID] = useState("User")
   const [rootFiles, setRootFiles] = useState<FileItem[]>([])
-  const [rootFolders, setRootFolders] = useState<Folder[]>([])
+  const [rootFolders, setRootFolders] = useState<FolderType[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<{
     files: FileItem[]
-    folders: Folder[]
+    folders: FolderType[]
     chats: ChatItem[]
   } | null>(null)
   const [isSearching, setIsSearching] = useState(false)
@@ -82,6 +82,70 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     return extensionMatch ? extensionMatch[0].toLowerCase() : ""
   }
 
+  // Function to get file path based on folder hierarchy
+  const getFilePath = useCallback(
+    (folderId?: string): string => {
+      if (!folderId) {
+        return "root"
+      }
+
+      // Helper function to find path to a specific folder
+      const findFolderPath = (folders: FolderType[], targetId: string, currentPath = "root"): string | null => {
+        for (const folder of folders) {
+          if (folder.id === targetId) {
+            return currentPath + "/" + folder.name
+          }
+
+          // Check in subfolders
+          const path = findFolderPath(folder.folders, targetId, currentPath + "/" + folder.name)
+          if (path) return path
+        }
+        return null
+      }
+
+      const path = findFolderPath(rootFolders, folderId)
+      return path || "root"
+    },
+    [rootFolders],
+  )
+
+  // Function to get full path for a file
+  const getFullFilePath = useCallback(
+    (fileId: string, folderId?: string): string => {
+      if (!folderId) {
+        // Root file
+        const file = rootFiles.find((f) => f.id === fileId)
+        return file ? file.name : "Unknown file"
+      }
+
+      // File in a folder
+      const folderPath = getFilePath(folderId).replace("root/", "")
+      const findFileInFolders = (folders: FolderType[], targetFolderId: string, fileId: string): string | null => {
+        for (const folder of folders) {
+          if (folder.id === targetFolderId) {
+            const file = folder.files.find((f) => f.id === fileId)
+            return file ? `${folderPath}/${file.name}` : null
+          }
+
+          const result = findFileInFolders(folder.folders, targetFolderId, fileId)
+          if (result) return result
+        }
+        return null
+      }
+
+      return findFileInFolders(rootFolders, folderId, fileId) || "Unknown file"
+    },
+    [rootFiles, rootFolders, getFilePath],
+  )
+
+  // Function to get full path for a folder
+  const getFullFolderPath = useCallback(
+    (folderId: string): string => {
+      return getFilePath(folderId).replace("root/", "")
+    },
+    [getFilePath],
+  )
+
   // Handle search
   const handleSearch = () => {
     if (!searchQuery.trim()) {
@@ -111,8 +175,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     setSearchResults(null)
     setIsSearching(false)
   }
-
-  // Rest of your existing functions...
 
   // Existing handleDisplayUserFiles function
   const handleDisplayUserFiles = useCallback(async (userId: string) => {
@@ -145,7 +207,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
       // Start with empty root files and folders
       const newRootFiles: FileItem[] = []
-      const newRootFolders: Folder[] = []
+      const newRootFolders: FolderType[] = []
 
       // Add files directly in the root
       if (filesByPath["root"]) {
@@ -241,34 +303,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       handleDisplayUserFiles(storedUserID)
     }
   }, [handleDisplayUserFiles])
-
-  // Function to get file path based on folder hierarchy
-  const getFilePath = useCallback(
-    (folderId?: string): string => {
-      // Your existing implementation...
-      if (!folderId) {
-        return "root"
-      }
-
-      // Helper function to find path to a specific folder
-      const findFolderPath = (folders: Folder[], targetId: string, currentPath = "root"): string | null => {
-        for (const folder of folders) {
-          if (folder.id === targetId) {
-            return currentPath + "/" + folder.name
-          }
-
-          // Check in subfolders
-          const path = findFolderPath(folder.folders, targetId, currentPath + "/" + folder.name)
-          if (path) return path
-        }
-        return null
-      }
-
-      const path = findFolderPath(rootFolders, folderId)
-      return path || "root"
-    },
-    [rootFolders],
-  )
 
   // Your existing functions for file operations...
   const handleUpload = async (file: File, documentId: string): Promise<FileItem | null> => {
@@ -389,7 +423,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const createFolder = useCallback(
     (parentId?: string) => {
       if (newFolderName.trim()) {
-        const newFolder: Folder = {
+        const newFolder: FolderType = {
           id: Math.random().toString(36).substr(2, 9),
           name: newFolderName,
           files: [],
@@ -415,7 +449,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   )
 
   const updateFolderContents = useCallback(
-    (folders: Folder[], folderId: string, updateFn: (folder: Folder) => Folder): Folder[] => {
+    (folders: FolderType[], folderId: string, updateFn: (folder: FolderType) => FolderType): FolderType[] => {
       return folders.map((folder) => {
         if (folder.id === folderId) {
           return updateFn(folder)
@@ -441,8 +475,26 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [updateFolderContents],
   )
 
+  // Updated to handle search results
   const toggleFolderSelection = useCallback(
     (folderId: string) => {
+      // First check if we're in search mode
+      if (isSearching && searchResults) {
+        // Find the folder in search results
+        const folderInSearch = findFolderById(searchResults.folders, folderId)
+
+        if (folderInSearch) {
+          // Update the folder in search results
+          const updatedFolders = updateFolderInSearchResults(searchResults.folders, folderId, !folderInSearch.selected)
+
+          setSearchResults({
+            ...searchResults,
+            folders: updatedFolders,
+          })
+        }
+      }
+
+      // Always update the main data structure
       setRootFolders((prevFolders) => {
         return updateFolderContents(prevFolders, folderId, (folder) => ({
           ...folder,
@@ -458,25 +510,110 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         }))
       })
     },
-    [updateFolderContents],
+    [updateFolderContents, isSearching, searchResults],
   )
 
+  // Helper function to find a folder by ID
+  const findFolderById = (folders: FolderType[], folderId: string): FolderType | null => {
+    for (const folder of folders) {
+      if (folder.id === folderId) {
+        return folder
+      }
+
+      const subFolder = findFolderById(folder.folders, folderId)
+      if (subFolder) {
+        return subFolder
+      }
+    }
+
+    return null
+  }
+
+  // Helper function to update a folder in search results
+  const updateFolderInSearchResults = (folders: FolderType[], folderId: string, selected: boolean): FolderType[] => {
+    return folders.map((folder) => {
+      if (folder.id === folderId) {
+        return {
+          ...folder,
+          selected,
+          files: folder.files.map((file) => ({ ...file, selected })),
+          folders: folder.folders.map((subFolder) => ({ ...subFolder, selected })),
+        }
+      }
+
+      return {
+        ...folder,
+        folders: updateFolderInSearchResults(folder.folders, folderId, selected),
+      }
+    })
+  }
+
+  // Updated to handle search results
   const toggleFileSelection = useCallback(
     (fileId: string, folderId?: string) => {
-      if (folderId) {
-        setRootFolders((prevFolders) => {
-          return updateFolderContents(prevFolders, folderId, (folder) => ({
-            ...folder,
-            files: folder.files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
-          }))
-        })
-      } else {
-        setRootFiles((files) =>
-          files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
+      // First check if we're in search mode
+      if (isSearching && searchResults) {
+        // Update the file in search results
+        const updatedFiles = searchResults.files.map((file) =>
+          file.id === fileId ? { ...file, selected: !file.selected } : file,
         )
+
+        setSearchResults({
+          ...searchResults,
+          files: updatedFiles,
+        })
+
+        // Now update the actual file in the main data structure
+        // First check if it's in root files
+        const rootFile = rootFiles.find((file) => file.id === fileId)
+        if (rootFile) {
+          setRootFiles((files) =>
+            files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
+          )
+        } else {
+          // If not in root, it must be in a folder
+          // We need to find which folder contains this file
+          const updateFolderWithFile = (folders: FolderType[]): FolderType[] => {
+            return folders.map((folder) => {
+              // Check if file is in this folder
+              const fileIndex = folder.files.findIndex((file) => file.id === fileId)
+              if (fileIndex >= 0) {
+                // File found in this folder
+                const updatedFiles = [...folder.files]
+                updatedFiles[fileIndex] = {
+                  ...updatedFiles[fileIndex],
+                  selected: !updatedFiles[fileIndex].selected,
+                }
+                return { ...folder, files: updatedFiles }
+              }
+
+              // If not in this folder, check subfolders
+              return {
+                ...folder,
+                folders: updateFolderWithFile(folder.folders),
+              }
+            })
+          }
+
+          setRootFolders((folders) => updateFolderWithFile(folders))
+        }
+      } else {
+        // Original behavior for non-search mode
+        if (folderId) {
+          setRootFolders((prevFolders) => {
+            return updateFolderContents(prevFolders, folderId, (folder) => ({
+              ...folder,
+              files: folder.files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
+            }))
+          })
+        } else {
+          setRootFiles((files) =>
+            files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
+          )
+        }
       }
     },
-    [updateFolderContents],
+    [updateFolderContents, isSearching, searchResults, rootFiles],
   )
 
   const deleteFile = useCallback(
@@ -503,11 +640,19 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         } else {
           setRootFiles((files) => files.filter((file) => file.id !== fileId))
         }
+
+        // Also remove from search results if present
+        if (searchResults) {
+          setSearchResults({
+            ...searchResults,
+            files: searchResults.files.filter((file) => file.id !== fileId),
+          })
+        }
       } catch (error) {
         console.error("Error deleting file:", error)
       }
     },
-    [updateFolderContents],
+    [updateFolderContents, searchResults],
   )
 
   const deleteFolder = useCallback(
@@ -522,13 +667,21 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       } else {
         setRootFolders((folders) => folders.filter((f) => f.id !== folderId))
       }
+
+      // Also remove from search results if present
+      if (searchResults) {
+        setSearchResults({
+          ...searchResults,
+          folders: searchResults.folders.filter((folder) => folder.id !== folderId),
+        })
+      }
     },
-    [updateFolderContents],
+    [updateFolderContents, searchResults],
   )
 
   const handleDragStart = (
     e: React.DragEvent,
-    item: FileItem | Folder,
+    item: FileItem | FolderType,
     type: "file" | "folder",
     parentId: string | null,
   ) => {
@@ -549,7 +702,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       if (!draggedItem) return
 
       // Prevent dropping a folder into itself or its descendants
-      if (draggedItem.type === "folder" && isDescendant(draggedItem.item as Folder, targetFolderId)) {
+      if (draggedItem.type === "folder" && isDescendant(draggedItem.item as FolderType, targetFolderId)) {
         return
       }
 
@@ -576,7 +729,8 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           return updateFolderContents(prevFolders, targetFolderId, (folder) => ({
             ...folder,
             files: draggedItem.type === "file" ? [...folder.files, draggedItem.item as FileItem] : folder.files,
-            folders: draggedItem.type === "folder" ? [...folder.folders, draggedItem.item as Folder] : folder.folders,
+            folders:
+              draggedItem.type === "folder" ? [...folder.folders, draggedItem.item as FolderType] : folder.folders,
           }))
         })
       } else {
@@ -584,7 +738,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         if (draggedItem.type === "file") {
           setRootFiles((prev) => [...prev, draggedItem.item as FileItem])
         } else {
-          setRootFolders((prev) => [...prev, draggedItem.item as Folder])
+          setRootFolders((prev) => [...prev, draggedItem.item as FolderType])
         }
       }
 
@@ -593,14 +747,33 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [draggedItem, updateFolderContents],
   )
 
-  const isDescendant = (folder: Folder, targetId?: string): boolean => {
+  const isDescendant = (folder: FolderType, targetId?: string): boolean => {
     if (!targetId) return false
     if (folder.id === targetId) return true
     return folder.folders.some((f) => isDescendant(f, targetId))
   }
 
-  // Render folder function
-  const renderFolder = (folder: Folder, parentId: string | null = null) => (
+  // New function to render a file with file icon - consistent spacing and tooltip
+  const renderFile = (file: FileItem, folderId?: string) => (
+    <div
+      key={file.id}
+      className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1"
+      draggable
+      onDragStart={(e) => handleDragStart(e, file, "file", folderId || null)}
+      title={getFullFilePath(file.id, folderId)}
+    >
+      <div className="w-4 h-4"></div> {/* Consistent spacer for all files */}
+      <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id, folderId)} />
+      <FileText className="w-4 h-4 text-gray-400" />
+      <span className="text-sm truncate flex-grow">{file.name}</span>
+      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id, folderId)}>
+        <Trash2 className="w-4 h-4 text-red-500" />
+      </Button>
+    </div>
+  )
+
+  // Render folder function - updated with consistent folder icon and tooltip
+  const renderFolder = (folder: FolderType, parentId: string | null = null, isSearchResult = false) => (
     <div
       key={folder.id}
       className="space-y-1"
@@ -609,11 +782,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       onDragOver={handleDragOver}
       onDrop={(e) => handleDrop(e, folder.id)}
     >
-      <div className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1">
+      <div className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1" title={getFullFolderPath(folder.id)}>
         <button onClick={() => toggleFolder(folder.id)} className="text-gray-500">
           {folder.expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
         <Checkbox checked={folder.selected} onCheckedChange={() => toggleFolderSelection(folder.id)} />
+        <Folder className="w-4 h-4 text-gray-400" />
         <span className="text-sm truncate flex-grow">{folder.name}</span>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -648,7 +822,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         </Button>
       </div>
 
-      {/* Always render the file input, but only show folder content when expanded */}
+      {/* Always render the file input, but only show folder content when expanded or in search results */}
       <input
         id={`file-upload-${folder.id}`}
         type="file"
@@ -657,24 +831,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         onChange={(e) => handleFileUpload(e, userID, folder.id)}
       />
 
-      {folder.expanded && (
+      {(folder.expanded || isSearchResult) && (
         <div className="ml-6 space-y-1">
-          {folder.folders.map((subFolder) => renderFolder(subFolder, folder.id))}
-          {folder.files.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1"
-              draggable
-              onDragStart={(e) => handleDragStart(e, file, "file", folder.id)}
-            >
-              <MessageSquare className="w-4 h-4 text-gray-400" />
-              <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id, folder.id)} />
-              <span className="text-sm truncate flex-grow">{file.name}</span>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id, folder.id)}>
-                <Trash2 className="w-4 h-4 text-red-500" />
-              </Button>
-            </div>
-          ))}
+          {folder.folders.map((subFolder) => renderFolder(subFolder, folder.id, isSearchResult))}
+          {folder.files.map((file) => renderFile(file, folder.id))}
         </div>
       )}
     </div>
@@ -688,7 +848,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     onFileSelect(allSelectedFiles) // Pass the full array
   }, [rootFiles, rootFolders, onFileSelect])
 
-  const getAllSelectedFiles = (folder: Folder): FileItem[] => {
+  const getAllSelectedFiles = (folder: FolderType): FileItem[] => {
     return [
       ...folder.files.filter((file) => file.selected),
       ...folder.folders.flatMap((subFolder) => getAllSelectedFiles(subFolder)),
@@ -754,22 +914,14 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         {folders.length > 0 && (
           <div>
             <h4 className="text-xs font-semibold uppercase text-gray-500 mb-2">Folders</h4>
-            <div className="space-y-1">{folders.map((folder) => renderFolder(folder))}</div>
+            <div className="space-y-1">{folders.map((folder) => renderFolder(folder, null, true))}</div>
           </div>
         )}
 
         {files.length > 0 && (
           <div>
             <h4 className="text-xs font-semibold uppercase text-gray-500 mb-2">Files</h4>
-            <div className="space-y-1">
-              {files.map((file) => (
-                <div key={file.id} className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1">
-                  <MessageSquare className="w-4 h-4 text-gray-400" />
-                  <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id)} />
-                  <span className="text-sm truncate flex-grow">{file.name}</span>
-                </div>
-              ))}
-            </div>
+            <div className="space-y-1">{files.map((file) => renderFile(file))}</div>
           </div>
         )}
       </div>
@@ -918,21 +1070,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             {/* File and folder list */}
             <div className="space-y-1" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e)}>
               {rootFolders.map((folder) => renderFolder(folder))}
-              {rootFiles.map((file) => (
-                <div
-                  key={file.id}
-                  className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, file, "file", null)}
-                >
-                  <MessageSquare className="w-4 h-4 text-gray-400" />
-                  <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id)} />
-                  <span className="text-sm truncate flex-grow">{file.name}</span>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id)}>
-                    <Trash2 className="w-4 h-4 text-red-500" />
-                  </Button>
-                </div>
-              ))}
+              {rootFiles.map((file) => renderFile(file))}
             </div>
           </div>
         </>

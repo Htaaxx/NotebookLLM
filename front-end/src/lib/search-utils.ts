@@ -18,8 +18,18 @@ export function searchFiles(
   // Search through folders and their files
   const matchedFoldersAndFiles = searchFoldersRecursive(normalizedQuery, rootFolders)
 
+  // Create a map of all matched files to avoid duplicates
+  const allMatchedFiles = [...matchedFiles]
+
+  // Add files from folders but avoid duplicates
+  matchedFoldersAndFiles.files.forEach((file) => {
+    if (!allMatchedFiles.some((f) => f.id === file.id)) {
+      allMatchedFiles.push(file)
+    }
+  })
+
   return {
-    files: matchedFiles.concat(matchedFoldersAndFiles.files),
+    files: allMatchedFiles,
     folders: matchedFoldersAndFiles.folders,
   }
 }
@@ -60,11 +70,23 @@ function searchFoldersRecursive(query: string, folders: Folder[]): { files: File
 
     // Recursively search subfolders
     const subResults = searchFoldersRecursive(query, folder.folders)
+
+    // Add files from subfolders
     matchedFiles.push(...subResults.files)
 
-    // If this folder or any of its content matches, add it to results
-    if (folderMatches || filesInFolder.length > 0 || subResults.files.length > 0 || subResults.folders.length > 0) {
-      matchedFolders.push(folder)
+    // Create a copy of the folder with only matching content
+    if (folderMatches || filesInFolder.length > 0 || subResults.folders.length > 0) {
+      // Create a deep copy of the folder with only matching content
+      const folderCopy = { ...folder }
+
+      // Only include matching files
+      folderCopy.files = folder.files.filter((file) => file.name.toLowerCase().includes(query))
+
+      // Only include matching subfolders or subfolders with matching content
+      folderCopy.folders = subResults.folders
+
+      // Add to matched folders
+      matchedFolders.push(folderCopy)
     }
   })
 
