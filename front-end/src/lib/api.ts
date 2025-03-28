@@ -91,6 +91,7 @@ export const authAPI = {
     localStorage.setItem('accessToken', response.data.accessToken);
     localStorage.setItem('refreshToken', response.data.refreshToken);
     localStorage.setItem('username', userData.name);
+    localStorage.setItem('user_id', userData.id);
     return response.data;
   },
 

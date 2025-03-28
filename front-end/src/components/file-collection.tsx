@@ -2,55 +2,19 @@
 
 import type React from "react"
 import { useState, useCallback, useEffect } from "react"
-import { Search, ChevronRight, ChevronDown, Trash2, Plus, MessageSquare } from "lucide-react"
+import { Search, ChevronRight, ChevronDown, Trash2, Plus, MessageSquare, X } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { documentAPI } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
+import { searchFiles, searchChats } from "@/lib/search-utils"
+import type { FileItem, Folder, ChatItem, DragItem } from "../types/app-types"
 import "../styles/file-collection.css"
-
-interface FileItem {
-  id: string
-  name: string
-  selected: boolean
-  type: string
-  url: string
-  size: number
-  cloudinaryId: string
-  FilePath: string
-}
-
-interface Folder {
-  id: string
-  name: string
-  files: FileItem[]
-  folders: Folder[]
-  selected: boolean
-  expanded: boolean
-}
-
-type DragItem =
-  | {
-      type: "file"
-      item: FileItem
-      parentId: string | null
-    }
-  | {
-      type: "folder"
-      item: Folder
-      parentId: string | null
-    }
 
 interface FileCollectionProps {
   onFileSelect: (files: FileItem[]) => void
-}
-
-interface ChatItem {
-  id: string
-  name: string
-  messages: string[]
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
@@ -74,6 +38,23 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   // Existing state and functions
   const { t } = useLanguage()
   const [userID, setUserID] = useState("User")
+  const [rootFiles, setRootFiles] = useState<FileItem[]>([])
+  const [rootFolders, setRootFolders] = useState<Folder[]>([])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [searchResults, setSearchResults] = useState<{
+    files: FileItem[]
+    folders: Folder[]
+    chats: ChatItem[]
+  } | null>(null)
+  const [isSearching, setIsSearching] = useState(false)
+  const [newFolderName, setNewFolderName] = useState("")
+  const [showNewFolderInput, setShowNewFolderInput] = useState<boolean | string>(false)
+  const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
+  const [chatboxes, setChatboxes] = useState<ChatItem[]>([])
+  const [showNewChatInput, setShowNewChatInput] = useState<boolean>(false)
+  const [newChatName, setNewChatName] = useState("")
+  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [chatHistory, setChatHistory] = useState<string[]>([])
 
   // Helper function to determine file type from name
   const getFileTypeFromName = (filename: string): string => {
@@ -101,6 +82,39 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     return extensionMatch ? extensionMatch[0].toLowerCase() : ""
   }
 
+  // Handle search
+  const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null)
+      setIsSearching(false)
+      return
+    }
+
+    setIsSearching(true)
+
+    // Search files and folders
+    const fileResults = searchFiles(searchQuery, rootFiles, rootFolders)
+
+    // Search chats
+    const chatResults = searchChats(searchQuery, chatboxes)
+
+    setSearchResults({
+      files: fileResults.files,
+      folders: fileResults.folders,
+      chats: chatResults,
+    })
+  }
+
+  // Clear search
+  const clearSearch = () => {
+    setSearchQuery("")
+    setSearchResults(null)
+    setIsSearching(false)
+  }
+
+  // Rest of your existing functions...
+
+  // Existing handleDisplayUserFiles function
   const handleDisplayUserFiles = useCallback(async (userId: string) => {
     try {
       // Call the API to get all documents for this user
@@ -228,21 +242,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     }
   }, [handleDisplayUserFiles])
 
-  const [rootFiles, setRootFiles] = useState<FileItem[]>([])
-  const [rootFolders, setRootFolders] = useState<Folder[]>([])
-  const [searchQuery, setSearchQuery] = useState("")
-  const [newFolderName, setNewFolderName] = useState("")
-  const [showNewFolderInput, setShowNewFolderInput] = useState<boolean | string>(false)
-  const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
-  const [chatboxes, setChatboxes] = useState<ChatItem[]>([])
-  const [showNewChatInput, setShowNewChatInput] = useState<boolean>(false)
-  const [newChatName, setNewChatName] = useState("")
-  const [currentChatId, setCurrentChatId] = useState<string | null>(null)
-  const [chatHistory, setChatHistory] = useState<string[]>([])
-
   // Function to get file path based on folder hierarchy
   const getFilePath = useCallback(
     (folderId?: string): string => {
+      // Your existing implementation...
       if (!folderId) {
         return "root"
       }
@@ -267,7 +270,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [rootFolders],
   )
 
+  // Your existing functions for file operations...
   const handleUpload = async (file: File, documentId: string): Promise<FileItem | null> => {
+    // Your existing implementation...
     const formData = new FormData()
     formData.append("file", file)
     formData.append("document_id", documentId)
@@ -594,6 +599,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     return folder.folders.some((f) => isDescendant(f, targetId))
   }
 
+  // Render folder function
   const renderFolder = (folder: Folder, parentId: string | null = null) => (
     <div
       key={folder.id}
@@ -714,131 +720,223 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     console.log("Deleted chatbox:", chatboxId)
   }
 
+  // Render search results
+  const renderSearchResults = () => {
+    if (!searchResults) return null
+
+    const { files, folders, chats } = searchResults
+    const hasResults = files.length > 0 || folders.length > 0 || chats.length > 0
+
+    if (!hasResults) {
+      return <div className="p-4 text-center text-gray-500">No results found for "{searchQuery}"</div>
+    }
+
+    return (
+      <div className="space-y-4">
+        {chats.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold uppercase text-gray-500 mb-2">Chats</h4>
+            <div className="space-y-1">
+              {chats.map((chat) => (
+                <div
+                  key={chat.id}
+                  className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer"
+                  onClick={() => switchChatbox(chat.id)}
+                >
+                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm truncate flex-grow">{chat.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {folders.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold uppercase text-gray-500 mb-2">Folders</h4>
+            <div className="space-y-1">{folders.map((folder) => renderFolder(folder))}</div>
+          </div>
+        )}
+
+        {files.length > 0 && (
+          <div>
+            <h4 className="text-xs font-semibold uppercase text-gray-500 mb-2">Files</h4>
+            <div className="space-y-1">
+              {files.map((file) => (
+                <div key={file.id} className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1">
+                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                  <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id)} />
+                  <span className="text-sm truncate flex-grow">{file.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="file-collection-container w-64 border-r h-[calc(100vh-64px)] p-4 flex flex-col gap-3 bg-white text-black">
       <div className="flex items-center justify-between"></div>
 
       <div className="space-y-2">
-        <Input
-          placeholder={t("searchAll")}
-          className="h-8 text-sm"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        <Button variant="secondary" className="w-full h-8 text-sm bg-green-500 hover:bg-green-500 text-black">
+        <div className="relative">
+          <Input
+            placeholder={t("searchAll")}
+            className="h-8 text-sm pr-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSearch()
+              }
+            }}
+          />
+          {searchQuery && (
+            <button
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              onClick={clearSearch}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        <Button
+          variant="secondary"
+          className="w-full h-8 text-sm bg-green-500 hover:bg-green-600 text-black"
+          onClick={handleSearch}
+        >
           <Search className="w-4 h-4 mr-2" />
           {t("searchInFiles")}
         </Button>
       </div>
 
-      <div className="mt-2 flex items-center justify-between">
-        <h3 className="text-sm font-medium">{t("chat")}</h3>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-2">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-background bg-white">
-            <DropdownMenuItem onSelect={() => setShowNewChatInput(true)}>{t("createNewChat")}</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
-      {showNewChatInput && (
-        <div className="flex gap-2 mb-2">
-          <Input
-            placeholder="Chatbox name"
-            value={newChatName}
-            onChange={(e) => setNewChatName(e.target.value)}
-            className="h-8 text-sm"
-          />
-          <Button size="sm" className="h-8" onClick={() => createNewChat()}>
-            {t("create")}
-          </Button>
-        </div>
-      )}
-
-      {/* Chat boxes section */}
-      <div className="-mt-2 space-y-1 overflow-auto flex-1" style={{ maxHeight: "150px" }}>
-        {chatboxes.map((chatbox) => (
-          <div
-            key={chatbox.id}
-            className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${
-              currentChatId === chatbox.id ? "bg-gray-200" : ""
-            }`}
-            onClick={() => switchChatbox(chatbox.id)}
-          >
-            <MessageSquare className="w-4 h-4 text-gray-400" />
-            <span className="text-sm truncate flex-grow">{chatbox.name}</span>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteChatbox(chatbox.id)}>
-              <Trash2 className="w-4 h-4 text-red-500" />
+      {/* Search Results */}
+      {isSearching ? (
+        <div className="flex-1 overflow-auto">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium">Search Results</h3>
+            <Button variant="ghost" size="sm" className="h-8 px-2" onClick={clearSearch}>
+              <X className="w-4 h-4" />
             </Button>
           </div>
-        ))}
-      </div>
-
-      <div className="mt-2 flex-1 overflow-auto">
-        <div className="flex items-center justify-between mb-2 sticky top-0 bg-white z-10">
-          <h3 className="text-sm font-medium">{t("fileCollection")}</h3>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2">
-                <Plus className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-white shadow-lg">
-              <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(true)}>
-                Add Folder
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="cursor-pointer"
-                onSelect={() => document.getElementById("root-file-upload")?.click()}
-              >
-                Add File
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          {renderSearchResults()}
         </div>
-
-        {showNewFolderInput && (
-          <div className="flex gap-2 mb-2">
-            <Input
-              placeholder="Folder name"
-              value={newFolderName}
-              onChange={(e) => setNewFolderName(e.target.value)}
-              className="h-8 text-sm"
-            />
-            <Button
-              size="sm"
-              className="h-8"
-              onClick={() => createFolder(typeof showNewFolderInput === "string" ? showNewFolderInput : undefined)}
-            >
-              {t("create")}
-            </Button>
+      ) : (
+        <>
+          <div className="mt-2 flex items-center justify-between">
+            <h3 className="text-sm font-medium">{t("chat")}</h3>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 px-2">
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="bg-white shadow-lg">
+                <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewChatInput(true)}>
+                  {t("createNewChat")}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-        )}
 
-        {/* File and folder list */}
-        <div className="space-y-1" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e)}>
-          {rootFolders.map((folder) => renderFolder(folder))}
-          {rootFiles.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1"
-              draggable
-              onDragStart={(e) => handleDragStart(e, file, "file", null)}
-            >
-              <MessageSquare className="w-4 h-4 text-gray-400" />
-              <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id)} />
-              <span className="text-sm truncate flex-grow">{file.name}</span>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id)}>
-                <Trash2 className="w-4 h-4 text-red-500" />
+          {showNewChatInput && (
+            <div className="flex gap-2 mb-2">
+              <Input
+                placeholder="Chatbox name"
+                value={newChatName}
+                onChange={(e) => setNewChatName(e.target.value)}
+                className="h-8 text-sm"
+              />
+              <Button size="sm" className="h-8" onClick={() => createNewChat()}>
+                {t("create")}
               </Button>
             </div>
-          ))}
-        </div>
-      </div>
+          )}
+
+          {/* Chat boxes section */}
+          <div className="-mt-2 space-y-1 overflow-auto flex-1" style={{ maxHeight: "150px" }}>
+            {chatboxes.map((chatbox) => (
+              <div
+                key={chatbox.id}
+                className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${
+                  currentChatId === chatbox.id ? "bg-gray-200" : ""
+                }`}
+                onClick={() => switchChatbox(chatbox.id)}
+              >
+                <MessageSquare className="w-4 h-4 text-gray-400" />
+                <span className="text-sm truncate flex-grow">{chatbox.name}</span>
+                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteChatbox(chatbox.id)}>
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                </Button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-2 flex-1 overflow-auto">
+            <div className="flex items-center justify-between mb-2 sticky top-0 bg-white z-10">
+              <h3 className="text-sm font-medium">{t("fileCollection")}</h3>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8 px-2">
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-white shadow-lg">
+                  <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(true)}>
+                    Add Folder
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="cursor-pointer"
+                    onSelect={() => document.getElementById("root-file-upload")?.click()}
+                  >
+                    Add File
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            {showNewFolderInput && (
+              <div className="flex gap-2 mb-2">
+                <Input
+                  placeholder="Folder name"
+                  value={newFolderName}
+                  onChange={(e) => setNewFolderName(e.target.value)}
+                  className="h-8 text-sm"
+                />
+                <Button
+                  size="sm"
+                  className="h-8"
+                  onClick={() => createFolder(typeof showNewFolderInput === "string" ? showNewFolderInput : undefined)}
+                >
+                  {t("create")}
+                </Button>
+              </div>
+            )}
+
+            {/* File and folder list */}
+            <div className="space-y-1" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e)}>
+              {rootFolders.map((folder) => renderFolder(folder))}
+              {rootFiles.map((file) => (
+                <div
+                  key={file.id}
+                  className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1"
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, file, "file", null)}
+                >
+                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                  <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id)} />
+                  <span className="text-sm truncate flex-grow">{file.name}</span>
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id)}>
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="mt-4">
         <h3 className="text-sm font-medium mb-2">{t("quickUpload")}</h3>
