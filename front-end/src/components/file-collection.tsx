@@ -21,6 +21,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
 const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100MB
 
+// Local storage key for folders
+const FOLDERS_STORAGE_KEY = "userFolders"
+
 const validateFileSize = (file: File): string | null => {
   if (file.type.startsWith("image/") && file.size > MAX_IMAGE_SIZE) {
     return `Image "${file.name}" exceeds the maximum size of 10MB!`
@@ -55,6 +58,33 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [newChatName, setNewChatName] = useState("")
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
   const [chatHistory, setChatHistory] = useState<string[]>([])
+  useEffect(() => {
+  const handleFileDeleted = (event: CustomEvent) => {
+    const deletedFileId = event.detail.fileId
+
+    // Update root files
+    setRootFiles((prevFiles: FileItem[]) => prevFiles.filter((file: FileItem) => file.id !== deletedFileId))
+
+    // Update files in folders
+    const updateFoldersRecursively = (folders: FolderType[]): FolderType[] => {
+      return folders.map((folder) => ({
+        ...folder,
+        files: folder.files.filter((file) => file.id !== deletedFileId),
+        folders: updateFoldersRecursively(folder.folders),
+      }))
+    }
+
+    setRootFolders((prevFolders: FolderType[]) => updateFoldersRecursively(prevFolders))
+  }
+
+  // Add event listener
+  window.addEventListener("fileDeleted", handleFileDeleted as EventListener)
+
+  // Clean up
+  return () => {
+    window.removeEventListener("fileDeleted", handleFileDeleted as EventListener)
+  }
+}, [])
 
   // Helper function to determine file type from name
   const getFileTypeFromName = (filename: string): string => {
@@ -146,6 +176,30 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [getFilePath],
   )
 
+  // Save folders to localStorage whenever they change
+  useEffect(() => {
+    if (userID && rootFolders.length > 0) {
+      try {
+        localStorage.setItem(`${FOLDERS_STORAGE_KEY}_${userID}`, JSON.stringify(rootFolders))
+      } catch (error) {
+        console.error("Error saving folders to localStorage:", error)
+      }
+    }
+  }, [rootFolders, userID])
+
+  // Load folders from localStorage on component mount
+  const loadFoldersFromStorage = useCallback((userId: string) => {
+    try {
+      const storedFolders = localStorage.getItem(`${FOLDERS_STORAGE_KEY}_${userId}`)
+      if (storedFolders) {
+        return JSON.parse(storedFolders) as FolderType[]
+      }
+    } catch (error) {
+      console.error("Error loading folders from localStorage:", error)
+    }
+    return []
+  }, [])
+
   // Handle search
   const handleSearch = () => {
     if (!searchQuery.trim()) {
@@ -177,73 +231,79 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   }
 
   // Existing handleDisplayUserFiles function
-  const handleDisplayUserFiles = useCallback(async (userId: string) => {
-    try {
-      // Call the API to get all documents for this user
-      console.log("Loading documents for user:", userId)
-      const documents = await documentAPI.getDocuments(userId)
+  const handleDisplayUserFiles = useCallback(
+    async (userId: string) => {
+      try {
+        // First, load folders from localStorage to ensure empty folders are preserved
+        const storedFolders = loadFoldersFromStorage(userId)
 
-      if (!documents || documents.length === 0) {
-        console.log("No documents found for user")
-        return
-      }
+        // Call the API to get all documents for this user
+        console.log("Loading documents for user:", userId)
+        const documents = await documentAPI.getDocuments(userId)
 
-      console.log("Documents loaded:", documents.length)
+        // Start with empty root files
+        const newRootFiles: FileItem[] = []
 
-      // Group documents by filepath to create folder structure
-      const filesByPath: Record<string, any[]> = {}
+        // Use stored folders as a base, or empty array if none exist
+        const newRootFolders: FolderType[] = storedFolders || []
 
-      documents.forEach((doc: { document_id: string; document_name: string; document_path: string }) => {
-        const path = doc.document_path || "root"
-
-        // Check path validity
-        console.log(`Document ${doc.document_id} has path: ${path}`)
-
-        if (!filesByPath[path]) {
-          filesByPath[path] = []
+        if (!documents || documents.length === 0) {
+          console.log("No documents found for user")
+          // Even if no documents, we still set the folders from localStorage
+          setRootFolders(newRootFolders)
+          return
         }
-        filesByPath[path].push(doc)
-      })
 
-      // Start with empty root files and folders
-      const newRootFiles: FileItem[] = []
-      const newRootFolders: FolderType[] = []
+        console.log("Documents loaded:", documents.length)
 
-      // Add files directly in the root
-      if (filesByPath["root"]) {
-        filesByPath["root"].forEach((doc) => {
-          const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${doc.document_id}${getFileExtension(doc.document_name)}`
-          console.log("Cloudinary URL:", cloudinaryURL)
+        // Group documents by filepath to create folder structure
+        const filesByPath: Record<string, any[]> = {}
 
-          // Determine file type based on name
-          const fileType = doc.document_name ? getFileTypeFromName(doc.document_name) : "document"
+        documents.forEach((doc: { document_id: string; document_name: string; document_path: string }) => {
+          const path = doc.document_path || "root"
 
-          newRootFiles.push({
-            id: doc.document_id,
-            name: doc.document_name || "Untitled Document",
-            selected: false,
-            type: fileType,
-            url: cloudinaryURL, // Set the URL for preview
-            size: 0,
-            cloudinaryId: doc.document_id,
-            FilePath: "root",
-          })
+          // Check path validity
+          console.log(`Document ${doc.document_id} has path: ${path}`)
+
+          if (!filesByPath[path]) {
+            filesByPath[path] = []
+          }
+          filesByPath[path].push(doc)
         })
-      }
 
-      // Process each path to create folder structure
-      Object.keys(filesByPath).forEach((path) => {
-        if (path === "root") return
+        // Add files directly in the root
+        if (filesByPath["root"]) {
+          filesByPath["root"].forEach((doc) => {
+            const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${doc.document_id}${getFileExtension(doc.document_name)}`
+            console.log("Cloudinary URL:", cloudinaryURL)
 
-        const pathParts = path.split("/").filter((p) => p !== "root")
-        if (pathParts.length === 0) return
+            // Determine file type based on name
+            const fileType = doc.document_name ? getFileTypeFromName(doc.document_name) : "document"
 
-        let currentFolders = newRootFolders
-        let folder = null
+            newRootFiles.push({
+              id: doc.document_id,
+              name: doc.document_name || "Untitled Document",
+              selected: false,
+              type: fileType,
+              url: cloudinaryURL, // Set the URL for preview
+              size: 0,
+              cloudinaryId: doc.document_id,
+              FilePath: "root",
+            })
+          })
+        }
 
-        // Traverse the path to create folders
-        pathParts.forEach((folderName, index) => {
-          folder = currentFolders.find((f) => f.name === folderName)
+        // Helper function to find or create folder path
+        const findOrCreateFolderPath = (
+          folders: FolderType[],
+          pathParts: string[],
+          currentIndex = 0,
+          currentPath = "root",
+        ): { folder: FolderType; path: string } | null => {
+          if (currentIndex >= pathParts.length) return null
+
+          const folderName = pathParts[currentIndex]
+          let folder = folders.find((f) => f.name === folderName)
 
           if (!folder) {
             folder = {
@@ -254,11 +314,31 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               selected: false,
               expanded: true,
             }
-            currentFolders.push(folder)
+            folders.push(folder)
           }
 
-          // Add files to the last folder
-          if (index === pathParts.length - 1) {
+          const newPath = `${currentPath}/${folderName}`
+
+          if (currentIndex === pathParts.length - 1) {
+            return { folder, path: newPath }
+          }
+
+          return findOrCreateFolderPath(folder.folders, pathParts, currentIndex + 1, newPath)
+        }
+
+        // Process each path to create folder structure
+        Object.keys(filesByPath).forEach((path) => {
+          if (path === "root") return
+
+          const pathParts = path.split("/").filter((p) => p !== "root")
+          if (pathParts.length === 0) return
+
+          const result = findOrCreateFolderPath(newRootFolders, pathParts)
+
+          if (result) {
+            const { folder } = result
+
+            // Add files to the folder
             folder.files.push(
               ...filesByPath[path].map((doc) => {
                 // Generate URL for Cloudinary resource
@@ -280,68 +360,46 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               }),
             )
           }
-
-          // Update the current folders
-          currentFolders = folder.folders
         })
-      })
 
-      console.log("Setting state with files:", newRootFiles.length, "and folders:", newRootFolders.length)
+        console.log("Setting state with files:", newRootFiles.length, "and folders:", newRootFolders.length)
 
-      // Update the state
-      setRootFiles(newRootFiles)
-      setRootFolders(newRootFolders)
-    } catch (error) {
-      console.error("Error displaying user files:", error)
-    }
-  }, [])
+        // Update the state
+        setRootFiles(newRootFiles)
+        setRootFolders(newRootFolders)
+      } catch (error) {
+        console.error("Error displaying user files:", error)
+      }
+    },
+    [],
+  )
+
+  const [hasFetchedInitialData, setHasFetchedInitialData] = useState(false)
 
   useEffect(() => {
     const storedUserID = localStorage.getItem("user_id")
-    if (storedUserID) {
+    if (storedUserID && !hasFetchedInitialData) {
       setUserID(storedUserID)
       handleDisplayUserFiles(storedUserID)
+      setHasFetchedInitialData(true)
     }
-  }, [handleDisplayUserFiles])
+  }, [handleDisplayUserFiles, hasFetchedInitialData])
 
-  // Your existing functions for file operations...
-  const handleUpload = async (file: File, documentId: string): Promise<FileItem | null> => {
-    // Your existing implementation...
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("document_id", documentId)
 
-    try {
-      const response = await fetch("http://localhost:5000/user/upload", {
-        method: "POST",
-        body: formData,
+  const updateFolderContents = useCallback(
+    (folders: FolderType[], folderId: string, updateFn: (folder: FolderType) => FolderType): FolderType[] => {
+      return folders.map((folder) => {
+        if (folder.id === folderId) {
+          return updateFn(folder)
+        }
+        return {
+          ...folder,
+          folders: updateFolderContents(folder.folders, folderId, updateFn),
+        }
       })
-
-      const responseText = await response.text()
-
-      if (!response.ok) {
-        console.error("Upload failed:", responseText)
-        throw new Error(`Upload failed: ${response.status} - ${responseText}`)
-      }
-
-      const data = JSON.parse(responseText)
-      console.log("Uploaded:", data)
-
-      return {
-        id: data.document_id,
-        name: file.name,
-        selected: false,
-        type: file.type,
-        url: data.url,
-        size: file.size,
-        cloudinaryId: data.document_id,
-        FilePath: data.file_path,
-      }
-    } catch (error) {
-      console.error("Upload error:", error)
-      return null
-    }
-  }
+    },
+    [],
+  )
 
   const handleFileUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>, userID: string, folderId?: string) => {
@@ -369,8 +427,8 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       const filePath = getFilePath(folderId)
       console.log("Uploading to path:", filePath)
 
-      const newFiles = await Promise.all(
-        validFilesArray.map(async (file) => {
+      try {
+        const uploadPromises = validFilesArray.map(async (file) => {
           try {
             // Pass the filePath to createDocument
             const response = await documentAPI.createDocument(userID, file.name, filePath)
@@ -382,42 +440,58 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             const documentId = response.document_id
             console.log("Document ID:", documentId, "with path:", response.document_path)
 
-            const uploadedFile = await handleUpload(file, documentId)
+            // Create FormData for file upload
+            const formData = new FormData()
+            formData.append("file", file)
+            formData.append("document_id", documentId)
 
-            // Make sure FilePath is included in the file item
-            if (uploadedFile) {
-              uploadedFile.FilePath = response.document_path || filePath
-              console.log("Final file with path:", uploadedFile.FilePath)
+            const uploadResponse = await fetch("http://localhost:5000/user/upload", {
+              method: "POST",
+              body: formData,
+            })
+
+            if (!uploadResponse.ok) {
+              throw new Error(`Upload failed: ${uploadResponse.status}`)
             }
 
-            return uploadedFile
+            const data = await uploadResponse.json()
+
+            return {
+              id: documentId,
+              name: file.name,
+              selected: false,
+              type: file.type,
+              url: data.url || `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${documentId}`,
+              size: file.size,
+              cloudinaryId: documentId,
+              FilePath: response.document_path || filePath,
+            }
           } catch (error) {
             console.error("Error uploading file:", error)
             return null
           }
-        }),
-      )
+        })
 
-      const validFiles: FileItem[] = newFiles.filter((file): file is FileItem => file !== null)
+        // Wait for all uploads to complete
+        const uploadedFiles = await Promise.all(uploadPromises)
+        const validUploadedFiles = uploadedFiles.filter(Boolean) as FileItem[]
 
-      if (validFiles.length === 0) {
-        console.warn("No valid files were uploaded!!!")
-        return
-      }
-
-      // Update UI state
-      if (folderId) {
-        setRootFolders((prevFolders) =>
-          updateFolderContents(prevFolders, folderId, (folder) => ({
-            ...folder,
-            files: [...folder.files, ...validFiles],
-          })),
-        )
-      } else {
-        setRootFiles((prev) => [...prev, ...validFiles])
+        // Update UI state
+        if (folderId) {
+          setRootFolders((prevFolders) =>
+            updateFolderContents(prevFolders, folderId, (folder) => ({
+              ...folder,
+              files: [...folder.files, ...validUploadedFiles],
+            })),
+          )
+        } else {
+          setRootFiles((prev) => [...prev, ...validUploadedFiles])
+        }
+      } catch (error) {
+        console.error("Error during file uploads:", error)
       }
     },
-    [getFilePath],
+    [getFilePath, updateFolderContents],
   )
 
   const createFolder = useCallback(
@@ -445,22 +519,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         setShowNewFolderInput(false)
       }
     },
-    [newFolderName],
-  )
-
-  const updateFolderContents = useCallback(
-    (folders: FolderType[], folderId: string, updateFn: (folder: FolderType) => FolderType): FolderType[] => {
-      return folders.map((folder) => {
-        if (folder.id === folderId) {
-          return updateFn(folder)
-        }
-        return {
-          ...folder,
-          folders: updateFolderContents(folder.folders, folderId, updateFn),
-        }
-      })
-    },
-    [],
+    [newFolderName, updateFolderContents],
   )
 
   const toggleFolder = useCallback(
@@ -616,6 +675,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [updateFolderContents, isSearching, searchResults, rootFiles],
   )
 
+  // Fixed deleteFile function to not delete folders
   const deleteFile = useCallback(
     async (fileId: string, folderId?: string) => {
       try {
@@ -628,8 +688,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         })
 
         const data = await response.json()
-        const dbDelete = await documentAPI.deleteDocument(data.document_id)
+        await documentAPI.deleteDocument(data.document_id)
 
+        // Update UI state - only remove the file, not the folder
         if (folderId) {
           setRootFolders((prevFolders) =>
             updateFolderContents(prevFolders, folderId, (folder) => ({
@@ -656,8 +717,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   )
 
   // Find the deleteFolder function and replace it with this improved version that recursively deletes all files
-
-  // Replace the existing deleteFolder function with this implementation:
   const deleteFolder = useCallback(
     async (folderId: string, parentId?: string) => {
       try {
@@ -811,13 +870,27 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       onDragStart={(e) => handleDragStart(e, file, "file", folderId || null)}
       title={getFullFilePath(file.id, folderId)}
     >
-      <div className="w-4 h-4"></div> {/* Consistent spacer for all files */}
-      <Checkbox checked={file.selected} onCheckedChange={() => toggleFileSelection(file.id, folderId)} />
+      <div className="w-4 h-4 flex items-center justify-center">{/* Consistent spacer for all files */}</div>
+      <Checkbox
+        checked={file.selected}
+        onCheckedChange={() => toggleFileSelection(file.id, folderId)}
+        className="h-4 w-4"
+      />
       <FileText className="w-4 h-4 text-gray-400" />
       <span className="text-sm truncate flex-grow">{file.name}</span>
-      <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteFile(file.id, folderId)}>
-        <Trash2 className="w-4 h-4 text-red-500" />
-      </Button>
+      <div className="flex items-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-6 w-6 p-0"
+          onClick={(e) => {
+            e.stopPropagation() // Prevent event bubbling
+            deleteFile(file.id, folderId)
+          }}
+        >
+          <Trash2 className="w-4 h-4 text-red-500" />
+        </Button>
+      </div>
     </div>
   )
 
@@ -832,43 +905,56 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       onDrop={(e) => handleDrop(e, folder.id)}
     >
       <div className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1" title={getFullFolderPath(folder.id)}>
-        <button onClick={() => toggleFolder(folder.id)} className="text-gray-500">
+        <button
+          onClick={() => toggleFolder(folder.id)}
+          className="text-gray-500 w-4 h-4 flex items-center justify-center"
+        >
           {folder.expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <Checkbox checked={folder.selected} onCheckedChange={() => toggleFolderSelection(folder.id)} />
+        <Checkbox
+          checked={folder.selected}
+          onCheckedChange={() => toggleFolderSelection(folder.id)}
+          className="h-4 w-4"
+        />
         <Folder className="w-4 h-4 text-gray-400" />
         <span className="text-sm truncate flex-grow">{folder.name}</span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-              <Plus className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="bg-white shadow-lg">
-            <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(folder.id)}>
-              Add Subfolder
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              className="cursor-pointer"
-              onSelect={() => {
-                const fileInput = document.getElementById(`file-upload-${folder.id}`)
-                if (fileInput) {
-                  fileInput.click()
-                }
-              }}
-            >
-              Add File
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={() => deleteFolder(folder.id, parentId || undefined)}
-        >
-          <Trash2 className="w-4 h-4 text-red-500" />
-        </Button>
+        <div className="flex items-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                <Plus className="w-4 h-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-white shadow-lg">
+              <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(folder.id)}>
+                Add Subfolder
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="cursor-pointer"
+                onSelect={(e) => {
+                  e.stopPropagation() // Prevent event bubbling
+                  const fileInput = document.getElementById(`file-upload-${folder.id}`)
+                  if (fileInput) {
+                    fileInput.click()
+                  }
+                }}
+              >
+                Add File
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 w-6 p-0"
+            onClick={(e) => {
+              e.stopPropagation() // Prevent event bubbling
+              deleteFolder(folder.id, parentId || undefined)
+            }}
+          >
+            <Trash2 className="w-4 h-4 text-red-500" />
+          </Button>
+        </div>
       </div>
 
       {/* Always render the file input, but only show folder content when expanded or in search results */}
@@ -877,7 +963,13 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         type="file"
         className="hidden"
         multiple
-        onChange={(e) => handleFileUpload(e, userID, folder.id)}
+        onChange={(e) => {
+          if (e.target.files) {
+            handleFileUpload(e, userID, folder.id)
+            // Reset the input to allow uploading the same file again
+            e.target.value = ""
+          }
+        }}
       />
 
       {(folder.expanded || isSearchResult) && (
@@ -1068,7 +1160,15 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               >
                 <MessageSquare className="w-4 h-4 text-gray-400" />
                 <span className="text-sm truncate flex-grow">{chatbox.name}</span>
-                <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => deleteChatbox(chatbox.id)}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 w-6 p-0"
+                  onClick={(e) => {
+                    e.stopPropagation() // Prevent event bubbling
+                    deleteChatbox(chatbox.id)
+                  }}
+                >
                   <Trash2 className="w-4 h-4 text-red-500" />
                 </Button>
               </div>
@@ -1141,7 +1241,13 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               type="file"
               className="hidden"
               multiple
-              onChange={(e) => handleFileUpload(e, userID)}
+              onChange={(e) => {
+                if (e.target.files) {
+                  handleFileUpload(e, userID)
+                  // Reset the input to allow uploading the same file again
+                  e.target.value = ""
+                }
+              }}
             />
           </label>
         </div>
@@ -1149,4 +1255,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     </div>
   )
 }
+
+
+
+
+
+
 

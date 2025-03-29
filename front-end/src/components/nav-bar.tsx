@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { UserCircle, ChevronDown } from "lucide-react"
+import { UserCircle, ChevronDown, User, LogOut } from "lucide-react"
 import { Logo } from "./logo"
 import { authAPI } from "../lib/api"
 import { useLanguage } from "@/lib/language-context"
@@ -18,13 +18,19 @@ import {
 export function NavBar() {
   const [userName, setUserName] = useState("User")
   const [isScrolled, setIsScrolled] = useState(false)
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
   const { language, setLanguage, t } = useLanguage()
 
   useEffect(() => {
     const storedUsername = localStorage.getItem("username")
+    const token = localStorage.getItem("accessToken")
+
     if (storedUsername) {
       setUserName(storedUsername)
     }
+
+    // Check if user is logged in
+    setIsLoggedIn(!!token)
 
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 10)
@@ -63,10 +69,11 @@ export function NavBar() {
         isScrolled ? "shadow-md" : ""
       }`}
     >
-      <div className="flex items-center gap-2">
+      {/* Logo links to defaultPage if logged in, otherwise to landing page */}
+      <Link href={isLoggedIn ? "/defaultPage" : "/"} className="flex items-center gap-2">
         <Logo className="w-8 h-8 text-green-600" />
         <span className="font-semibold">NoteUS</span>
-      </div>
+      </Link>
 
       <div className="flex gap-8 ml-12">
         <Link
@@ -95,7 +102,7 @@ export function NavBar() {
         </Link>
       </div>
 
-      <div className="ml-auto relative">
+      <div className="ml-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors text-black">
@@ -111,11 +118,23 @@ export function NavBar() {
             >
               {t("language")}: {language.toUpperCase()}
             </DropdownMenuItem>
+
             <DropdownMenuSeparator />
+
+            <DropdownMenuItem asChild>
+              <Link href="/profile" className="flex items-center cursor-pointer">
+                <User className="w-4 h-4 mr-2" />
+                <span>Profile</span>
+              </Link>
+            </DropdownMenuItem>
+
+            <DropdownMenuSeparator />
+
             <DropdownMenuItem
-              className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50"
+              className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 flex items-center"
               onClick={handleSignOut}
             >
+              <LogOut className="w-4 h-4 mr-2" />
               {t("signOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>

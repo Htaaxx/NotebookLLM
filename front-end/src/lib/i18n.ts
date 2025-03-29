@@ -7,6 +7,7 @@ export interface Translations {
   chatbox: string
   files: string
   flashcard: string
+  profile: string
 
   // User menu
   language: string
@@ -57,6 +58,15 @@ export interface Translations {
   frontOfCard: string
   backOfCard: string
   addCard: string
+
+  // Profile page
+  profileSettings: string
+  personalInfo: string
+  changePassword: string
+  currentPassword: string
+  newPassword: string
+  confirmPassword: string
+  saveChanges: string
 }
 
 // Define the translations
@@ -66,6 +76,7 @@ export const translations: Record<Language, Translations> = {
     chatbox: "CHATBOX",
     files: "FILES",
     flashcard: "FLASHCARD",
+    profile: "PROFILE",
 
     // User menu
     language: "Language",
@@ -116,12 +127,22 @@ export const translations: Record<Language, Translations> = {
     frontOfCard: "Front of card",
     backOfCard: "Back of card",
     addCard: "Add Card",
+
+    // Profile page
+    profileSettings: "Profile Settings",
+    personalInfo: "Personal Information",
+    changePassword: "Change Password",
+    currentPassword: "Current Password",
+    newPassword: "New Password",
+    confirmPassword: "Confirm New Password",
+    saveChanges: "Save Changes",
   },
   vi: {
     // Navigation
     chatbox: "HỘP CHAT",
     files: "TỆP",
     flashcard: "THẺ GHI NHỚ",
+    profile: "HỒ SƠ",
 
     // User menu
     language: "Ngôn ngữ",
@@ -172,6 +193,15 @@ export const translations: Record<Language, Translations> = {
     frontOfCard: "Mặt trước của thẻ",
     backOfCard: "Mặt sau của thẻ",
     addCard: "Thêm thẻ",
+
+    // Profile page
+    profileSettings: "Cài đặt hồ sơ",
+    personalInfo: "Thông tin cá nhân",
+    changePassword: "Đổi mật khẩu",
+    currentPassword: "Mật khẩu hiện tại",
+    newPassword: "Mật khẩu mới",
+    confirmPassword: "Xác nhận mật khẩu mới",
+    saveChanges: "Lưu thay đổi",
   },
 }
 
