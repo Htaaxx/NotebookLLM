@@ -3,7 +3,7 @@
 import type React from "react"
 import { useState, useEffect, useCallback } from "react"
 import { NavBar } from "@/components/nav-bar"
-import { Search, Grid, List, Upload, Trash2, Eye, FileText, Folder } from "lucide-react"
+import { Search, Grid, List, Upload, Trash2, Eye, FileText } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
@@ -468,19 +468,16 @@ export default function FilesPage() {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >
-            <Folder className="h-16 w-16 mx-auto text-gray-300 mb-4" />
+            <Upload className="h-16 w-16 mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-medium text-gray-700">No files found</h3>
             <p className="text-gray-500 mt-2">
               {searchQuery ? "Try a different search term" : "Upload files to get started"}
             </p>
             <p className="text-gray-500 mt-2">Drag and drop files here or</p>
-            <Button
-              variant="outline"
-              className="mt-2"
-              onClick={() => document.getElementById("drag-drop-upload")?.click()}
-            >
+            <Button variant="outline" className="mt-2" onClick={() => document.getElementById("file-upload")?.click()}>
               choose files
             </Button>
+            <p className="text-gray-500 mt-4">Supported files: PDF, txt, Markdown, Audio files (e.g., mp3)</p>
           </div>
         ) : viewMode === "grid" ? (
           <div
@@ -495,24 +492,6 @@ export default function FilesPage() {
             {filteredFiles.map(renderFileRow)}
           </div>
         )}
-
-        <div
-          className="mt-8 border-2 border-dashed rounded-lg p-8 text-center"
-          onDragOver={handleDragOver}
-          onDrop={handleDrop}
-        >
-          <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-medium">Drag and drop or choose files</h3>
-          <p className="text-gray-500 mt-2">Supported files: PDF, txt, Markdown, Audio files (e.g., mp3)</p>
-          <Button
-            variant="outline"
-            className="mt-4"
-            onClick={() => document.getElementById("drag-drop-upload")?.click()}
-          >
-            choose files
-          </Button>
-          <input id="drag-drop-upload" type="file" multiple className="hidden" onChange={handleFileUpload} />
-        </div>
       </main>
     </div>
   )

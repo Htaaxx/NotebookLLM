@@ -1,7 +1,8 @@
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { MessageSquare, Brain } from "lucide-react"
+import { motion } from "framer-motion"
+import { fadeIn, slideIn, zoomIn } from "@/lib/motion-utils"
 
 interface HeroSectionProps {
   onGetStarted: () => void
@@ -10,45 +11,75 @@ interface HeroSectionProps {
 
 export function HeroSection({ onGetStarted, onSeeDemo }: HeroSectionProps) {
   return (
-    <section className="py-20 px-6 bg-gradient-to-b from-green-50 to-white">
-      <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
-        <div>
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-6">AI-powered Note-Taking Assistant</h1>
-          <p className="text-xl text-gray-600 mb-10">
-            Transform your notes with AI-powered organization, summarization, and knowledge extraction. Study smarter,
-            not harder.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button
-              onClick={onGetStarted}
-              size="lg"
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-6 text-lg"
+    <motion.div
+      className="relative bg-gradient-to-b from-white to-gray-50 py-20 overflow-hidden"
+      initial="hidden"
+      whileInView="show"
+      viewport={{ once: true, amount: 0.25 }}
+    >
+      <div className="container mx-auto px-6">
+        <div className="flex flex-col lg:flex-row items-center">
+          {/* Hero Content */}
+          <motion.div className="lg:w-1/2 text-center lg:text-left mb-12 lg:mb-0" variants={fadeIn("right", 0.2)}>
+            <motion.h1
+              className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6"
+              variants={fadeIn("up", 0.3)}
             >
-              Get Started Free
-            </Button>
-            <Button
-              onClick={onSeeDemo}
-              size="lg"
-              variant="outline"
-              className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-6 text-lg"
+              Transform Your <span className="text-green-600">Notes</span> into Knowledge
+            </motion.h1>
+
+            <motion.p
+              className="text-lg md:text-xl text-gray-600 mb-8 max-w-lg mx-auto lg:mx-0"
+              variants={fadeIn("up", 0.4)}
             >
-              See Demo
-            </Button>
-          </div>
-        </div>
-        <div className="relative">
-          <div className="aspect-[4/3] bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
-            <img src="/NoteUSDashboard.png" alt="NoteUS Dashboard Preview" className="w-full h-full object-contain" />
-          </div>
-          <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-green-100 rounded-full flex items-center justify-center">
-            <MessageSquare className="h-10 w-10 text-green-600" />
-          </div>
-          <div className="absolute -top-6 -right-6 w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center">
-            <Brain className="h-10 w-10 text-blue-600" />
-          </div>
+              Upload your notes, ask questions, and get instant answers. Create flashcards, quizzes, and mind maps to
+              enhance your learning.
+            </motion.p>
+
+            <motion.div
+              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+              variants={fadeIn("up", 0.5)}
+            >
+              <Button
+                onClick={onGetStarted}
+                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg text-lg font-medium"
+              >
+                Get Started
+              </Button>
+              <Button
+                onClick={onSeeDemo}
+                variant="outline"
+                className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-3 rounded-lg text-lg font-medium"
+              >
+                See Demo
+              </Button>
+            </motion.div>
+          </motion.div>
+
+          {/* Hero Image */}
+          <motion.div className="lg:w-1/2" variants={zoomIn(0.4, 1)}>
+            <img
+              src="/placeholder.svg?height=500&width=600"
+              alt="NoteUS App Interface"
+              className="w-full h-auto rounded-lg shadow-2xl"
+            />
+          </motion.div>
         </div>
       </div>
-    </section>
+      {/* Decorative Elements */}
+      <motion.div
+        className="absolute top-20 left-10 w-20 h-20 bg-green-200 rounded-full opacity-20"
+        variants={slideIn("down", "spring", 0.2, 1)}
+      />
+      <motion.div
+        className="absolute bottom-20 right-10 w-32 h-32 bg-blue-200 rounded-full opacity-20"
+        variants={slideIn("up", "spring", 0.4, 1)}
+      />
+      <motion.div
+        className="absolute top-1/3 right-1/4 w-16 h-16 bg-yellow-200 rounded-full opacity-20"
+        variants={zoomIn(0.6, 1)}
+      />
+    </motion.div>
   )
 }
 

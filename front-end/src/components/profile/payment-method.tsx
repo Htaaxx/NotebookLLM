@@ -1,13 +1,13 @@
 "use client"
 
 import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CreditCard, Plus, Trash2, CheckCircle, AlertCircle } from "lucide-react"
+import { useRouter } from "next/navigation"
 
 interface PaymentCard {
   id: string
@@ -18,9 +18,13 @@ interface PaymentCard {
 }
 
 export function PaymentMethod() {
+  const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState({ type: "", text: "" })
   const [showAddCard, setShowAddCard] = useState(false)
+  const [currentPlan, setCurrentPlan] = useState("Free")
+  const [userName, setUserName] = useState("")
+  const [userEmail, setUserEmail] = useState("")
 
   // Sample saved cards
   const [savedCards, setSavedCards] = useState<PaymentCard[]>([
@@ -40,6 +44,18 @@ export function PaymentMethod() {
     expiryDate: "",
     cvv: "",
   })
+
+  useEffect(() => {
+    // Load user data
+    const storedUsername = localStorage.getItem("username")
+    if (storedUsername) {
+      setUserName(storedUsername)
+    }
+
+    // In a real app, you would fetch the user's current plan from your backend
+    // For now, we'll just use a placeholder
+    setCurrentPlan("Free")
+  }, [])
 
   const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -94,6 +110,8 @@ export function PaymentMethod() {
       setShowAddCard(false)
       setMessage({ type: "success", text: "Payment method added successfully" })
       setIsLoading(false)
+
+      // In a real app, you would save this card to Stripe and your backend
     }, 1000)
   }
 
@@ -117,6 +135,17 @@ export function PaymentMethod() {
 
       return filtered
     })
+  }
+
+  const handleUpgradePlan = () => {
+    // Store the default card in localStorage for the payment page to use
+    const defaultCard = savedCards.find((card) => card.isDefault)
+    if (defaultCard) {
+      localStorage.setItem("defaultPaymentCard", JSON.stringify(defaultCard))
+    }
+
+    // Navigate to pricing page
+    router.push("/pricing")
   }
 
   return (
@@ -270,10 +299,20 @@ export function PaymentMethod() {
               <h3 className="text-lg font-medium mb-2">Current Subscription</h3>
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="font-medium">Free Plan</p>
-                  <p className="text-sm text-gray-500">Upgrade to access premium features</p>
+                  <p className="font-medium">{currentPlan} Plan</p>
+                  <p className="text-sm text-gray-500">
+                    {currentPlan === "Free"
+                      ? "Upgrade to access premium features"
+                      : currentPlan === "Standard"
+                        ? "Upgrade to Pro for all features"
+                        : "You're on our highest tier plan"}
+                  </p>
                 </div>
-                <Button className="bg-green-600 hover:bg-green-700">Upgrade Plan</Button>
+                {currentPlan !== "Pro" && (
+                  <Button className="bg-green-600 hover:bg-green-700" onClick={handleUpgradePlan}>
+                    Upgrade Plan
+                  </Button>
+                )}
               </div>
             </div>
           </div>

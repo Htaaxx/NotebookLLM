@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { motion } from "framer-motion"
 import AuthUI from "@/components/auth-ui"
 import { NavBar } from "@/components/home/navbar"
 import { HeroSection } from "@/components/home/hero-section"
@@ -10,6 +11,7 @@ import { TestimonialsSection } from "@/components/home/testimonials-section"
 import { CTASection } from "@/components/home/cta-section"
 import { IntegrationSection } from "@/components/home/integration-section"
 import { Footer } from "@/components/home/footer"
+import { staggerContainer } from "@/lib/motion-utils"
 
 export default function Home() {
   const [showAuth, setShowAuth] = useState(false)
@@ -19,7 +21,12 @@ export default function Home() {
   }
 
   return (
-    <main className="min-h-screen relative bg-white">
+    <motion.main
+      className="min-h-screen relative bg-white overflow-hidden"
+      initial="hidden"
+      animate="show"
+      variants={staggerContainer(0.2, 0.1)}
+    >
       <NavBar onNavClick={handleNavClick} onSignUp={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />
 
       <HeroSection onGetStarted={() => setShowAuth(true)} onSeeDemo={() => setShowAuth(true)} />
@@ -39,8 +46,21 @@ export default function Home() {
       {/* Auth Modal Overlay */}
       {showAuth && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAuth(false)}></div>
-          <div className="z-10 w-full max-w-md">
+          <motion.div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowAuth(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          />
+          <motion.div
+            className="z-10 w-full max-w-md"
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.9, opacity: 0 }}
+            transition={{ type: "spring", duration: 0.5 }}
+          >
             <AuthUI />
             <button
               onClick={() => setShowAuth(false)}
@@ -48,10 +68,10 @@ export default function Home() {
             >
               Return to homepage
             </button>
-          </div>
+          </motion.div>
         </div>
       )}
-    </main>
+    </motion.main>
   )
 }
 

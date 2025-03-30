@@ -1,28 +1,86 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { NavBar } from "@/components/home/navbar"
+import { NavBar } from "@/components/nav-bar"
 import { Footer } from "@/components/home/footer"
 import AuthUI from "@/components/auth-ui"
 import { useLanguage } from "@/lib/language-context"
+import { plans } from "@/lib/stripe"
 
 export default function PricingPage() {
   const [showAuth, setShowAuth] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [userName, setUserName] = useState("")
+  const [userEmail, setUserEmail] = useState("")
+  const [currentPlan, setCurrentPlan] = useState("Free")
   const { language } = useLanguage()
   const isVietnamese = language === "vi"
+  const router = useRouter()
+
+  useEffect(() => {
+    // Check if user is authenticated
+    const token = localStorage.getItem("accessToken")
+    const storedUsername = localStorage.getItem("username")
+
+    if (token && storedUsername) {
+      setIsAuthenticated(true)
+      setUserName(storedUsername)
+
+      // In a real app, you would fetch the user's current plan from your backend
+      // For now, we'll just use a placeholder
+      setCurrentPlan("Free")
+    }
+  }, [])
 
   const handleNavClick = () => {
-    setShowAuth(true)
+    if (!isAuthenticated) {
+      setShowAuth(true)
+    }
+  }
+
+  const handleSubscribe = async (planId: string) => {
+    if (!isAuthenticated) {
+      setShowAuth(true)
+      return
+    }
+
+    setIsLoading(true)
+
+    try {
+      const selectedPlan = plans.find((plan) => plan.id === planId)
+
+      if (!selectedPlan || !selectedPlan.priceId) {
+        if (planId === "free") {
+          // Free plan doesn't need payment
+          // In a real app, you would update the user's plan in your backend
+          setCurrentPlan("Free")
+          router.push("/defaultPage")
+          return
+        }
+        throw new Error("Invalid plan selected")
+      }
+
+      // Store selected plan in localStorage for the payment page
+      localStorage.setItem("selectedPlan", JSON.stringify(selectedPlan))
+
+      // Navigate to payment page
+      router.push(`/payment?plan=${planId}`)
+    } catch (error) {
+      console.error("Error subscribing to plan:", error)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
     <main className="min-h-screen bg-white">
-      <NavBar onNavClick={handleNavClick} onSignUp={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />
-
+      <NavBar />
       <div className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
@@ -30,6 +88,11 @@ export default function PricingPage() {
             <p className="text-xl text-gray-600 max-w-3xl mx-auto">
               Select the perfect plan for your needs and start transforming your notes today.
             </p>
+            {isAuthenticated && (
+              <p className="mt-4 text-lg text-green-600">
+                You are currently on the <strong>{currentPlan}</strong> plan
+              </p>
+            )}
           </div>
 
           <div className="grid md:grid-cols-3 gap-8">
@@ -73,8 +136,12 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => setShowAuth(true)}>
-                  Get Started
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => handleSubscribe("free")}
+                  disabled={currentPlan === "Free" || isLoading}
+                >
+                  {currentPlan === "Free" ? "Current Plan" : "Get Started"}
                 </Button>
               </CardFooter>
             </Card>
@@ -92,7 +159,7 @@ export default function PricingPage() {
               </CardHeader>
               <CardContent className="text-center">
                 <div className="text-5xl font-bold mb-6">
-                  $1<span className="text-2xl font-normal">/month</span>
+                  $5<span className="text-2xl font-normal">/month</span>
                 </div>
                 <ul className="space-y-3 text-left">
                   <li className="flex items-start">
@@ -115,8 +182,12 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full bg-blue-500 hover:bg-blue-600" onClick={() => setShowAuth(true)}>
-                  Subscribe Now
+                <Button
+                  className="w-full bg-blue-500 hover:bg-blue-600"
+                  onClick={() => handleSubscribe("standard")}
+                  disabled={currentPlan === "Standard" || isLoading}
+                >
+                  {currentPlan === "Standard" ? "Current Plan" : "Subscribe Now"}
                 </Button>
               </CardFooter>
             </Card>
@@ -131,7 +202,7 @@ export default function PricingPage() {
               </CardHeader>
               <CardContent className="text-center">
                 <div className="text-5xl font-bold mb-6">
-                  $2<span className="text-2xl font-normal">/month</span>
+                  $10<span className="text-2xl font-normal">/month</span>
                 </div>
                 <ul className="space-y-3 text-left">
                   <li className="flex items-start">
@@ -162,8 +233,12 @@ export default function PricingPage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full bg-green-600 hover:bg-green-700" onClick={() => setShowAuth(true)}>
-                  Go Pro
+                <Button
+                  className="w-full bg-green-600 hover:bg-green-700"
+                  onClick={() => handleSubscribe("pro")}
+                  disabled={currentPlan === "Pro" || isLoading}
+                >
+                  {currentPlan === "Pro" ? "Current Plan" : "Go Pro"}
                 </Button>
               </CardFooter>
             </Card>
