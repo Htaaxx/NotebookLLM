@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect, useCallback } from "react"
 import { NavBar } from "@/components/nav-bar"
 import { Search, Grid, List, Upload, Trash2, Eye, FileText, Folder } from "lucide-react"
@@ -59,7 +58,30 @@ export default function FilesPage() {
       setUserID(storedUserID)
       loadUserFiles(storedUserID)
     }
-  }, [])
+  }, [loadUserFiles])
+
+  // Listen for file upload/delete events from other components
+  useEffect(() => {
+    const handleFileUploaded = () => {
+      if (userID) {
+        loadUserFiles(userID)
+      }
+    }
+
+    const handleFileDeleted = () => {
+      if (userID) {
+        loadUserFiles(userID)
+      }
+    }
+
+    window.addEventListener("fileUploaded", handleFileUploaded as EventListener)
+    window.addEventListener("fileDeleted", handleFileDeleted as EventListener)
+
+    return () => {
+      window.removeEventListener("fileUploaded", handleFileUploaded as EventListener)
+      window.removeEventListener("fileDeleted", handleFileDeleted as EventListener)
+    }
+  }, [userID, loadUserFiles])
 
   // Helper function to determine file type from extension
   const getFileTypeFromExtension = (extension?: string): string => {
@@ -134,7 +156,7 @@ export default function FilesPage() {
 
           const data = await uploadResponse.json()
 
-          return {
+          const newFile = {
             id: documentId,
             name: file.name,
             selected: false,
@@ -144,24 +166,25 @@ export default function FilesPage() {
             cloudinaryId: documentId,
             FilePath: "root",
           }
+
+          // Dispatch a custom event to notify other components about the new file
+          window.dispatchEvent(
+            new CustomEvent("fileUploaded", {
+              detail: { file: newFile },
+            }),
+          )
+
+          return newFile
         } catch (error) {
           console.error("Error uploading file:", error)
           return null
         }
       })
 
-      const results = await Promise.allSettled(uploadPromises)
-      const successfulUploads = results
-        .filter(
-          (result): result is PromiseFulfilledResult<FileItem | null> =>
-            result.status === "fulfilled" && result.value !== null,
-        )
-        .map((result) => result.value) as FileItem[]
+      await Promise.all(uploadPromises)
 
-      // Update files state with new uploads
-      if (successfulUploads.length > 0) {
-        setFiles((prevFiles) => [...prevFiles, ...successfulUploads])
-      }
+      // Refresh the file list after upload
+      loadUserFiles(userID)
     } catch (error) {
       console.error("Error during file uploads:", error)
     } finally {
@@ -190,15 +213,17 @@ export default function FilesPage() {
       // Delete from database
       await documentAPI.deleteDocument(fileId)
 
-      // Update UI
-      setFiles((prevFiles) => prevFiles.filter((file) => file.id !== fileId))
-
       // Dispatch custom event to notify other components
       window.dispatchEvent(
         new CustomEvent("fileDeleted", {
           detail: { fileId },
         }),
       )
+
+      // Refresh the file list after deletion
+      if (userID) {
+        loadUserFiles(userID)
+      }
     } catch (error) {
       console.error("Error deleting file:", error)
     }
@@ -348,7 +373,7 @@ export default function FilesPage() {
 
           const data = await uploadResponse.json()
 
-          return {
+          const newFile = {
             id: documentId,
             name: file.name,
             selected: false,
@@ -358,24 +383,25 @@ export default function FilesPage() {
             cloudinaryId: documentId,
             FilePath: "root",
           }
+
+          // Dispatch a custom event to notify other components about the new file
+          window.dispatchEvent(
+            new CustomEvent("fileUploaded", {
+              detail: { file: newFile },
+            }),
+          )
+
+          return newFile
         } catch (error) {
           console.error("Error uploading file:", error)
           return null
         }
       })
 
-      const results = await Promise.allSettled(uploadPromises)
-      const successfulUploads = results
-        .filter(
-          (result): result is PromiseFulfilledResult<FileItem | null> =>
-            result.status === "fulfilled" && result.value !== null,
-        )
-        .map((result) => result.value) as FileItem[]
+      await Promise.all(uploadPromises)
 
-      // Update files state with new uploads
-      if (successfulUploads.length > 0) {
-        setFiles((prevFiles) => [...prevFiles, ...successfulUploads])
-      }
+      // Refresh the file list after upload
+      loadUserFiles(userID)
     } catch (error) {
       console.error("Error during file uploads:", error)
     } finally {

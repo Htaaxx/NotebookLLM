@@ -12,6 +12,7 @@ export default function Home() {
   const [selectedFiles, setSelectedFiles] = useState<FileItem[]>([])
   const [activePanel, setActivePanel] = useState<"preview" | "mindmap" | "cheatsheet" | null>(null)
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   const handleFileSelection = useCallback((files: FileItem[]) => {
     setSelectedFiles(files)
@@ -47,29 +48,38 @@ export default function Home() {
     }
   }, [])
 
-  // Add an effect to listen for file deletion events
-  // Add this near your other useEffect hooks
-
+  // Listen for file events to trigger refreshes
   useEffect(() => {
+    const handleFileUploaded = () => {
+      // Trigger a refresh by updating the state
+      setRefreshTrigger((prev) => prev + 1)
+    }
+
     const handleFileDeleted = (event: CustomEvent) => {
       const deletedFileId = event.detail.fileId
 
       // If the currently previewed file is deleted, clear the preview
       if (previewFile && previewFile.id === deletedFileId) {
         setPreviewFile(null)
+        setActivePanel(null)
         localStorage.removeItem("previewFile")
         localStorage.removeItem("showPdfPreview")
       }
 
       // Update selected files list if needed
       setSelectedFiles((prev) => prev.filter((file) => file.id !== deletedFileId))
+
+      // Force a complete refresh of the FileCollection component
+      setRefreshTrigger((prev) => prev + 1)
     }
 
-    // Add event listener
+    // Add event listeners
+    window.addEventListener("fileUploaded", handleFileUploaded as EventListener)
     window.addEventListener("fileDeleted", handleFileDeleted as EventListener)
 
     // Clean up
     return () => {
+      window.removeEventListener("fileUploaded", handleFileUploaded as EventListener)
       window.removeEventListener("fileDeleted", handleFileDeleted as EventListener)
     }
   }, [previewFile])
@@ -79,7 +89,7 @@ export default function Home() {
       <NavBar />
       <div className="flex flex-1 relative">
         <div className="w-64 border-r h-[calc(100vh-64px)] bg-white">
-          <FileCollection onFileSelect={handleFileSelection} />
+          <FileCollection onFileSelect={handleFileSelection} key={`file-collection-${refreshTrigger}`} />
         </div>
         <div className={`transition-all duration-300 bg-white ${activePanel ? "w-[42%]" : "flex-1"}`}>
           <ChatBox />
