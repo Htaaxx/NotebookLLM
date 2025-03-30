@@ -17,14 +17,13 @@ interface FileCollectionProps {
   onFileSelect: (files: FileItem[]) => void
 }
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_IMAGE_SIZE = 10 * 1024 * 1024 // 10MB
-const MAX_VIDEO_SIZE = 100 * 1024 * 1024 // 100MB
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024
+const MAX_VIDEO_SIZE = 100 * 1024 * 1024
 
-// Local storage key for folders
 const FOLDERS_STORAGE_KEY = "userFolders"
 
-// Function to validate file size
+// Validates file size based on file type
 const validateFileSize = (file: File): string | null => {
   if (file.type.startsWith("image/") && file.size > MAX_IMAGE_SIZE) {
     return `Image "${file.name}" exceeds the maximum size of 10MB!`
@@ -49,7 +48,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     folders: FolderType[]
     chats: ChatItem[]
   } | null>(null)
-  const [isSearching, setIsSearching] = useState(false)
   const [newFolderName, setNewFolderName] = useState("")
   const [showNewFolderInput, setShowNewFolderInput] = useState<boolean | string>(false)
   const [draggedItem, setDraggedItem] = useState<DragItem | null>(null)
@@ -61,7 +59,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const dataFetchedRef = useRef(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
 
-  // Helper function to determine file type from name
+  // Determines file type based on filename
   const getFileTypeFromName = (filename: string): string => {
     if (!filename) return "document"
 
@@ -77,31 +75,26 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     return "document"
   }
 
+  // Extracts file extension from filename
   const getFileExtension = (filename: string): string => {
     if (!filename) return ""
-
-    // Get the last part after the dot
     const extensionMatch = filename.match(/\.[^.]+$/)
-
-    // Return the extension with the dot, or empty string if no extension
     return extensionMatch ? extensionMatch[0].toLowerCase() : ""
   }
 
-  // Function to get file path based on folder hierarchy
+  // Gets file path based on folder hierarchy
   const getFilePath = useCallback(
     (folderId?: string): string => {
       if (!folderId) {
         return "root"
       }
 
-      // Helper function to find path to a specific folder
       const findFolderPath = (folders: FolderType[], targetId: string, currentPath = "root"): string | null => {
         for (const folder of folders) {
           if (folder.id === targetId) {
             return currentPath + "/" + folder.name
           }
 
-          // Check in subfolders
           const path = findFolderPath(folder.folders, targetId, currentPath + "/" + folder.name)
           if (path) return path
         }
@@ -114,16 +107,14 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [rootFolders],
   )
 
-  // Function to get full path for a file
+  // Gets full path for a file
   const getFullFilePath = useCallback(
     (fileId: string, folderId?: string): string => {
       if (!folderId) {
-        // Root file
         const file = rootFiles.find((f) => f.id === fileId)
         return file ? file.name : "Unknown file"
       }
 
-      // File in a folder
       const folderPath = getFilePath(folderId).replace("root/", "")
       const findFileInFolders = (folders: FolderType[], targetFolderId: string, fileId: string): string | null => {
         for (const folder of folders) {
@@ -143,7 +134,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [rootFiles, rootFolders, getFilePath],
   )
 
-  // Function to get full path for a folder
+  // Gets full path for a folder
   const getFullFolderPath = useCallback(
     (folderId: string): string => {
       return getFilePath(folderId).replace("root/", "")
@@ -151,7 +142,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [getFilePath],
   )
 
-  // Load folders from localStorage
+  // Loads folders from localStorage
   const loadFoldersFromStorage = useCallback((userId: string) => {
     try {
       const storedFolders = localStorage.getItem(`${FOLDERS_STORAGE_KEY}_${userId}`)
@@ -164,7 +155,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     return []
   }, [])
 
-  // Save folders to localStorage whenever they change
+  // Saves folders to localStorage when they change
   useEffect(() => {
     if (userID && rootFolders.length > 0) {
       try {
@@ -175,20 +166,14 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     }
   }, [rootFolders, userID])
 
-  // Handle search
+  // Handles search functionality
   const handleSearch = () => {
     if (!searchQuery.trim()) {
       setSearchResults(null)
-      setIsSearching(false)
       return
     }
 
-    setIsSearching(true)
-
-    // Search files and folders
     const fileResults = searchFiles(searchQuery, rootFiles, rootFolders)
-
-    // Search chats
     const chatResults = searchChats(searchQuery, chatboxes)
 
     setSearchResults({
@@ -198,65 +183,33 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     })
   }
 
-  // Clear search
+  // Clears search results
   const clearSearch = () => {
     setSearchQuery("")
     setSearchResults(null)
-    setIsSearching(false)
   }
 
-  // Function to handle file upload/delete events from other components
-  useEffect(() => {
-    const handleFileUploaded = (event: CustomEvent) => {
-      // Refresh the entire file list to prevent duplicates
-      if (userID) {
-        handleDisplayUserFiles(userID)
-      }
-    }
-
-    const handleFileDeleted = (event: CustomEvent) => {
-      // Refresh the entire file list to ensure consistency
-      if (userID) {
-        handleDisplayUserFiles(userID)
-      }
-    }
-
-    window.addEventListener("fileUploaded", handleFileUploaded as EventListener)
-    window.addEventListener("fileDeleted", handleFileDeleted as EventListener)
-
-    return () => {
-      window.removeEventListener("fileUploaded", handleFileUploaded as EventListener)
-      window.removeEventListener("fileDeleted", handleFileDeleted as EventListener)
-    }
-  }, [userID])
-
-  // Find the handleDisplayUserFiles function and replace it with this improved version
-  // that properly handles files in folders and subfolders without causing duplicates
-
+  // Displays user files from API and localStorage
   const handleDisplayUserFiles = useCallback(
     async (userId: string) => {
       try {
         console.log("Loading documents for user:", userId)
         const documents = await documentAPI.getDocuments(userId)
 
-        // Load folders from localStorage to ensure empty folders are preserved
         const storedFolders = loadFoldersFromStorage(userId)
 
-        // Start with empty root files
         const newRootFiles: FileItem[] = []
 
-        // Use stored folders as a base, but clear their files to prevent duplication
         const newRootFolders: FolderType[] = storedFolders
           ? storedFolders.map((folder) => ({
               ...folder,
-              files: [], // Clear existing files to prevent duplication
-              folders: clearFilesFromFolders(folder.folders), // Clear files from subfolders too
+              files: [],
+              folders: clearFilesFromFolders(folder.folders),
             }))
           : []
 
         if (!documents || documents.length === 0) {
           console.log("No documents found for user")
-          // Even if no documents, we still set the folders from localStorage
           setRootFolders(newRootFolders)
           setRootFiles([])
           return
@@ -264,13 +217,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
         console.log("Documents loaded:", documents.length)
 
-        // Group documents by filepath to create folder structure
         const filesByPath: Record<string, any[]> = {}
 
         documents.forEach((doc: { document_id: string; document_name: string; document_path: string }) => {
           const path = doc.document_path || "root"
-
-          // Check path validity
           console.log(`Document ${doc.document_id} has path: ${path}`)
 
           if (!filesByPath[path]) {
@@ -279,14 +229,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           filesByPath[path].push(doc)
         })
 
-        // Add files directly in the root
         if (filesByPath["root"]) {
           filesByPath["root"].forEach((doc) => {
             const fileExtension = getFileExtension(doc.document_name)
             const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${doc.document_id}${fileExtension}`
             console.log("Cloudinary URL:", cloudinaryURL)
 
-            // Determine file type based on name
             const fileType = doc.document_name ? getFileTypeFromName(doc.document_name) : "document"
 
             newRootFiles.push({
@@ -294,7 +242,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               name: doc.document_name || "Untitled Document",
               selected: false,
               type: fileType,
-              url: cloudinaryURL, // Set the URL for preview
+              url: cloudinaryURL,
               size: 0,
               cloudinaryId: doc.document_id,
               FilePath: "root",
@@ -302,7 +250,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           })
         }
 
-        // Helper function to find or create folder path
         const findOrCreateFolderPath = (
           folders: FolderType[],
           pathParts: string[],
@@ -335,7 +282,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           return findOrCreateFolderPath(folder.folders, pathParts, currentIndex + 1, newPath)
         }
 
-        // Process each path to create folder structure
         Object.keys(filesByPath).forEach((path) => {
           if (path === "root") return
 
@@ -347,14 +293,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           if (result) {
             const { folder } = result
 
-            // Add files to the folder
             folder.files.push(
               ...filesByPath[path].map((doc) => {
                 const fileExtension = getFileExtension(doc.document_name)
-                // Generate URL for Cloudinary resource
                 const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${doc.document_id}${fileExtension}`
 
-                // Determine file type based on name
                 const fileType = doc.document_name ? getFileTypeFromName(doc.document_name) : "document"
 
                 return {
@@ -362,7 +305,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
                   name: doc.document_name || "Untitled Document",
                   selected: false,
                   type: fileType,
-                  url: cloudinaryURL, // Set the URL for preview
+                  url: cloudinaryURL,
                   size: 0,
                   cloudinaryId: doc.document_id,
                   FilePath: path,
@@ -374,7 +317,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
         console.log("Setting state with files:", newRootFiles.length, "and folders:", newRootFolders.length)
 
-        // Update the state
         setRootFiles(newRootFiles)
         setRootFolders(newRootFolders)
       } catch (error) {
@@ -384,18 +326,16 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [loadFoldersFromStorage],
   )
 
-  // Add this helper function to clear files from folders recursively
+  // Recursively clears files from folders
   const clearFilesFromFolders = (folders: FolderType[]): FolderType[] => {
     return folders.map((folder) => ({
       ...folder,
-      files: [], // Clear files
-      folders: clearFilesFromFolders(folder.folders), // Recursively clear subfolders
+      files: [],
+      folders: clearFilesFromFolders(folder.folders),
     }))
   }
 
-  // Update the useEffect for loading user files to prevent duplicate rendering
-
-  // Load user files on component mount - only once
+  // Loads user files on component mount
   useEffect(() => {
     const storedUserID = localStorage.getItem("user_id")
     if (storedUserID && !dataFetchedRef.current) {
@@ -405,6 +345,33 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     }
   }, [handleDisplayUserFiles])
 
+  // Listens for file upload/delete events
+  useEffect(() => {
+    let handleFileUploaded: (event: CustomEvent) => void
+    let handleFileDeleted: (event: CustomEvent) => void
+
+    handleFileUploaded = (event: CustomEvent) => {
+      if (userID) {
+        handleDisplayUserFiles(userID)
+      }
+    }
+
+    handleFileDeleted = (event: CustomEvent) => {
+      if (userID) {
+        handleDisplayUserFiles(userID)
+      }
+    }
+
+    window.addEventListener("fileUploaded", handleFileUploaded as EventListener)
+    window.addEventListener("fileDeleted", handleFileDeleted as EventListener)
+
+    return () => {
+      window.removeEventListener("fileUploaded", handleFileUploaded as EventListener)
+      window.removeEventListener("fileDeleted", handleFileDeleted as EventListener)
+    }
+  }, [userID, handleDisplayUserFiles])
+
+  // Updates folder contents recursively
   const updateFolderContents = useCallback(
     (folders: FolderType[], folderId: string, updateFn: (folder: FolderType) => FolderType): FolderType[] => {
       return folders.map((folder) => {
@@ -420,7 +387,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [],
   )
 
-  // Update the file upload handler to ensure it doesn't cause duplicates
+  // Handles file upload
   const handleFileUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>, userID: string, folderId?: string) => {
       const uploadedFiles = event.target.files
@@ -443,14 +410,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         return
       }
 
-      // Generate the file path for this upload
       const filePath = getFilePath(folderId)
       console.log("Uploading to path:", filePath)
 
       try {
         const uploadPromises = validFilesArray.map(async (file) => {
           try {
-            // Pass the filePath to createDocument
             const response = await documentAPI.createDocument(userID, file.name, filePath)
 
             if (!response || !response.document_id) {
@@ -460,7 +425,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             const documentId = response.document_id
             console.log("Document ID:", documentId, "with path:", response.document_path)
 
-            // Create FormData for file upload
             const formData = new FormData()
             formData.append("file", file)
             formData.append("document_id", documentId)
@@ -487,7 +451,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               FilePath: response.document_path || filePath,
             }
 
-            // Dispatch a custom event to notify other components about the new file
             window.dispatchEvent(
               new CustomEvent("fileUploaded", {
                 detail: { file: newFile },
@@ -501,11 +464,8 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           }
         })
 
-        // Wait for all uploads to complete
         await Promise.all(uploadPromises)
 
-        // Refresh the file list after upload - but reset the dataFetchedRef first
-        // to ensure we get a fresh load
         dataFetchedRef.current = false
         handleDisplayUserFiles(userID)
       } catch (error) {
@@ -515,6 +475,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [getFilePath, handleDisplayUserFiles],
   )
 
+  // Creates a new folder
   const createFolder = useCallback(
     (parentId?: string) => {
       if (newFolderName.trim()) {
@@ -543,6 +504,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [newFolderName, updateFolderContents],
   )
 
+  // Toggles folder expansion
   const toggleFolder = useCallback(
     (folderId: string) => {
       setRootFolders((prevFolders) => {
@@ -555,26 +517,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [updateFolderContents],
   )
 
-  // Updated to handle search results
+  // Toggles folder selection
   const toggleFolderSelection = useCallback(
     (folderId: string) => {
-      // First check if we're in search mode
-      if (isSearching && searchResults) {
-        // Find the folder in search results
-        const folderInSearch = findFolderById(searchResults.folders, folderId)
-
-        if (folderInSearch) {
-          // Update the folder in search results
-          const updatedFolders = updateFolderInSearchResults(searchResults.folders, folderId, !folderInSearch.selected)
-
-          setSearchResults({
-            ...searchResults,
-            folders: updatedFolders,
-          })
-        }
-      }
-
-      // Always update the main data structure
       setRootFolders((prevFolders) => {
         return updateFolderContents(prevFolders, folderId, (folder) => ({
           ...folder,
@@ -590,10 +535,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         }))
       })
     },
-    [updateFolderContents, isSearching, searchResults],
+    [updateFolderContents],
   )
 
-  // Helper function to find a folder by ID
+  // Finds a folder by ID
   const findFolderById = (folders: FolderType[], folderId: string): FolderType | null => {
     for (const folder of folders) {
       if (folder.id === folderId) {
@@ -609,94 +554,26 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     return null
   }
 
-  // Helper function to update a folder in search results
-  const updateFolderInSearchResults = (folders: FolderType[], folderId: string, selected: boolean): FolderType[] => {
-    return folders.map((folder) => {
-      if (folder.id === folderId) {
-        return {
-          ...folder,
-          selected,
-          files: folder.files.map((file) => ({ ...file, selected })),
-          folders: folder.folders.map((subFolder) => ({ ...subFolder, selected })),
-        }
-      }
-
-      return {
-        ...folder,
-        folders: updateFolderInSearchResults(folder.folders, folderId, selected),
-      }
-    })
-  }
-
-  // Updated to handle search results
+  // Toggles file selection
   const toggleFileSelection = useCallback(
     (fileId: string, folderId?: string) => {
-      // First check if we're in search mode
-      if (isSearching && searchResults) {
-        // Update the file in search results
-        const updatedFiles = searchResults.files.map((file) =>
-          file.id === fileId ? { ...file, selected: !file.selected } : file,
-        )
-
-        setSearchResults({
-          ...searchResults,
-          files: updatedFiles,
+      if (folderId) {
+        setRootFolders((prevFolders) => {
+          return updateFolderContents(prevFolders, folderId, (folder) => ({
+            ...folder,
+            files: folder.files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
+          }))
         })
-
-        // Now update the actual file in the main data structure
-        // First check if it's in root files
-        const rootFile = rootFiles.find((file) => file.id === fileId)
-        if (rootFile) {
-          setRootFiles((files) =>
-            files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
-          )
-        } else {
-          // If not in root, it must be in a folder
-          // We need to find which folder contains this file
-          const updateFolderWithFile = (folders: FolderType[]): FolderType[] => {
-            return folders.map((folder) => {
-              // Check if file is in this folder
-              const fileIndex = folder.files.findIndex((file) => file.id === fileId)
-              if (fileIndex >= 0) {
-                // File found in this folder
-                const updatedFiles = [...folder.files]
-                updatedFiles[fileIndex] = {
-                  ...updatedFiles[fileIndex],
-                  selected: !updatedFiles[fileIndex].selected,
-                }
-                return { ...folder, files: updatedFiles }
-              }
-
-              // If not in this folder, check subfolders
-              return {
-                ...folder,
-                folders: updateFolderWithFile(folder.folders),
-              }
-            })
-          }
-
-          setRootFolders((folders) => updateFolderWithFile(folders))
-        }
       } else {
-        // Original behavior for non-search mode
-        if (folderId) {
-          setRootFolders((prevFolders) => {
-            return updateFolderContents(prevFolders, folderId, (folder) => ({
-              ...folder,
-              files: folder.files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
-            }))
-          })
-        } else {
-          setRootFiles((files) =>
-            files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
-          )
-        }
+        setRootFiles((files) =>
+          files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
+        )
       }
     },
-    [updateFolderContents, isSearching, searchResults, rootFiles],
+    [updateFolderContents],
   )
 
-  // Update the delete file handler to ensure it properly refreshes the UI
+  // Deletes a file
   const deleteFile = useCallback(
     async (fileId: string, folderId?: string) => {
       try {
@@ -711,15 +588,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         const data = await response.json()
         await documentAPI.deleteDocument(data.document_id)
 
-        // Dispatch custom event to notify other components
         window.dispatchEvent(
           new CustomEvent("fileDeleted", {
             detail: { fileId },
           }),
         )
 
-        // Refresh the file list after deletion - but reset the dataFetchedRef first
-        // to ensure we get a fresh load
         dataFetchedRef.current = false
         if (userID) {
           handleDisplayUserFiles(userID)
@@ -731,33 +605,26 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [userID, handleDisplayUserFiles],
   )
 
-  // Find the deleteFolder function and replace it with this improved version that recursively deletes all files
+  // Deletes a folder and all its contents
   const deleteFolder = useCallback(
     async (folderId: string, parentId?: string) => {
       try {
-        // First, collect all file IDs within this folder and its subfolders
         const folderToDelete = findFolderById(rootFolders, folderId)
         if (!folderToDelete) {
           console.error("Folder not found:", folderId)
           return
         }
 
-        // Recursively collect all file IDs in the folder and its subfolders
         const filesToDelete: string[] = []
         const collectFilesRecursively = (folder: FolderType) => {
-          // Add files directly in this folder
           folder.files.forEach((file) => filesToDelete.push(file.id))
-
-          // Process subfolders
           folder.folders.forEach((subfolder) => collectFilesRecursively(subfolder))
         }
 
         collectFilesRecursively(folderToDelete)
 
-        // Delete all files from storage and database
         for (const fileId of filesToDelete) {
           try {
-            // Delete from storage
             await fetch("http://localhost:5000/user/delete", {
               method: "DELETE",
               headers: {
@@ -766,11 +633,9 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               body: JSON.stringify({ document_id: fileId }),
             })
 
-            // Delete from database
             await documentAPI.deleteDocument(fileId)
             console.log("Deleted file:", fileId)
 
-            // Dispatch custom event for each deleted file
             window.dispatchEvent(
               new CustomEvent("fileDeleted", {
                 detail: { fileId },
@@ -783,32 +648,37 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
         console.log(`Deleted ${filesToDelete.length} files from folder ${folderId}`)
 
-        // Now remove the folder from UI state
+        let updatedFolders: FolderType[] = []
+
         if (parentId) {
-          setRootFolders((prevFolders) => {
-            return updateFolderContents(prevFolders, parentId, (folder) => ({
-              ...folder,
-              folders: folder.folders.filter((f) => f.id !== folderId),
-            }))
-          })
+          updatedFolders = updateFolderContents(rootFolders, parentId, (folder) => ({
+            ...folder,
+            folders: folder.folders.filter((f) => f.id !== folderId),
+          }))
+          setRootFolders(updatedFolders)
         } else {
-          setRootFolders((folders) => folders.filter((f) => f.id !== folderId))
+          updatedFolders = rootFolders.filter((f) => f.id !== folderId)
+          setRootFolders(updatedFolders)
         }
 
-        // Also remove from search results if present
-        if (searchResults) {
-          setSearchResults({
-            ...searchResults,
-            folders: searchResults.folders.filter((folder) => folder.id !== folderId),
-          })
+        if (userID) {
+          try {
+            localStorage.setItem(
+              `${FOLDERS_STORAGE_KEY}_${userID}`,
+              JSON.stringify(parentId ? updatedFolders : updatedFolders),
+            )
+          } catch (error) {
+            console.error("Error saving updated folders to localStorage:", error)
+          }
         }
       } catch (error) {
         console.error("Error deleting folder:", error)
       }
     },
-    [updateFolderContents, searchResults, rootFolders],
+    [updateFolderContents, rootFolders, userID],
   )
 
+  // Handles drag start event
   const handleDragStart = (
     e: React.DragEvent,
     item: FileItem | FolderType,
@@ -819,11 +689,13 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     setDraggedItem({ type, item, parentId } as DragItem)
   }
 
+  // Handles drag over event
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
   }
 
+  // Handles drop event
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>, targetFolderId?: string) => {
       e.preventDefault()
@@ -831,12 +703,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
       if (!draggedItem) return
 
-      // Prevent dropping a folder into itself or its descendants
       if (draggedItem.type === "folder" && isDescendant(draggedItem.item as FolderType, targetFolderId)) {
         return
       }
 
-      // Remove from source
       if (draggedItem.parentId) {
         setRootFolders((prevFolders) => {
           return updateFolderContents(prevFolders, draggedItem.parentId!, (folder) => ({
@@ -853,7 +723,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         }
       }
 
-      // Add to target
       if (targetFolderId) {
         setRootFolders((prevFolders) => {
           return updateFolderContents(prevFolders, targetFolderId, (folder) => ({
@@ -864,7 +733,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           }))
         })
       } else {
-        // Drop to root level
         if (draggedItem.type === "file") {
           setRootFiles((prev) => [...prev, draggedItem.item as FileItem])
         } else {
@@ -877,13 +745,14 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [draggedItem, updateFolderContents],
   )
 
+  // Checks if a folder is a descendant of another folder
   const isDescendant = (folder: FolderType, targetId?: string): boolean => {
     if (!targetId) return false
     if (folder.id === targetId) return true
     return folder.folders.some((f) => isDescendant(f, targetId))
   }
 
-  // New function to render a file with file icon - consistent spacing and tooltip
+  // Renders a file item
   const renderFile = (file: FileItem, folderId?: string) => (
     <div
       key={file.id}
@@ -892,7 +761,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       onDragStart={(e) => handleDragStart(e, file, "file", folderId || null)}
       title={getFullFilePath(file.id, folderId)}
     >
-      <div className="w-4 h-4 flex items-center justify-center">{/* Consistent spacer for all files */}</div>
+      <div className="w-4 h-4 flex items-center justify-center"></div>
       <Checkbox
         checked={file.selected}
         onCheckedChange={() => toggleFileSelection(file.id, folderId)}
@@ -906,7 +775,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           size="sm"
           className="h-6 w-6 p-0"
           onClick={(e) => {
-            e.stopPropagation() // Prevent event bubbling
+            e.stopPropagation()
             deleteFile(file.id, folderId)
           }}
         >
@@ -916,7 +785,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     </div>
   )
 
-  // Render folder function - updated with consistent folder icon and tooltip
+  // Renders a folder item
   const renderFolder = (folder: FolderType, parentId: string | null = null, isSearchResult = false) => (
     <div
       key={folder.id}
@@ -979,7 +848,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         </div>
       </div>
 
-      {/* Always render the file input, but only show folder content when expanded or in search results */}
       <input
         id={`file-upload-${folder.id}`}
         type="file"
@@ -988,7 +856,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         onChange={(e) => {
           if (e.target.files) {
             handleFileUpload(e, userID, folder.id)
-            // Reset the input to allow uploading the same file again
             e.target.value = ""
           }
         }}
@@ -1003,14 +870,16 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     </div>
   )
 
+  // Updates selected files when selection changes
   useEffect(() => {
     const allSelectedFiles = [
       ...rootFiles.filter((file) => file.selected),
       ...rootFolders.flatMap((folder) => getAllSelectedFiles(folder)),
     ]
-    onFileSelect(allSelectedFiles) // Pass the full array
+    onFileSelect(allSelectedFiles)
   }, [rootFiles, rootFolders, onFileSelect])
 
+  // Gets all selected files from a folder recursively
   const getAllSelectedFiles = (folder: FolderType): FileItem[] => {
     return [
       ...folder.files.filter((file) => file.selected),
@@ -1018,6 +887,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     ]
   }
 
+  // Creates a new chat
   const createNewChat = () => {
     const newChatbox = {
       id: Math.random().toString(36).substr(2, 9),
@@ -1029,6 +899,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     setShowNewChatInput(false)
   }
 
+  // Switches to a different chat
   const switchChatbox = (chatboxId: string) => {
     setCurrentChatId(chatboxId)
     const selectedChatbox = chatboxes.find((chatbox) => chatbox.id === chatboxId)
@@ -1038,12 +909,13 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     console.log("Switched to chatbox:", chatboxId)
   }
 
+  // Deletes a chat
   const deleteChatbox = (chatboxId: string) => {
     setChatboxes((prevChatboxes) => prevChatboxes.filter((chatbox) => chatbox.id !== chatboxId))
     console.log("Deleted chatbox:", chatboxId)
   }
 
-  // Render search results
+  // Renders search results
   const renderSearchResults = () => {
     if (!searchResults) return null
 
@@ -1091,6 +963,22 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     )
   }
 
+  // Ensures folder structure changes are immediately saved to localStorage
+  useEffect(() => {
+    const saveToLocalStorage = () => {
+      if (userID && rootFolders.length >= 0) {
+        try {
+          localStorage.setItem(`${FOLDERS_STORAGE_KEY}_${userID}`, JSON.stringify(rootFolders))
+          console.log("Saved updated folder structure to localStorage")
+        } catch (error) {
+          console.error("Error saving folders to localStorage:", error)
+        }
+      }
+    }
+
+    saveToLocalStorage()
+  }, [rootFolders, userID])
+
   return (
     <div className="file-collection-container w-64 border-r h-[calc(100vh-64px)] p-4 flex flex-col gap-3 bg-white text-black">
       <div className="flex items-center justify-between"></div>
@@ -1127,8 +1015,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         </Button>
       </div>
 
-      {/* Search Results */}
-      {isSearching ? (
+      {searchResults ? (
         <div className="flex-1 overflow-auto">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium">Search Results</h3>
@@ -1170,7 +1057,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             </div>
           )}
 
-          {/* Chat boxes section */}
           <div className="-mt-2 space-y-1 overflow-auto flex-1" style={{ maxHeight: "150px" }}>
             {chatboxes.map((chatbox) => (
               <div
@@ -1187,7 +1073,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
                   size="sm"
                   className="h-6 w-6 p-0"
                   onClick={(e) => {
-                    e.stopPropagation() // Prevent event bubbling
+                    e.stopPropagation()
                     deleteChatbox(chatbox.id)
                   }}
                 >
@@ -1238,7 +1124,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               </div>
             )}
 
-            {/* File and folder list */}
             <div className="space-y-1" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e)}>
               {rootFolders.map((folder) => renderFolder(folder))}
               {rootFiles.map((file) => renderFile(file))}
@@ -1266,7 +1151,6 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
               onChange={(e) => {
                 if (e.target.files) {
                   handleFileUpload(e, userID)
-                  // Reset the input to allow uploading the same file again
                   e.target.value = ""
                 }
               }}
