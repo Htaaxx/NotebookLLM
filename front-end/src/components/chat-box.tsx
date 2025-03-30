@@ -11,6 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Slider } from "@/components/ui/slider"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { motion, AnimatePresence } from "framer-motion"
+import { fadeIn, buttonAnimation } from "@/lib/motion-utils"
 
 export function ChatBox() {
   const [showSettings, setShowSettings] = useState(false)
@@ -60,127 +62,151 @@ export function ChatBox() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-64px)] bg-white text-black">
+    <motion.div
+      className="flex flex-col h-[calc(100vh-64px)] bg-white text-black"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+    >
       {/* Chat Messages */}
-      <div className="flex-1 p-4 overflow-y-auto">
+      <motion.div className="flex-1 p-4 overflow-y-auto" variants={fadeIn("down", 0.2)} initial="hidden" animate="show">
         {chatHistory.map((msg, index) => (
-          <div key={index} className="flex justify-end mb-2">
+          <motion.div
+            key={index}
+            className="flex justify-end mb-2"
+            initial={{ opacity: 0, y: 20, x: 20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            transition={{ duration: 0.3, delay: index * 0.1 }}
+          >
             <div className="bg-green-500 text-white p-3 rounded-2xl rounded-tr-none max-w-[80%]">{msg}</div>
-          </div>
+          </motion.div>
         ))}
         <div ref={chatEndRef} />
-      </div>
+      </motion.div>
 
       {/* Chat Input */}
-      <div className="border-t p-4 bg-white">
+      <motion.div className="border-t p-4 bg-white" variants={fadeIn("up", 0.3)} initial="hidden" animate="show">
         <div className="flex items-center justify-between mb-2">
-          <button
+          <motion.button
             onClick={() => setShowSettings(!showSettings)}
             className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
           >
             <Settings className="w-4 h-4 mr-1" />
             {t("chatSettings")}
             {showSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </button>
+          </motion.button>
         </div>
 
-        {showSettings && (
-          <div className="mb-4 p-4 bg-gray-50 rounded-lg">
-            <div className="space-y-4">
-              <h3 className="text-sm font-medium">AI Model Settings</h3>
+        <AnimatePresence>
+          {showSettings && (
+            <motion.div
+              className="mb-4 p-4 bg-gray-50 rounded-lg"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">AI Model Settings</h3>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Model</label>
-                  <Select value={model} onValueChange={setModel}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select model" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                      <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                      <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                      <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
-                      <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Model</label>
+                    <Select value={model} onValueChange={setModel}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="gpt-4o">GPT-4o</SelectItem>
+                        <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
+                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
+                        <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
+                        <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Max Tokens</label>
+                    <Select
+                      value={maxTokens.toString()}
+                      onValueChange={(value) => setMaxTokens(Number.parseInt(value))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Max tokens" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1000">1,000</SelectItem>
+                        <SelectItem value="2000">2,000</SelectItem>
+                        <SelectItem value="4000">4,000</SelectItem>
+                        <SelectItem value="8000">8,000</SelectItem>
+                        <SelectItem value="16000">16,000</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Max Tokens</label>
-                  <Select value={maxTokens.toString()} onValueChange={(value) => setMaxTokens(Number.parseInt(value))}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Max tokens" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1000">1,000</SelectItem>
-                      <SelectItem value="2000">2,000</SelectItem>
-                      <SelectItem value="4000">4,000</SelectItem>
-                      <SelectItem value="8000">8,000</SelectItem>
-                      <SelectItem value="16000">16,000</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="flex justify-between">
+                    <label className="text-sm font-medium">Temperature: {temperature.toFixed(1)}</label>
+                  </div>
+                  <Slider
+                    value={[temperature]}
+                    min={0}
+                    max={1}
+                    step={0.1}
+                    onValueChange={(value) => setTemperature(value[0])}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Precise</span>
+                    <span>Creative</span>
+                  </div>
+                </div>
+
+                <Separator />
+
+                <h3 className="text-sm font-medium">Knowledge Base Settings</h3>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox id="use-rag" checked={useRAG} onCheckedChange={(checked) => setUseRAG(checked === true)} />
+                  <label htmlFor="use-rag" className="text-sm font-medium cursor-pointer flex items-center">
+                    <FileText className="w-4 h-4 mr-1 text-green-600" />
+                    Use selected files as context
+                  </label>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="use-summary"
+                    checked={useSummary}
+                    onCheckedChange={(checked) => setUseSummary(checked === true)}
+                  />
+                  <label htmlFor="use-summary" className="text-sm font-medium cursor-pointer flex items-center">
+                    <Sparkles className="w-4 h-4 mr-1 text-amber-500" />
+                    Generate summaries for long documents
+                  </label>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between">
+                    <label className="text-sm font-medium">Context Window: {contextWindow} messages</label>
+                  </div>
+                  <Slider
+                    value={[contextWindow]}
+                    min={1}
+                    max={20}
+                    step={1}
+                    onValueChange={(value) => setContextWindow(value[0])}
+                    className="w-full"
+                  />
                 </div>
               </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <label className="text-sm font-medium">Temperature: {temperature.toFixed(1)}</label>
-                </div>
-                <Slider
-                  value={[temperature]}
-                  min={0}
-                  max={1}
-                  step={0.1}
-                  onValueChange={(value) => setTemperature(value[0])}
-                  className="w-full"
-                />
-                <div className="flex justify-between text-xs text-gray-500">
-                  <span>Precise</span>
-                  <span>Creative</span>
-                </div>
-              </div>
-
-              <Separator />
-
-              <h3 className="text-sm font-medium">Knowledge Base Settings</h3>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox id="use-rag" checked={useRAG} onCheckedChange={(checked) => setUseRAG(checked === true)} />
-                <label htmlFor="use-rag" className="text-sm font-medium cursor-pointer flex items-center">
-                  <FileText className="w-4 h-4 mr-1 text-green-600" />
-                  Use selected files as context
-                </label>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="use-summary"
-                  checked={useSummary}
-                  onCheckedChange={(checked) => setUseSummary(checked === true)}
-                />
-                <label htmlFor="use-summary" className="text-sm font-medium cursor-pointer flex items-center">
-                  <Sparkles className="w-4 h-4 mr-1 text-amber-500" />
-                  Generate summaries for long documents
-                </label>
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <label className="text-sm font-medium">Context Window: {contextWindow} messages</label>
-                </div>
-                <Slider
-                  value={[contextWindow]}
-                  min={1}
-                  max={20}
-                  step={1}
-                  onValueChange={(value) => setContextWindow(value[0])}
-                  className="w-full"
-                />
-              </div>
-            </div>
-          </div>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-3xl mx-auto">
           <Input
@@ -189,17 +215,21 @@ export function ChatBox() {
             placeholder={t("typeMessage")}
             className="flex-1 bg-white text-black border-gray-300"
           />
-          <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
-            <Send className="w-4 h-4 mr-2" />
-            {t("send")}
-          </Button>
-          <Button type="button" variant="outline" className="border-gray-300 text-black">
-            <RefreshCw className="w-4 h-4 mr-2" />
-            {t("regenerate")}
-          </Button>
+          <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
+              <Send className="w-4 h-4 mr-2" />
+              {t("send")}
+            </Button>
+          </motion.div>
+          <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+            <Button type="button" variant="outline" className="border-gray-300 text-black">
+              <RefreshCw className="w-4 h-4 mr-2" />
+              {t("regenerate")}
+            </Button>
+          </motion.div>
         </form>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   )
 }
 

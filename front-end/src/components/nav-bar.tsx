@@ -14,6 +14,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import { motion } from "framer-motion"
+import { fadeIn } from "@/lib/motion-utils"
 
 export function NavBar() {
   const [userName, setUserName] = useState("User")
@@ -64,18 +66,34 @@ export function NavBar() {
   }
 
   return (
-    <nav
+    <motion.nav
       className={`flex items-center h-16 px-6 border-b sticky top-0 z-50 bg-white text-black transition-shadow ${
         isScrolled ? "shadow-md" : ""
       }`}
+      initial={{ y: -20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5 }}
     >
       {/* Logo links to defaultPage if logged in, otherwise to landing page */}
       <Link href={isLoggedIn ? "/defaultPage" : "/"} className="flex items-center gap-2">
-        <Logo className="w-8 h-8 text-green-600" />
-        <span className="font-semibold">NoteUS</span>
+        <motion.div
+          initial={{ rotate: -10, scale: 0.9 }}
+          animate={{ rotate: 0, scale: 1 }}
+          transition={{ duration: 0.5, type: "spring" }}
+        >
+          <Logo className="w-8 h-8 text-green-600" />
+        </motion.div>
+        <motion.span
+          className="font-semibold"
+          initial={{ x: -10, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          NoteUS
+        </motion.span>
       </Link>
 
-      <div className="flex gap-8 ml-12">
+      <motion.div className="flex gap-8 ml-12" variants={fadeIn("down", 0.2)} initial="hidden" animate="show">
         <Link
           href="/defaultPage"
           className={`hover:text-green-600 transition-colors py-1 border-b-2 text-black ${
@@ -100,16 +118,20 @@ export function NavBar() {
         >
           {t("flashcard")}
         </Link>
-      </div>
+      </motion.div>
 
-      <div className="ml-auto">
+      <motion.div className="ml-auto" variants={fadeIn("down", 0.3)} initial="hidden" animate="show">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors text-black">
+            <motion.button
+              className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors text-black"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <UserCircle className="w-6 h-6" />
               <span className="text-sm font-medium">{userName}</span>
               <ChevronDown className="w-4 h-4 text-gray-500" />
-            </button>
+            </motion.button>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-56 bg-white text-black" align="end">
             <DropdownMenuItem
@@ -139,8 +161,8 @@ export function NavBar() {
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
-    </nav>
+      </motion.div>
+    </motion.nav>
   )
 }
 

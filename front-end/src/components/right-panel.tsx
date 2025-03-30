@@ -8,6 +8,8 @@ import { MindMapView } from "@/components/mindmap-view"
 import { useLanguage } from "@/lib/language-context"
 import "react-pdf/dist/esm/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
+import { motion, AnimatePresence } from "framer-motion"
+import { fadeIn, buttonAnimation } from "@/lib/motion-utils"
 
 // Set worker options for PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`
@@ -160,9 +162,15 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
 
   if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap")) {
     return (
-      <div className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-white text-black">
+      <motion.div
+        className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-white text-black"
+        initial={{ opacity: 0, x: 20 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: 20 }}
+        transition={{ duration: 0.3 }}
+      >
         <p className="text-lg text-gray-500">{t("noChosenFile")}</p>
-      </div>
+      </motion.div>
     )
   }
 
@@ -178,94 +186,167 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   }
 
   return (
-    <div className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black">
-      {activePanel === "preview" && (
-        <>
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-center bg-green-500 text-black py-2 px-4 rounded-md w-full mr-2">
-              {selectedPdf?.name || selectedImage?.name || selectedVideo?.name || selectedOtherFile?.name}
-            </h2>
-            <div className="flex gap-2">
-              <Button onClick={handleZoomOut} size="sm">
-                <ZoomOut className="w-4 h-4" />
-              </Button>
-              <Button onClick={handleZoomIn} size="sm">
-                <ZoomIn className="w-4 h-4" />
-              </Button>
-              <Button onClick={handleHighlightText} size="sm" title="Highlight Selected Text">
-                <Highlighter className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
+    <motion.div
+      className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black"
+      initial={{ opacity: 0, x: 20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      transition={{ duration: 0.3 }}
+    >
+      <AnimatePresence mode="wait">
+        {activePanel === "preview" && (
+          <motion.div
+            key="preview"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex-grow flex flex-col"
+          >
+            <motion.div
+              className="flex justify-between items-center mb-4"
+              variants={fadeIn("down", 0.1)}
+              initial="hidden"
+              animate="show"
+            >
+              <h2 className="text-center bg-green-500 text-black py-2 px-4 rounded-md w-full mr-2">
+                {selectedPdf?.name || selectedImage?.name || selectedVideo?.name || selectedOtherFile?.name}
+              </h2>
+              <div className="flex gap-2">
+                <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+                  <Button onClick={handleZoomOut} size="sm">
+                    <ZoomOut className="w-4 h-4" />
+                  </Button>
+                </motion.div>
+                <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+                  <Button onClick={handleZoomIn} size="sm">
+                    <ZoomIn className="w-4 h-4" />
+                  </Button>
+                </motion.div>
+                <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+                  <Button onClick={handleHighlightText} size="sm" title="Highlight Selected Text">
+                    <Highlighter className="w-4 h-4" />
+                  </Button>
+                </motion.div>
+              </div>
+            </motion.div>
 
-          <div className="flex-grow overflow-auto">
-            {selectedPdf && (
-              <Document file={selectedPdf.url} onLoadSuccess={onDocumentLoadSuccess}>
-                {Array.from(new Array(numPages), (_, index) => (
-                  <Page
-                    key={index}
-                    pageNumber={index + 1}
-                    scale={scale}
-                    onRenderSuccess={() => onPageRendered(index + 1)}
+            <motion.div
+              className="flex-grow overflow-auto"
+              variants={fadeIn("up", 0.2)}
+              initial="hidden"
+              animate="show"
+            >
+              {selectedPdf && (
+                <Document file={selectedPdf.url} onLoadSuccess={onDocumentLoadSuccess}>
+                  {Array.from(new Array(numPages), (_, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.5, delay: index * 0.1 }}
+                    >
+                      <Page pageNumber={index + 1} scale={scale} onRenderSuccess={() => onPageRendered(index + 1)} />
+                    </motion.div>
+                  ))}
+                </Document>
+              )}
+
+              {selectedImage && (
+                <motion.div
+                  className="flex justify-center"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <img
+                    src={selectedImage.url || "/placeholder.svg"}
+                    alt={selectedImage.name}
+                    className="max-w-full max-h-[500px] rounded-lg shadow-lg"
                   />
-                ))}
-              </Document>
-            )}
+                </motion.div>
+              )}
 
-            {selectedImage && (
-              <div className="flex justify-center">
-                <img
-                  src={selectedImage.url || "/placeholder.svg"}
-                  alt={selectedImage.name}
-                  className="max-w-full max-h-[500px] rounded-lg shadow-lg"
-                />
-              </div>
-            )}
+              {selectedVideo && (
+                <motion.div
+                  className="flex justify-center"
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
+                  <video controls className="max-w-full max-h-[500px] rounded-lg shadow-lg">
+                    <source src={selectedVideo.url} type={selectedVideo.type} />
+                    Your browser does not support the video tag.
+                  </video>
+                </motion.div>
+              )}
 
-            {selectedVideo && (
-              <div className="flex justify-center">
-                <video controls className="max-w-full max-h-[500px] rounded-lg shadow-lg">
-                  <source src={selectedVideo.url} type={selectedVideo.type} />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-            )}
+              {selectedOtherFile && (
+                <motion.div className="text-center mt-4" variants={fadeIn("up", 0.3)} initial="hidden" animate="show">
+                  <p className="text-muted-foreground">Preview is not available for this file type.</p>
+                  <motion.a
+                    href={selectedOtherFile.url}
+                    download
+                    className="text-blue-500 underline"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    Download {selectedOtherFile.name}
+                  </motion.a>
+                </motion.div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
 
-            {selectedOtherFile && (
-              <div className="text-center mt-4">
-                <p className="text-muted-foreground">Preview is not available for this file type.</p>
-                <a href={selectedOtherFile.url} download className="text-blue-500 underline">
-                  Download {selectedOtherFile.name}
-                </a>
-              </div>
-            )}
-          </div>
-        </>
-      )}
+        {activePanel === "mindmap" && (
+          <motion.div
+            key="mindmap"
+            className="h-full bg-white rounded-lg grid grid-rows-[auto_1fr]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div
+              className="flex justify-between items-center mb-4"
+              variants={fadeIn("down", 0.1)}
+              initial="hidden"
+              animate="show"
+            >
+              <h2 className="text-center bg-green-500 text-black py-2 px-4 rounded-md w-full">
+                {selectedMarkdownFile ? selectedMarkdownFile.name : "Mind Map View"}
+              </h2>
+            </motion.div>
+            <motion.div
+              className="min-h-0 relative flex-grow"
+              variants={fadeIn("up", 0.2)}
+              initial="hidden"
+              animate="show"
+            >
+              {error ? (
+                <div className="p-4 text-red-500">{error}</div>
+              ) : (
+                <MindMapView markdownContent={markdownContent || undefined} className="absolute inset-0" />
+              )}
+            </motion.div>
+          </motion.div>
+        )}
 
-      {activePanel === "mindmap" && (
-        <div className="h-full bg-white rounded-lg grid grid-rows-[auto_1fr]">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-center bg-green-500 text-black py-2 px-4 rounded-md w-full">
-              {selectedMarkdownFile ? selectedMarkdownFile.name : "Mind Map View"}
-            </h2>
-          </div>
-          <div className="min-h-0 relative flex-grow">
-            {error ? (
-              <div className="p-4 text-red-500">{error}</div>
-            ) : (
-              <MindMapView markdownContent={markdownContent || undefined} className="absolute inset-0" />
-            )}
-          </div>
-        </div>
-      )}
-
-      {activePanel === "cheatsheet" && (
-        <div className="h-full bg-muted rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Cheatsheet View</p>
-        </div>
-      )}
-    </div>
+        {activePanel === "cheatsheet" && (
+          <motion.div
+            key="cheatsheet"
+            className="h-full bg-muted rounded-lg p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <p className="text-sm text-muted-foreground">Cheatsheet View</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   )
 }
 

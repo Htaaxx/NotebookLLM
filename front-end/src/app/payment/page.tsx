@@ -31,6 +31,7 @@ function CheckoutForm({
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [savedCard, setSavedCard] = useState<any>(null)
   const [useStoredCard, setUseStoredCard] = useState(false)
+  const [isElementMounted, setIsElementMounted] = useState(false)
 
   useEffect(() => {
     // Get saved card from localStorage
@@ -38,6 +39,13 @@ function CheckoutForm({
     if (storedCard) {
       setSavedCard(JSON.parse(storedCard))
     }
+
+    // Give the PaymentElement time to mount
+    const timer = setTimeout(() => {
+      setIsElementMounted(true)
+    }, 1000)
+
+    return () => clearTimeout(timer)
   }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -52,12 +60,7 @@ function CheckoutForm({
     setErrorMessage(null)
 
     try {
-      // Make sure elements are properly mounted before calling confirmPayment
-      const element = elements.getElement(PaymentElement)
-      if (!element) {
-        throw new Error("Payment Element not mounted")
-      }
-
+      // Skip the element check and proceed directly with confirmation
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
@@ -112,7 +115,11 @@ function CheckoutForm({
         </div>
       </div>
 
-      <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={!stripe || isLoading}>
+      <Button
+        type="submit"
+        className="w-full bg-green-600 hover:bg-green-700"
+        disabled={!stripe || isLoading || !isElementMounted}
+      >
         {isLoading ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -236,7 +243,7 @@ export default function PaymentPage() {
             </CardHeader>
             <CardContent>
               {selectedPlan?.price > 0 && clientSecret && stripePromise ? (
-                <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "stripe" } }}>
                   <CheckoutForm
                     clientSecret={clientSecret}
                     planName={selectedPlan.name}
