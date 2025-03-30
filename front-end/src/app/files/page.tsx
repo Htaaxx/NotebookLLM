@@ -235,6 +235,8 @@ export default function FilesPage() {
     localStorage.setItem("previewFile", JSON.stringify(file))
     // Set flag to automatically open the preview panel
     localStorage.setItem("showPdfPreview", "true")
+    // Set the selected file ID to ensure it's selected in the file collection
+    localStorage.setItem("selectedFileId", file.id)
     // Navigate to defaultPage
     router.push("/defaultPage")
   }

@@ -13,6 +13,7 @@ export default function Home() {
   const [activePanel, setActivePanel] = useState<"preview" | "mindmap" | "cheatsheet" | null>(null)
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
+  const [files, setFiles] = useState<FileItem[]>([]) // Assuming you have a state for files
 
   const handleFileSelection = useCallback((files: FileItem[]) => {
     setSelectedFiles(files)
@@ -45,6 +46,26 @@ export default function Home() {
       }
     } catch (error) {
       console.error("Error parsing stored file:", error)
+    }
+
+    // Check if there's a selected file ID from the files page
+    const selectedFileId = localStorage.getItem("selectedFileId")
+    if (selectedFileId) {
+      // Find the file in your files list and select it
+      // Assuming 'files' is populated elsewhere, e.g., from an API call
+      // For demonstration, let's assume files are fetched and set in another useEffect
+      // and that this useEffect runs after that one.  If 'files' is initially empty,
+      // this block will effectively do nothing until files are loaded.
+      setFiles((prevFiles) => {
+        const updatedFiles = prevFiles.map((file) => ({
+          ...file,
+          selected: file.id === selectedFileId,
+        }))
+        return updatedFiles
+      })
+
+      // Clear the selected file ID from localStorage
+      localStorage.removeItem("selectedFileId")
     }
   }, [])
 

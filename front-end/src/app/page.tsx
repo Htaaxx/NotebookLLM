@@ -9,7 +9,6 @@ import { FeaturesSection } from "@/components/home/features-section"
 import { AppScreenshotSection } from "@/components/home/app-screenshot-section"
 import { TestimonialsSection } from "@/components/home/testimonials-section"
 import { CTASection } from "@/components/home/cta-section"
-import { IntegrationSection } from "@/components/home/integration-section"
 import { Footer } from "@/components/home/footer"
 import { staggerContainer } from "@/lib/motion-utils"
 
@@ -39,7 +38,7 @@ export default function Home() {
 
       <CTASection onGetStarted={() => setShowAuth(true)} />
 
-      <IntegrationSection />
+      {/* IntegrationSection removed as requested */}
 
       <Footer onNavClick={handleNavClick} />
 

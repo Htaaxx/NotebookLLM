@@ -22,7 +22,7 @@ export interface Plan {
   priceId: string // Stripe price ID
 }
 
-// Define available plans
+// Update the plans array with the correct Stripe links
 export const plans: Plan[] = [
   {
     id: "free",
@@ -42,7 +42,7 @@ export const plans: Plan[] = [
     description: "Basic features package",
     price: 5,
     features: ["Unlimited file uploads", "Create up to 20 quizzes and flashcards", "All features from Free plan"],
-    priceId: "price_standard", // Replace with your actual Stripe price ID
+    priceId: "https://buy.stripe.com/test_cN215x1o0bB06xq289", // Updated with your Stripe link
   },
   {
     id: "pro",
@@ -54,7 +54,7 @@ export const plans: Plan[] = [
       "Create quizzes and flashcards without limits",
       "All features from Standard plan",
     ],
-    priceId: "price_pro", // Replace with your actual Stripe price ID
+    priceId: "https://buy.stripe.com/test_00g8xZc2E34ug80144", // Updated with your Stripe link
   },
 ]
 
