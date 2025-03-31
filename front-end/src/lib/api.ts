@@ -117,9 +117,13 @@ export const authAPI = {
     }
   },
 
-  ChangePassword: async (userId: string, oldPassword: string, newPassword: string) => {
+  changePassword: async (userId: string, oldPassword: string, newPassword: string) => {
     try{
-      const response = await api.post('/changePassword', { user_id: userId, old_password: oldPassword, new_password: newPassword });
+      const response = await api.post('/changePassword', { 
+        user_id: userId, 
+        old_password: oldPassword,  
+        new_password: newPassword  
+      });
       return response.data;
     } catch (error) {
       throw error;

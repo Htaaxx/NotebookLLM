@@ -2,12 +2,13 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Key, AlertCircle, CheckCircle } from "lucide-react"
+import { authAPI } from "@/lib/api"
 
 export function ChangePassword() {
   const [currentPassword, setCurrentPassword] = useState("")
@@ -15,6 +16,13 @@ export function ChangePassword() {
   const [confirmPassword, setConfirmPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState({ type: "", text: "" })
+  const [userId, setUserId] = useState<string | null>(null)
+
+  // Get user ID from localStorage when component mounts
+  useEffect(() => {
+    const storedUserId = localStorage.getItem("user_id")
+    setUserId(storedUserId)
+  }, [])
 
   // Password strength indicators
   const hasMinLength = newPassword.length >= 8
@@ -37,7 +45,7 @@ export function ChangePassword() {
     return "bg-green-500"
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
     setMessage({ type: "", text: "" })
@@ -55,14 +63,40 @@ export function ChangePassword() {
       return
     }
 
-    // Simulate API call
-    setTimeout(() => {
-      setMessage({ type: "success", text: "Password changed successfully" })
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
+    if (!userId) {
+      setMessage({ type: "error", text: "User ID not found. Please log in again." })
       setIsLoading(false)
-    }, 1000)
+      return
+    }
+
+    try {
+      console.log("Attempting to change password for user:", userId)
+
+      // Call the API to change password
+      const response = await authAPI.changePassword(userId, currentPassword, newPassword)
+
+      // Check if the response indicates success
+      if (response && response.success) {
+        // Handle successful response
+        setMessage({ type: "success", text: "Password changed successfully" })
+        setCurrentPassword("")
+        setNewPassword("")
+        setConfirmPassword("")
+      } else {
+        // Handle unsuccessful response
+        const errorMsg = response?.message || "Failed to change password. Please try again."
+        setMessage({ type: "error", text: errorMsg })
+      }
+    } catch (error: any) {
+      console.error("Password change error:", error)
+
+      // Handle error response
+      const errorMessage =
+        error.response?.data?.message || error.message || "Failed to change password. Please try again."
+      setMessage({ type: "error", text: errorMessage })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -181,7 +215,7 @@ export function ChangePassword() {
             <div className="flex justify-end">
               <Button
                 type="submit"
-                disabled={isLoading || !currentPassword || !newPassword || !confirmPassword}
+                disabled={isLoading || !currentPassword || !newPassword || !confirmPassword || !userId}
                 className="bg-green-600 hover:bg-green-700"
               >
                 {isLoading ? "Changing..." : "Change Password"}

@@ -3,17 +3,15 @@
 import { useState, useEffect } from "react"
 import { NavBar } from "@/components/nav-bar"
 import { Card, CardContent } from "@/components/ui/card"
-import { UserProfile } from "@/components/profile/user-profile"
 import { ChangePassword } from "@/components/profile/change-password"
 import { PaymentMethod } from "@/components/profile/payment-method"
-import { UserCircle, Key, CreditCard } from "lucide-react"
+import { Key, CreditCard } from "lucide-react"
 
-type ProfileSection = "profile" | "password" | "payment"
+type ProfileSection = "password" | "payment"
 
 export default function ProfilePage() {
-  const [activeSection, setActiveSection] = useState<ProfileSection>("profile")
+  const [activeSection, setActiveSection] = useState<ProfileSection>("password")
   const [userName, setUserName] = useState("User")
-  const [email, setEmail] = useState("user@example.com")
 
   useEffect(() => {
     // Load user data from localStorage or API
@@ -37,23 +35,24 @@ export default function ProfilePage() {
                 <CardContent className="p-6">
                   <div className="flex flex-col items-center mb-6">
                     <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-                      <UserCircle className="w-16 h-16 text-gray-400" />
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="w-16 h-16 text-gray-400"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                        <circle cx="12" cy="7" r="4"></circle>
+                      </svg>
                     </div>
                     <h2 className="text-xl font-semibold">{userName}</h2>
-                    <p className="text-gray-500 text-sm">{email}</p>
                   </div>
 
                   <div className="space-y-1">
-                    <button
-                      onClick={() => setActiveSection("profile")}
-                      className={`flex items-center w-full p-3 rounded-lg text-left hover:bg-gray-50 transition-colors ${
-                        activeSection === "profile" ? "text-green-600 border-b-2 border-green-600" : ""
-                      }`}
-                    >
-                      <UserCircle className="w-5 h-5 mr-3" />
-                      <span className="font-medium">User Profile</span>
-                    </button>
-
                     <button
                       onClick={() => setActiveSection("password")}
                       className={`flex items-center w-full p-3 rounded-lg text-left hover:bg-gray-50 transition-colors ${
@@ -74,13 +73,12 @@ export default function ProfilePage() {
                       <span className="font-medium">Payment Method</span>
                     </button>
                   </div>
-                </CardContent>  
+                </CardContent>
               </Card>
             </div>
 
             {/* Content */}
             <div>
-              {activeSection === "profile" && <UserProfile userName={userName} email={email} />}
               {activeSection === "password" && <ChangePassword />}
               {activeSection === "payment" && <PaymentMethod />}
             </div>

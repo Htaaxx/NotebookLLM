@@ -387,7 +387,73 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [],
   )
 
-  // Handles file upload
+  // Helper function to handle upload
+  const handleUpload = async (file: File, documentId: string, filePath: string): Promise<FileItem | null> => {
+    const formData = new FormData()
+    formData.append("file", file)
+    formData.append("document_id", documentId)
+
+    try {
+      // Upload file to server
+      const uploadResponse = await fetch("http://localhost:5000/user/upload", {
+        method: "POST",
+        body: formData,
+      })
+
+      if (!uploadResponse.ok) {
+        throw new Error(`Upload failed: ${uploadResponse.status}`)
+      }
+
+      const data = await uploadResponse.json()
+      console.log("Upload successful:", data)
+
+      // Try to call the embeddings API separately
+      try {
+        // The correct endpoint from Swagger is /store_embeddings with documentID as query param
+        const embeddingsUrl = `http://localhost:8000/store_embeddings?documentID=${documentId}`
+        console.log("Calling embeddings API:", embeddingsUrl)
+
+        // Use a timeout to avoid blocking the UI
+        setTimeout(async () => {
+          try {
+            // Send the same formData to the embeddings API
+            const embeddingsResponse = await fetch(embeddingsUrl, {
+              method: "POST",
+              body: formData,
+            })
+
+            if (embeddingsResponse.ok) {
+              const responseText = await embeddingsResponse.text()
+              console.log("Embeddings stored successfully:", responseText)
+            } else {
+              console.warn("Embeddings API returned error:", embeddingsResponse.status)
+            }
+          } catch (err) {
+            console.warn("Embeddings API call failed, but continuing:", err)
+          }
+        }, 100)
+      } catch (embeddingsError) {
+        console.warn("Failed to trigger embeddings, but continuing:", embeddingsError)
+      }
+
+      // Return the file item regardless of embeddings success
+      return {
+        id: documentId,
+        name: file.name,
+        selected: false,
+        type: file.type,
+        url: data.url || `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${documentId}`,
+        size: file.size,
+        cloudinaryId: documentId,
+        FilePath: filePath,
+      }
+    } catch (error) {
+      console.error("Error in upload process:", error)
+      return null
+    }
+  }
+
+  // Update the file upload handler to ensure it doesn't cause duplicates
   const handleFileUpload = useCallback(
     async (event: React.ChangeEvent<HTMLInputElement>, userID: string, folderId?: string) => {
       const uploadedFiles = event.target.files
@@ -410,12 +476,14 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         return
       }
 
+      // Generate the file path for this upload
       const filePath = getFilePath(folderId)
       console.log("Uploading to path:", filePath)
 
       try {
         const uploadPromises = validFilesArray.map(async (file) => {
           try {
+            // Pass the filePath to createDocument
             const response = await documentAPI.createDocument(userID, file.name, filePath)
 
             if (!response || !response.document_id) {
@@ -425,37 +493,17 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             const documentId = response.document_id
             console.log("Document ID:", documentId, "with path:", response.document_path)
 
-            const formData = new FormData()
-            formData.append("file", file)
-            formData.append("document_id", documentId)
+            // Use our new helper function for upload
+            const newFile = await handleUpload(file, documentId, response.document_path || filePath)
 
-            const uploadResponse = await fetch("http://localhost:5000/user/upload", {
-              method: "POST",
-              body: formData,
-            })
-
-            if (!uploadResponse.ok) {
-              throw new Error(`Upload failed: ${uploadResponse.status}`)
+            if (newFile) {
+              // Dispatch a custom event to notify other components about the new file
+              window.dispatchEvent(
+                new CustomEvent("fileUploaded", {
+                  detail: { file: newFile },
+                }),
+              )
             }
-
-            const data = await uploadResponse.json()
-
-            const newFile = {
-              id: documentId,
-              name: file.name,
-              selected: false,
-              type: file.type,
-              url: data.url || `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${documentId}`,
-              size: file.size,
-              cloudinaryId: documentId,
-              FilePath: response.document_path || filePath,
-            }
-
-            window.dispatchEvent(
-              new CustomEvent("fileUploaded", {
-                detail: { file: newFile },
-              }),
-            )
 
             return newFile
           } catch (error) {
@@ -464,8 +512,18 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           }
         })
 
-        await Promise.all(uploadPromises)
+        // Wait for all uploads to complete
+        const results = await Promise.all(uploadPromises)
+        const successfulUploads = results.filter((result) => result !== null)
 
+        if (successfulUploads.length === 0) {
+          console.warn("No files were successfully uploaded")
+        } else {
+          console.log(`Successfully uploaded ${successfulUploads.length} files`)
+        }
+
+        // Refresh the file list after upload - but reset the dataFetchedRef first
+        // to ensure we get a fresh load
         dataFetchedRef.current = false
         handleDisplayUserFiles(userID)
       } catch (error) {
