@@ -155,7 +155,16 @@ export const documentAPI = {
       ...updateData
     });
     return response.data;
+  },
+
+  updateDocumentStatus: async (documentId: string, status: string) => {
+    const response = await api.post('/updateDocumentStatus', {
+      document_id: documentId,
+      status: status
+    });
+    return response.data;
   }
+
 };
 
 export default api;

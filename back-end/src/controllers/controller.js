@@ -321,3 +321,39 @@ exports.changePassword = async (req, res) => {
     res.status(500).json({ message: "Error changing password", error: error.message });
   }
 };
+
+
+const redis = require("redis");
+
+// Create Redis client
+const redisClient = redis.createClient({
+  url: process.env.REDIS_URL || "redis://localhost:6379",
+});
+redisClient.connect().catch(console.error);
+
+exports.updateDocumentStatus = async (req, res) => {
+  const { document_id, new_status } = req.body;
+
+  // Validate inputs
+  if (!document_id || new_status === undefined) {
+    return res.status(400).json({ message: "Document ID and new status are required" });
+  }
+
+  try {
+    // Get all keys matching "chunk:*"
+    const keys = await redisClient.keys("chunk:*");
+
+    // Update the `is_active` field for all chunks with the matching `doc_id`
+    for (const key of keys) {
+      const doc_id = await redisClient.hGet(key, "doc_id");
+      if (doc_id === document_id) {
+        await redisClient.hSet(key, "is_active", new_status);
+      }
+    }
+
+    res.json({ message: `Updated all chunks with document_id: ${document_id} to status: ${new_status}` });
+  } catch (error) {
+    console.error("Error updating document status:", error);
+    res.status(500).json({ message: "Error updating document status", error: error.message });
+  }
+};
