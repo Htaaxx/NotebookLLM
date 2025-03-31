@@ -17,7 +17,8 @@ import { fadeIn, buttonAnimation } from "@/lib/motion-utils"
 export function ChatBox() {
   const [showSettings, setShowSettings] = useState(false)
   const [message, setMessage] = useState("")
-  const [chatHistory, setChatHistory] = useState<string[]>([])
+  const [chatHistory, setChatHistory] = useState<Array<{ text: string; isUser: boolean }>>([])
+  const [isLoading, setIsLoading] = useState(false)
   const { t } = useLanguage()
 
   // Chat settings state
@@ -41,24 +42,99 @@ export function ChatBox() {
     if (!message.trim()) return
 
     try {
-      await sendMessageToBackend(message)
-      setChatHistory((prev) => [...prev, message])
+      // Add user message to chat history
+      setChatHistory((prev) => [...prev, { text: message, isUser: true }])
+      setIsLoading(true)
+
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("user_id") || "default_user"
+
+      // Call our Next.js API route instead of directly calling the external API
+      const response = await fetch("/api/llm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          query: message,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      // Parse the response
+      const data = await response.text()
+
+      // Add LLM response to chat history
+      setChatHistory((prev) => [...prev, { text: data, isUser: false }])
+
+      // Clear the input field
       setMessage("")
     } catch (error) {
       console.error("Failed to send message", error)
+      setChatHistory((prev) => [
+        ...prev,
+        { text: "Sorry, I couldn't process your request. Please try again.", isUser: false },
+      ])
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  const sendMessageToBackend = async (message: string) => {
-    console.log("Sending message to backend:", message)
-    console.log("Using settings:", {
-      model,
-      temperature,
-      maxTokens,
-      useRAG,
-      useSummary,
-      contextWindow,
-    })
+  // Also update the regenerateLastResponse function:
+  const regenerateLastResponse = async () => {
+    // Find the last user message
+    const lastUserMessageIndex = [...chatHistory].reverse().findIndex((msg) => msg.isUser)
+    if (lastUserMessageIndex === -1) return
+
+    const lastUserMessage = chatHistory[chatHistory.length - lastUserMessageIndex - 1]
+
+    // Remove the last AI response if it exists
+    if (!chatHistory[chatHistory.length - 1].isUser) {
+      setChatHistory((prev) => prev.slice(0, prev.length - 1))
+    }
+
+    // Re-send the last user message
+    try {
+      setIsLoading(true)
+
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("user_id") || "default_user"
+
+      // Call our Next.js API route
+      const response = await fetch("/api/llm", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_id: userId,
+          query: "message",
+          message: lastUserMessage.text,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      // Parse the response
+      const data = await response.text()
+
+      // Add LLM response to chat history
+      setChatHistory((prev) => [...prev, { text: data, isUser: false }])
+    } catch (error) {
+      console.error("Failed to regenerate response", error)
+      setChatHistory((prev) => [
+        ...prev,
+        { text: "Sorry, I couldn't regenerate a response. Please try again.", isUser: false },
+      ])
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -73,14 +149,40 @@ export function ChatBox() {
         {chatHistory.map((msg, index) => (
           <motion.div
             key={index}
-            className="flex justify-end mb-2"
-            initial={{ opacity: 0, y: 20, x: 20 }}
+            className={`flex ${msg.isUser ? "justify-end" : "justify-start"} mb-4`}
+            initial={{ opacity: 0, y: 20, x: msg.isUser ? 20 : -20 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
-            <div className="bg-green-500 text-white p-3 rounded-2xl rounded-tr-none max-w-[80%]">{msg}</div>
+            <div
+              className={`p-3 rounded-2xl max-w-[80%] ${
+                msg.isUser ? "bg-green-500 text-white rounded-tr-none" : "bg-gray-100 text-black rounded-tl-none"
+              }`}
+            >
+              {msg.text}
+            </div>
           </motion.div>
         ))}
+        {isLoading && (
+          <motion.div className="flex justify-start mb-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="bg-gray-100 text-black p-3 rounded-2xl rounded-tl-none max-w-[80%]">
+              <div className="flex space-x-2">
+                <div
+                  className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                  style={{ animationDelay: "0ms" }}
+                ></div>
+                <div
+                  className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                  style={{ animationDelay: "150ms" }}
+                ></div>
+                <div
+                  className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                  style={{ animationDelay: "300ms" }}
+                ></div>
+              </div>
+            </div>
+          </motion.div>
+        )}
         <div ref={chatEndRef} />
       </motion.div>
 
@@ -214,15 +316,22 @@ export function ChatBox() {
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t("typeMessage")}
             className="flex-1 bg-white text-black border-gray-300"
+            disabled={isLoading}
           />
           <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white">
+            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
               <Send className="w-4 h-4 mr-2" />
               {t("send")}
             </Button>
           </motion.div>
           <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-            <Button type="button" variant="outline" className="border-gray-300 text-black">
+            <Button
+              type="button"
+              variant="outline"
+              className="border-gray-300 text-black"
+              onClick={regenerateLastResponse}
+              disabled={isLoading || chatHistory.length === 0}
+            >
               <RefreshCw className="w-4 h-4 mr-2" />
               {t("regenerate")}
             </Button>

@@ -164,7 +164,7 @@ export const documentAPI = {
   updateDocumentStatus: async (documentId: string, status: string) => {
     const response = await api.post('/updateDocumentStatus', {
       document_id: documentId,
-      status: status
+      new_status: status
     });
     return response.data;
   }

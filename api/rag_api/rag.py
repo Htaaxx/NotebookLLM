@@ -255,7 +255,7 @@ async def store_embeddings(documentID: str = None, file: UploadFile = File(None)
         "chunk_id": f"{doc_id}-{i}",
         "doc_id": doc_id,
         "content": chunk.get("text", ""),  # Nội dung chunk
-        "is_active": 1,  # Đảm bảo thêm trường is_active
+        "is_active": 0,  # Đảm bảo thêm trường is_active
         "page_number": chunk["page_number"],  # Thêm số trang
         "bounding_box": json.dumps(chunk["bounding_box"]),  # Chuyển bounding box thành JSON
         "text_embedding": np.array(embeddings[i], dtype="float32").tobytes(),  # Embedding

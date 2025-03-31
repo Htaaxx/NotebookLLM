@@ -342,7 +342,7 @@ exports.updateDocumentStatus = async (req, res) => {
     return res.status(400).json({ message: "Document ID and new status are required" });
   }
 
-  try {
+  try { 
     // Get all keys matching "chunk:*"
     const keys = await redisClient.keys("chunk:*");
 

@@ -37,6 +37,24 @@ const validateFileSize = (file: File): string | null => {
   return null
 }
 
+// Move the findFolderById function outside of other functions if it's not already
+const findFolderByIdInner = (folders: FolderType[], folderId: string): FolderType | null => {
+  for (const folder of folders) {
+    if (folder.id === folderId) {
+      return folder
+    }
+
+    const subFolder = findFolderByIdInner(folder.folders, folderId)
+    if (subFolder) {
+      return subFolder
+    }
+  }
+
+  return null
+}
+
+const findFolderById = findFolderByIdInner
+
 export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const { t } = useLanguage()
   const [userID, setUserID] = useState("User")
@@ -577,7 +595,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
   // Toggles folder selection
   const toggleFolderSelection = useCallback(
-    (folderId: string) => {
+    async (folderId: string) => {
+      // First determine if the folder is currently selected
+      const folder = findFolderByIdInner(rootFolders, folderId)
+      const isCurrentlySelected = folder?.selected || false
+
+      // Update UI state
       setRootFolders((prevFolders) => {
         return updateFolderContents(prevFolders, folderId, (folder) => ({
           ...folder,
@@ -592,29 +615,78 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           })),
         }))
       })
+
+      // Update status for all files in the folder
+      if (folder) {
+        const updateFilesRecursively = async (folder: FolderType) => {
+          // Update status for all files in this folder
+          const newStatus = isCurrentlySelected ? "1" : "0"
+
+          // Update direct files in this folder
+          const updatePromises = folder.files.map((file) =>
+            documentAPI
+              .updateDocumentStatus(file.id, newStatus)
+              .catch((error) => console.error(`Error updating document ${file.id} status:`, error)),
+          )
+
+          // Update files in subfolders
+          folder.folders.forEach((subFolder) => {
+            updateFilesRecursively(subFolder)
+          })
+
+          await Promise.all(updatePromises)
+        }
+
+        try {
+          await updateFilesRecursively(folder)
+          console.log(`Updated status for all files in folder ${folderId}`)
+        } catch (error) {
+          console.error(`Error updating files in folder ${folderId}:`, error)
+        }
+      }
     },
-    [updateFolderContents],
+    [updateFolderContents, rootFolders],
   )
 
   // Finds a folder by ID
-  const findFolderById = (folders: FolderType[], folderId: string): FolderType | null => {
-    for (const folder of folders) {
-      if (folder.id === folderId) {
-        return folder
-      }
+  // const findFolderById = (folders: FolderType[], folderId: string): FolderType | null => {
+  //   for (const folder of folders) {
+  //     if (folder.id === folderId) {
+  //       return folder
+  //     }
 
-      const subFolder = findFolderById(folder.folders, folderId)
-      if (subFolder) {
-        return subFolder
-      }
-    }
+  //     const subFolder = findFolderById(folder.folders, folderId)
+  //     if (subFolder) {
+  //       return subFolder
+  //     }
+  //   }
 
-    return null
-  }
+  //   return null
+  // }
 
   // Toggles file selection
   const toggleFileSelection = useCallback(
-    (fileId: string, folderId?: string) => {
+    async (fileId: string, folderId?: string) => {
+      // First determine if the file is currently selected
+      let isCurrentlySelected = false
+
+      const getFileSelectionStatus = (): boolean => {
+        if (folderId) {
+          const folder = findFolderByIdInner(rootFolders, folderId)
+          if (folder) {
+            const file = folder.files.find((f) => f.id === fileId)
+            return file?.selected || false
+          }
+        } else {
+          const file = rootFiles.find((f) => f.id === fileId)
+          return file?.selected || false
+        }
+        return false
+      }
+
+      isCurrentlySelected = getFileSelectionStatus()
+
+      // Toggle the selection in the UI
       if (folderId) {
         setRootFolders((prevFolders) => {
           return updateFolderContents(prevFolders, folderId, (folder) => ({
@@ -627,8 +699,20 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           files.map((file) => (file.id === fileId ? { ...file, selected: !file.selected } : file)),
         )
       }
+
+      // Call the API to update the document status
+      try {
+        // Send status 1 when selecting, 0 when deselecting
+        const newStatus = isCurrentlySelected ? "0" : "1"
+        console.log(`Updating document ${fileId} status to ${newStatus}`)
+
+        await documentAPI.updateDocumentStatus(fileId, newStatus)
+        console.log(`Document ${fileId} status updated successfully`)
+      } catch (error) {
+        console.error(`Error updating document ${fileId} status:`, error)
+      }
     },
-    [updateFolderContents],
+    [updateFolderContents, rootFolders, rootFiles],
   )
 
   // Deletes a file
@@ -667,7 +751,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const deleteFolder = useCallback(
     async (folderId: string, parentId?: string) => {
       try {
-        const folderToDelete = findFolderById(rootFolders, folderId)
+        const folderToDelete = findFolderByIdInner(rootFolders, folderId)
         if (!folderToDelete) {
           console.error("Folder not found:", folderId)
           return
