@@ -7,6 +7,7 @@ import { Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { NavBar } from "@/components/nav-bar"
+import { NavBar as HomeNavBar } from "@/components/home/navbar"
 import { Footer } from "@/components/home/footer"
 import AuthUI from "@/components/auth-ui"
 import { useLanguage } from "@/lib/language-context"
@@ -16,55 +17,82 @@ import { fadeIn, staggerContainer, buttonAnimation, cardHoverEffect } from "@/li
 
 export default function PricingPage() {
   const [showAuth, setShowAuth] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState(true)
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null)
   const [userName, setUserName] = useState("")
-  const [userEmail, setUserEmail] = useState("")
-  const [currentPlan, setCurrentPlan] = useState("Free")
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null)
   const { language } = useLanguage()
   const isVietnamese = language === "vi"
   const router = useRouter()
 
+  // Check authentication status
   useEffect(() => {
-    // Check if user is authenticated
-    const token = localStorage.getItem("accessToken")
-    const storedUsername = localStorage.getItem("username")
+    // Simulate some loading time
+    const loadingTimer = setTimeout(() => {
+      const token = localStorage.getItem("accessToken")
+      const storedUsername = localStorage.getItem("username")
 
-    if (token && storedUsername) {
-      setIsAuthenticated(true)
-      setUserName(storedUsername)
+      if (token && storedUsername) {
+        setIsAuthenticated(true)
+        setUserName(storedUsername)
 
-      // In a real app, you would fetch the user's current plan from your backend
-      // For now, we'll just use a placeholder
-      setCurrentPlan("Free")
-    }
+        // Get current plan from localStorage
+        const userPlan = localStorage.getItem("currentPlan")
+        if (userPlan) {
+          setCurrentPlan(userPlan)
+        } else {
+          setCurrentPlan("Free") // Default to Free if no plan is stored
+        }
+      }
+
+      setIsLoading(false)
+    }, 500) // 500ms delay to show loading state
+
+    return () => clearTimeout(loadingTimer)
   }, [])
 
   const handleNavClick = () => {
-    if (!isAuthenticated) {
-      setShowAuth(true)
-    }
+    // Don't do anything special here, let regular navigation happen
   }
 
-  const handleSubscribe = async (planId: string) => {
+  const handleSubscribe = (planId: string) => {
     if (!isAuthenticated) {
+      // Store the selected plan ID and show auth modal
+      setSelectedPlanId(planId)
       setShowAuth(true)
       return
     }
 
+    // User is authenticated, proceed with subscription
+    proceedWithSubscription(planId)
+  }
+
+  const handleAuthSuccess = () => {
+    // Called after successful authentication
+    setIsAuthenticated(true)
+    setShowAuth(false)
+
+    // If user selected a plan before auth, proceed with that subscription
+    if (selectedPlanId) {
+      proceedWithSubscription(selectedPlanId)
+    }
+  }
+
+  const proceedWithSubscription = (planId: string) => {
     setIsLoading(true)
 
     try {
       const selectedPlan = plans.find((plan) => plan.id === planId)
 
+      if (planId === "free") {
+        // Free plan doesn't need payment
+        localStorage.setItem("currentPlan", "Free")
+        router.push("/defaultPage")
+        return
+      }
+
       if (!selectedPlan || !selectedPlan.priceId) {
-        if (planId === "free") {
-          // Free plan doesn't need payment
-          // In a real app, you would update the user's plan in your backend
-          setCurrentPlan("Free")
-          router.push("/defaultPage")
-          return
-        }
         throw new Error("Invalid plan selected")
       }
 
@@ -75,14 +103,31 @@ export default function PricingPage() {
       router.push(`/payment?plan=${planId}`)
     } catch (error) {
       console.error("Error subscribing to plan:", error)
-    } finally {
       setIsLoading(false)
     }
   }
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-white">
+        <NavBar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
+            <p className="mt-2 text-gray-700">Loading pricing information...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <main className="min-h-screen bg-white">
-      <NavBar />
+      {isAuthenticated ? (
+        <NavBar />
+      ) : (
+        <HomeNavBar onNavClick={handleNavClick} onSignUp={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />
+      )}
       <motion.div className="py-20 px-6" initial="hidden" animate="show" variants={staggerContainer(0.1, 0.1)}>
         <div className="max-w-7xl mx-auto">
           <motion.div className="text-center mb-16" variants={fadeIn("up", 0.1)}>
@@ -92,7 +137,7 @@ export default function PricingPage() {
             <motion.p className="text-xl text-gray-600 max-w-3xl mx-auto" variants={fadeIn("up", 0.3)}>
               Select the perfect plan for your needs and start transforming your notes today.
             </motion.p>
-            {isAuthenticated && (
+            {isAuthenticated && currentPlan && (
               <motion.p className="mt-4 text-lg text-green-600" variants={fadeIn("up", 0.4)}>
                 You are currently on the <strong>{currentPlan}</strong> plan
               </motion.p>
@@ -146,9 +191,9 @@ export default function PricingPage() {
                       <Button
                         className="w-full bg-green-600 hover:bg-green-700"
                         onClick={() => handleSubscribe("free")}
-                        disabled={currentPlan === "Free" || isLoading}
+                        disabled={(isAuthenticated && currentPlan === "Free") || isLoading}
                       >
-                        {currentPlan === "Free" ? "Current Plan" : "Get Started"}
+                        {isAuthenticated && currentPlan === "Free" ? "Current Plan" : "Get Started"}
                       </Button>
                     </motion.div>
                   </CardFooter>
@@ -205,9 +250,9 @@ export default function PricingPage() {
                       <Button
                         className="w-full bg-blue-500 hover:bg-blue-600"
                         onClick={() => handleSubscribe("standard")}
-                        disabled={currentPlan === "Standard" || isLoading}
+                        disabled={(isAuthenticated && currentPlan === "Standard") || isLoading}
                       >
-                        {currentPlan === "Standard" ? "Current Plan" : "Subscribe Now"}
+                        {isAuthenticated && currentPlan === "Standard" ? "Current Plan" : "Subscribe Now"}
                       </Button>
                     </motion.div>
                   </CardFooter>
@@ -264,9 +309,9 @@ export default function PricingPage() {
                       <Button
                         className="w-full bg-green-600 hover:bg-green-700"
                         onClick={() => handleSubscribe("pro")}
-                        disabled={currentPlan === "Pro" || isLoading}
+                        disabled={(isAuthenticated && currentPlan === "Pro") || isLoading}
                       >
-                        {currentPlan === "Pro" ? "Current Plan" : "Go Pro"}
+                        {isAuthenticated && currentPlan === "Pro" ? "Current Plan" : "Go Pro"}
                       </Button>
                     </motion.div>
                   </CardFooter>
@@ -311,7 +356,7 @@ export default function PricingPage() {
             animate={{ scale: 1, opacity: 1 }}
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
           >
-            <AuthUI />
+            <AuthUI onAuthSuccess={handleAuthSuccess} />
             <motion.button
               onClick={() => setShowAuth(false)}
               className="mt-4 text-white hover:underline text-sm mx-auto block"

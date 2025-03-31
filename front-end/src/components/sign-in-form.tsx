@@ -1,108 +1,162 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useForm } from "react-hook-form"
-import * as z from "zod"
 import { Button } from "@/components/ui/button"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Loader2 } from "lucide-react"
-
-// connect to backend
+import { Check, Loader2 } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { authAPI } from "@/lib/api"
+import { useLanguage } from "@/lib/language-context"
 
-const formSchema = z.object({
-  username: z.string().min(3, { message: "Username must be at least 3 characters" }),
-  password: z.string().min(6, { message: "Password must be at least 6 characters" }),
-})
-
-type SignInFormProps = {
-  onSuccess: () => void
+interface SignInFormProps {
+  onSuccess?: () => void
 }
 
 export function SignInForm({ onSuccess }: SignInFormProps) {
+  const router = useRouter()
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [isSuccess, setIsSuccess] = useState(false)
+  const { language } = useLanguage()
+  const isVietnamese = language === "vi"
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  })
-
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError("")
     setIsLoading(true)
-    setError(null)
 
     try {
-      // call backend API
-      const data = await authAPI.signIn(values.username, values.password)
+      await authAPI.signIn(username, password)
+      setIsSuccess(true)
 
-      // call the success callback to navigate to defaultPage
-      onSuccess()
-    } catch (error) {
-      console.error("Sign in error:", error)
-      setError("Invalid username or password. Please try again.")
-    } finally {
+      // Wait a moment to show success state
+      setTimeout(() => {
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          router.push("/defaultPage")
+        }
+      }, 1000)
+    } catch (err: any) {
+      console.error("Sign in error:", err)
+
+      if (err.response?.status === 401) {
+        setError(isVietnamese ? "Tên đăng nhập hoặc mật khẩu không đúng" : "Invalid username or password")
+      } else {
+        setError(
+          isVietnamese
+            ? "Đã xảy ra lỗi khi đăng nhập. Vui lòng thử lại sau."
+            : "An error occurred during sign in. Please try again later.",
+        )
+      }
+
       setIsLoading(false)
     }
   }
 
+  // For development/testing only - to be removed in production
+  const handleDemoLogin = async () => {
+    setIsLoading(true)
+
+    // Simulate a successful login for development purposes
+    setTimeout(() => {
+      // Store demo user data in localStorage
+      localStorage.setItem("accessToken", "demo-token")
+      localStorage.setItem("refreshToken", "demo-refresh-token")
+      localStorage.setItem("username", "DemoUser")
+      localStorage.setItem("user_id", "demo-user-id")
+
+      setIsSuccess(true)
+
+      // Wait a moment to show success state
+      setTimeout(() => {
+        if (onSuccess) {
+          onSuccess()
+        } else {
+          router.push("/defaultPage")
+        }
+      }, 1000)
+    }, 1000)
+  }
+
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {error && <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">{error}</div>}
-        <FormField
-          control={form.control}
-          name="username"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black">Username</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter username" className="bg-white text-black border-gray-300" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black">Password</FormLabel>
-              <FormControl>
-                <Input
-                  type="password"
-                  placeholder="Enter password"
-                  className="bg-white text-black border-gray-300"
-                  {...field}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <div className="text-right">
-          <Button variant="link" className="p-0 h-auto font-normal text-green-600 hover:text-green-700" type="button">
-            Forgot password?
-          </Button>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <Label htmlFor="username" className="text-black text-xs">
+            {isVietnamese ? "Tên đăng nhập" : "Username"}
+          </Label>
+          <Input
+            id="username"
+            placeholder={isVietnamese ? "Nhập tên đăng nhập" : "Enter username"}
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            required
+            className="bg-white text-black border-gray-300 h-8 text-sm"
+          />
         </div>
-        <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isLoading}>
-          {isLoading ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Signing in...
-            </>
-          ) : (
-            "Sign in"
-          )}
-        </Button>
-      </form>
-    </Form>
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="password" className="text-black text-xs">
+              {isVietnamese ? "Mật khẩu" : "Password"}
+            </Label>
+            <button type="button" className="text-xs text-blue-500 hover:underline">
+              {isVietnamese ? "Quên mật khẩu?" : "Forgot password?"}
+            </button>
+          </div>
+          <Input
+            id="password"
+            type="password"
+            placeholder={isVietnamese ? "Nhập mật khẩu" : "Enter password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="bg-white text-black border-gray-300 h-8 text-sm"
+          />
+        </div>
+      </div>
+
+      {error && <p className="text-red-500 text-xs">{error}</p>}
+
+      <Button
+        type="submit"
+        className="w-full bg-green-600 hover:bg-green-700 text-white h-8 text-sm"
+        disabled={isLoading || isSuccess}
+      >
+        {isLoading ? (
+          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+        ) : isSuccess ? (
+          <Check className="mr-2 h-3 w-3" />
+        ) : null}
+        {isLoading
+          ? isVietnamese
+            ? "Đang đăng nhập..."
+            : "Signing in..."
+          : isSuccess
+            ? isVietnamese
+              ? "Đăng nhập thành công!"
+              : "Sign in successful!"
+            : isVietnamese
+              ? "Đăng nhập"
+              : "Sign in"}
+      </Button>
+
+      {/* Development/demo mode button - to be removed in production */}
+      <Button
+        type="button"
+        variant="outline"
+        className="w-full border-green-600 text-green-600 hover:bg-green-50 h-8 text-sm"
+        onClick={handleDemoLogin}
+        disabled={isLoading || isSuccess}
+      >
+        {isVietnamese ? "Đăng nhập dùng thử" : "Demo Login"}
+      </Button>
+    </form>
   )
 }
 

@@ -50,7 +50,7 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
       // After successful signup, sign in the user automatically
       await authAPI.signIn(values.username, values.password)
 
-      // Navigate to defaultPage
+      // Call the success callback
       onSuccess()
     } catch (error) {
       console.error("Sign up error:", error)
@@ -62,18 +62,22 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        {error && <div className="p-3 text-sm text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md">{error}</div>}
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3">
+        {error && <div className="p-2 text-xs text-red-500 bg-red-50 dark:bg-red-900/20 rounded-md">{error}</div>}
         <FormField
           control={form.control}
           name="username"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black">Username</FormLabel>
+            <FormItem className="space-y-1">
+              <FormLabel className="text-black text-xs">Username</FormLabel>
               <FormControl>
-                <Input placeholder="Enter username" className="bg-white text-black border-gray-300" {...field} />
+                <Input
+                  placeholder="Enter username"
+                  className="bg-white text-black border-gray-300 h-8 text-sm"
+                  {...field}
+                />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
@@ -81,12 +85,16 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
           control={form.control}
           name="email"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black">Email</FormLabel>
+            <FormItem className="space-y-1">
+              <FormLabel className="text-black text-xs">Email</FormLabel>
               <FormControl>
-                <Input placeholder="Enter email" className="bg-white text-black border-gray-300" {...field} />
+                <Input
+                  placeholder="Enter email"
+                  className="bg-white text-black border-gray-300 h-8 text-sm"
+                  {...field}
+                />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
@@ -94,17 +102,17 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
           control={form.control}
           name="password"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel className="text-black">Password</FormLabel>
+            <FormItem className="space-y-1">
+              <FormLabel className="text-black text-xs">Password</FormLabel>
               <FormControl>
                 <Input
                   type="password"
                   placeholder="Enter password"
-                  className="bg-white text-black border-gray-300"
+                  className="bg-white text-black border-gray-300 h-8 text-sm"
                   {...field}
                 />
               </FormControl>
-              <FormMessage />
+              <FormMessage className="text-xs" />
             </FormItem>
           )}
         />
@@ -112,12 +120,12 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
           control={form.control}
           name="terms"
           render={({ field }) => (
-            <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md p-4 border bg-white">
+            <FormItem className="flex flex-row items-start space-x-2 space-y-0 rounded-md p-2 border bg-white">
               <FormControl>
-                <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                <Checkbox checked={field.value} onCheckedChange={field.onChange} className="h-3 w-3 mt-0.5" />
               </FormControl>
               <div className="space-y-1 leading-none">
-                <FormLabel className="text-black">
+                <FormLabel className="text-black text-xs">
                   I agree to the{" "}
                   <a href="#" className="text-green-600 hover:text-green-700 underline-offset-4 hover:underline">
                     terms of service
@@ -127,15 +135,15 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
                     privacy policy
                   </a>
                 </FormLabel>
-                <FormMessage />
+                <FormMessage className="text-xs" />
               </div>
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full bg-green-600 hover:bg-green-700" disabled={isLoading}>
+        <Button type="submit" className="w-full bg-green-600 hover:bg-green-700 h-8 text-sm" disabled={isLoading}>
           {isLoading ? (
             <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 h-3 w-3 animate-spin" />
               Creating account...
             </>
           ) : (

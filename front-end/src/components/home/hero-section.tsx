@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { fadeIn, slideIn, zoomIn } from "@/lib/motion-utils"
@@ -10,6 +11,17 @@ interface HeroSectionProps {
 }
 
 export function HeroSection({ onGetStarted, onSeeDemo }: HeroSectionProps) {
+  const [isPlaying, setIsPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement>(null)
+
+  const handleSeeDemo = () => {
+    if (videoRef.current) {
+      videoRef.current.play()
+      setIsPlaying(true)
+    }
+    onSeeDemo()
+  }
+
   return (
     <motion.div
       className="relative bg-gradient-to-b from-white to-gray-50 py-20 overflow-hidden"
@@ -47,7 +59,7 @@ export function HeroSection({ onGetStarted, onSeeDemo }: HeroSectionProps) {
                 Get Started
               </Button>
               <Button
-                onClick={onSeeDemo}
+                onClick={handleSeeDemo}
                 variant="outline"
                 className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-3 rounded-lg text-lg font-medium"
               >
@@ -56,13 +68,31 @@ export function HeroSection({ onGetStarted, onSeeDemo }: HeroSectionProps) {
             </motion.div>
           </motion.div>
 
-          {/* Hero Image */}
+          {/* Hero Video/Image */}
           <motion.div className="lg:w-1/2" variants={zoomIn(0.4, 1)}>
-            <img
-              src="/placeholder.svg?height=500&width=600"
-              alt="NoteUS App Interface"
-              className="w-full h-auto rounded-lg shadow-2xl"
-            />
+            <div className="relative rounded-lg shadow-2xl overflow-hidden">
+              {/* Placeholder image that will be replaced by video when playing */}
+              {!isPlaying && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-10">
+                  <div className="w-16 h-16 rounded-full bg-white bg-opacity-80 flex items-center justify-center">
+                    <div className="w-0 h-0 border-t-8 border-b-8 border-l-12 border-transparent border-l-green-600 ml-1"></div>
+                  </div>
+                </div>
+              )}
+
+              {/* Video element */}
+              <video
+                ref={videoRef}
+                className="w-full h-auto rounded-lg"
+                poster="/placeholder.svg?height=500&width=600"
+                controls={isPlaying}
+                onEnded={() => setIsPlaying(false)}
+                playsInline
+              >
+                <source src="/demo-video.mp4" type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            </div>
           </motion.div>
         </div>
       </div>
