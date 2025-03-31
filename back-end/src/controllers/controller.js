@@ -284,3 +284,40 @@ exports.updateDocument = async (req, res) => {
   }
 };
 
+// change password : input user_id, old password, new password 
+exports.changePassword = async (req, res) => {
+  const { user_id, oldPassword, newPassword } = req.body;
+
+  // Validate inputs
+  if (!user_id || !oldPassword || !newPassword) {
+    return res.status(400).json({ 
+      message: "User ID, old password, and new password are required" 
+    });
+  }
+
+  try {
+    // Find user by user_id
+    const user = await User.findOne({ user_id });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Verify old password
+    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Current password is incorrect" });
+    }
+
+    // Hash the new password
+    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    
+    // Update user's password
+    user.password = hashedNewPassword;
+    await user.save();
+
+    res.json({ message: "Password changed successfully" });
+  } catch (error) {
+    console.error("Error changing password:", error);
+    res.status(500).json({ message: "Error changing password", error: error.message });
+  }
+};
