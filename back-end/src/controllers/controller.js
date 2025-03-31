@@ -286,12 +286,15 @@ exports.updateDocument = async (req, res) => {
 
 // change password : input user_id, old password, new password 
 exports.changePassword = async (req, res) => {
-  const { user_id, oldPassword, newPassword } = req.body;
+  const { user_id, old_password, new_password } = req.body; 
 
   // Validate inputs
-  if (!user_id || !oldPassword || !newPassword) {
+  if (!user_id || !old_password || !new_password) {
     return res.status(400).json({ 
-      message: "User ID, old password, and new password are required" 
+      message: "User ID, old password, and new password are required",
+      user_id: user_id,
+      oldPassword: old_password,
+      newPassword: new_password
     });
   }
 
@@ -303,13 +306,13 @@ exports.changePassword = async (req, res) => {
     }
 
     // Verify old password
-    const isPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    const isPasswordValid = await bcrypt.compare(old_password, user.password);
     if (!isPasswordValid) {
       return res.status(401).json({ message: "Current password is incorrect" });
     }
 
     // Hash the new password
-    const hashedNewPassword = await bcrypt.hash(newPassword, 10);
+    const hashedNewPassword = await bcrypt.hash(new_password, 10);
     
     // Update user's password
     user.password = hashedNewPassword;
