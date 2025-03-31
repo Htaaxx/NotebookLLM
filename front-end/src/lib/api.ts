@@ -1,3 +1,4 @@
+import { ChangePassword } from '@/components/profile/change-password';
 import axios from 'axios';
 
 const API_URL = 'http://localhost:5000/api';
@@ -114,7 +115,17 @@ export const authAPI = {
     } catch (error) {
       throw error;
     }
-  }
+  },
+
+  ChangePassword: async (userId: string, oldPassword: string, newPassword: string) => {
+    try{
+      const response = await api.post('/changePassword', { user_id: userId, old_password: oldPassword, new_password: newPassword });
+      return response.data;
+    } catch (error) {
+      throw error;
+    }
+  },
+  
 };
 
 // Các phương thức API cho tài liệu
