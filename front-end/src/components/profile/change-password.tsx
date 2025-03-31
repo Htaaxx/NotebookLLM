@@ -73,7 +73,7 @@ export function ChangePassword() {
       console.log("Attempting to change password for user:", userId)
 
       // Call the API to change password
-      const response = await authAPI.ChangePassword(userId, currentPassword, newPassword)
+      const response = await authAPI.changePassword(userId, currentPassword, newPassword)
 
       // Check if the response indicates success
       if (response && response.success) {
