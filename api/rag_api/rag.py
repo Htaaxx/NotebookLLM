@@ -2,6 +2,8 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from typing import List
 import os
+# encode tobyte
+import base64
 
 # Automatic API testing
 from pydantic import BaseModel, HttpUrl
@@ -37,7 +39,8 @@ from sklearn.metrics.pairwise import cosine_similarity
 import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from extract_file_content_api.extract_file_content_api import extract_text
-
+# Kmean
+from sklearn.cluster import KMeans
 # load_dotenv()
 
 app = FastAPI()
@@ -383,16 +386,64 @@ async def query_openai(request: QueryRequest, user_id: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error querying OpenAI: {str(e)}")
-    
-# import io
-# from starlette.datastructures import UploadFile
 
-# file_path = '/Users/nghia.vo/university/ML/NotebookLLM/api/create_mindmap/doc2.txt'
-# with open(file_path, 'rb') as f:
-#     file_content = f.read()
+def combine_chunks(chunks, predictions):
+    combined_chunks = {}
+    for i, chunk in enumerate(chunks):
+        if predictions[i] not in combined_chunks:
+            combined_chunks[predictions[i]] = chunk
+        else:
+            combined_chunks[predictions[i]] += ' ' + chunk
+    return combined_chunks
+def write_to_file(file_path, content):
+    with open(file_path, "w") as f:
+        f.write(content)
 
-# file = UploadFile(filename='doc2.txt', file=io.BytesIO(file_content))
 
-# # Ensure store_embeddings is awaited if it is an async function
-# emb = store_embeddings(file=file)
-# print(emb)
+async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: int = 5):
+    all_chunks = []
+    embeddings = []
+    for document_id in documentIDs:
+        query = f'@doc_id:{{{document_id}}}'
+        # Perform the search
+        results = index.search(query)
+        # Extract documents safely
+        docs = getattr(results, "docs", None)  # RediSearch results store documents in `.docs`
+        # print('docs:',docs)
+        if not docs:
+            raise TypeError(f"Unexpected search result format: {dir(results)}")
+
+        # Iterate through extracted docs
+        for doc in docs:
+            chunk = getattr(doc, "content", None)
+            all_chunks.append(chunk)
+    embeddings = embed_texts(all_chunks)
+
+    if not all_chunks or not embeddings:
+        raise ValueError("No valid chunks or embeddings found.")
+
+    # # Clustering embeddings
+    kmeans_model = KMeans(n_clusters=num_clusters, random_state=42)
+    kmeans_predictions = kmeans_model.fit_predict(embeddings)
+    print('kmeans_predictions:', kmeans_predictions)
+    combined_chunks = combine_chunks(all_chunks, kmeans_predictions)
+    # print('combined_chunks:', combined_chunks)
+    result = []
+    for i in range(num_clusters):
+        try:
+            completion = openai_client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": 
+                        "You are a helpful assistant that reformats to markdown text for better readability with \n # for header 1, \n ## for header 2, \n ### header 3 and the doc."},
+                    {"role": "user", "content": combined_chunks[i]}
+                ]
+            )
+            result.append(completion.choices[0].message.content)
+            write_to_file(f"cluster_{i}.txt", completion.choices[0].message.content)
+        except Exception as e:
+            print(f"Error generating completion: {e}")
+            result.append("Error processing this chunk.")
+
+    return result
+
