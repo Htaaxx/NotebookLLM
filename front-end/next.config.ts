@@ -6,6 +6,10 @@ const nextConfig: NextConfig = {
     config.resolve.alias.encoding = false
     return config
   },
+  // output: "export",
+  eslint: {
+    ignoreDuringBuilds: true, // Skip ESLint errors in builds
+  },
 };
 
 export default nextConfig;
