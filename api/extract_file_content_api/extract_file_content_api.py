@@ -48,7 +48,7 @@ def extract_text_from_pdf(file_path: str):
     Extract text from a PDF file, split it into chunks, and include bounding box metadata.
     """
     chunks_with_metadata = []
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=500)
 
     try:
         # Mở tài liệu PDF
@@ -118,7 +118,7 @@ def extract_text_from_docx(file_path: str):
     Extract text and images from a DOCX file, split into chunks, and add metadata (including bounding box).
     """
     chunks_with_metadata = []
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=500)
 
     try:
         # Extract paragraphs from DOCX
@@ -174,7 +174,7 @@ def extract_text_from_txt(file_path: str):
     Extract text from a TXT file, split into chunks, and add metadata (including bounding box).
     """
     chunks_with_metadata = []
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=200)
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=500)
 
     try:
         with open(file_path, "r", encoding="utf-8") as file:
