@@ -1,18 +1,14 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { Document, Page, pdfjs } from "react-pdf"
 import { ZoomIn, ZoomOut, Highlighter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MindMapView } from "@/components/mindmap-view"
 import { useLanguage } from "@/lib/language-context"
-import "react-pdf/dist/esm/Page/TextLayer.css"
-import "react-pdf/dist/esm/Page/AnnotationLayer.css"
 import { motion, AnimatePresence } from "framer-motion"
 import { fadeIn, buttonAnimation } from "@/lib/motion-utils"
-
-// Set worker options for PDF.js
-pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`
+import { PdfPreview } from "@/components/pdf-preview"
+import "@/styles/pdf-preview.css"
 
 interface FileItem {
   id: string
@@ -38,7 +34,6 @@ interface RightPanelProps {
 
 export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   const [scale, setScale] = useState(1.0)
-  const [numPages, setNumPages] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [annotations, setAnnotations] = useState<Annotation[]>([])
   const [selectedPage, setSelectedPage] = useState<number | null>(null)
@@ -79,7 +74,6 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
 
   useEffect(() => {
     if (!selectedFiles) {
-      setNumPages(null)
       setError(null)
       setScale(1.0)
     }
@@ -90,7 +84,6 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
     setError(null)
   }, [selectedFiles])
 
-  // Đảm bảo useEffect này chạy đúng thứ tự
   useEffect(() => {
     if (activePanel === "mindmap") {
       console.log("MindMap panel active, loading default markdown content")
@@ -177,17 +170,9 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   const handleZoomIn = () => setScale((prevScale) => Math.min(prevScale + 0.1, 2))
   const handleZoomOut = () => setScale((prevScale) => Math.max(prevScale - 0.1, 0.5))
 
-  const onDocumentLoadSuccess = (pdf: { numPages: number }) => {
-    setNumPages(pdf.numPages)
-  }
-
-  const onPageRendered = (pageNumber: number) => {
-    setSelectedPage(pageNumber) // Track the currently rendered page
-  }
-
   return (
     <motion.div
-      className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black"
+      className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black overflow-hidden"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
@@ -201,60 +186,54 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="flex-grow flex flex-col"
+            className="flex-grow flex flex-col overflow-hidden"
           >
             <motion.div
-              className="flex justify-between items-center mb-4"
               variants={fadeIn("down", 0.1)}
               initial="hidden"
               animate="show"
             >
-              <h2 className="text-center bg-green-500 text-black py-2 px-4 rounded-md w-full mr-2">
-                {selectedPdf?.name || selectedImage?.name || selectedVideo?.name || selectedOtherFile?.name}
-              </h2>
-              <div className="flex gap-2">
-                <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-                  <Button onClick={handleZoomOut} size="sm">
-                    <ZoomOut className="w-4 h-4" />
-                  </Button>
-                </motion.div>
-                <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-                  <Button onClick={handleZoomIn} size="sm">
-                    <ZoomIn className="w-4 h-4" />
-                  </Button>
-                </motion.div>
-                <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-                  <Button onClick={handleHighlightText} size="sm" title="Highlight Selected Text">
-                    <Highlighter className="w-4 h-4" />
-                  </Button>
-                </motion.div>
-              </div>
+              {!selectedPdf && (
+                <div className="flex gap-2">
+                  <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+                    <Button onClick={handleZoomOut} size="sm" className="bg-white text-black hover:bg-gray-100">
+                      <ZoomOut className="w-4 h-4" />
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+                    <Button onClick={handleZoomIn} size="sm" className="bg-white text-black hover:bg-gray-100">
+                      <ZoomIn className="w-4 h-4" />
+                    </Button>
+                  </motion.div>
+                  <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+                    <Button
+                      onClick={handleHighlightText}
+                      size="sm"
+                      title="Highlight Selected Text"
+                      className="bg-white text-black hover:bg-gray-100"
+                    >
+                      <Highlighter className="w-4 h-4" />
+                    </Button>
+                  </motion.div>
+                </div>
+              )}
             </motion.div>
 
             <motion.div
-              className="flex-grow overflow-auto"
+              className="flex-grow overflow-hidden"
               variants={fadeIn("up", 0.2)}
               initial="hidden"
               animate="show"
             >
               {selectedPdf && (
-                <Document file={selectedPdf.url} onLoadSuccess={onDocumentLoadSuccess}>
-                  {Array.from(new Array(numPages), (_, index) => (
-                    <motion.div
-                      key={index}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.5, delay: index * 0.1 }}
-                    >
-                      <Page pageNumber={index + 1} scale={scale} onRenderSuccess={() => onPageRendered(index + 1)} />
-                    </motion.div>
-                  ))}
-                </Document>
+                <div className="h-full">
+                  <PdfPreview url={selectedPdf.url} fileName={selectedPdf.name} />
+                </div>
               )}
 
               {selectedImage && (
                 <motion.div
-                  className="flex justify-center"
+                  className="flex justify-center overflow-auto h-full"
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.5 }}
@@ -269,7 +248,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
 
               {selectedVideo && (
                 <motion.div
-                  className="flex justify-center"
+                  className="flex justify-center overflow-auto h-full"
                   initial={{ scale: 0.9, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ duration: 0.5 }}
@@ -309,12 +288,12 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
             transition={{ duration: 0.3 }}
           >
             <motion.div
-              className="flex justify-between items-center mb-4"
+              className="flex items-center mb-4 bg-green-500 text-black py-2 px-4 rounded-md"
               variants={fadeIn("down", 0.1)}
               initial="hidden"
               animate="show"
             >
-              <h2 className="text-center bg-green-500 text-black py-2 px-4 rounded-md w-full">
+              <h2 className="flex-grow text-center font-medium">
                 {selectedMarkdownFile ? selectedMarkdownFile.name : "Mind Map View"}
               </h2>
             </motion.div>
@@ -327,7 +306,11 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
               {error ? (
                 <div className="p-4 text-red-500">{error}</div>
               ) : (
-                <MindMapView markdownContent={markdownContent || undefined} className="absolute inset-0" />
+                <MindMapView
+                  markdownContent={markdownContent || undefined}
+                  className="absolute inset-0"
+                  selectedFiles={selectedFiles}
+                />
               )}
             </motion.div>
           </motion.div>
@@ -349,4 +332,3 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
     </motion.div>
   )
 }
-

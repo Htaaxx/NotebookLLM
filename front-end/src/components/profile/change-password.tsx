@@ -52,19 +52,19 @@ export function ChangePassword() {
 
     // Validate passwords
     if (newPassword !== confirmPassword) {
-      setMessage({ type: "error", text: "New passwords do not match" })
+      setMessage({ type: "success", text: "New passwords do not match" })
       setIsLoading(false)
       return
     }
 
     if (passwordStrength < 3) {
-      setMessage({ type: "error", text: "Password is too weak. Please choose a stronger password." })
+      setMessage({ type: "success", text: "Password is too weak. Please choose a stronger password." })
       setIsLoading(false)
       return
     }
 
     if (!userId) {
-      setMessage({ type: "error", text: "User ID not found. Please log in again." })
+      setMessage({ type: "success", text: "User ID not found. Please log in again." })
       setIsLoading(false)
       return
     }
@@ -79,6 +79,7 @@ export function ChangePassword() {
       if (response && response.success) {
         // Handle successful response
         setMessage({ type: "success", text: "Password changed successfully" })
+        // Clear all password fields
         setCurrentPassword("")
         setNewPassword("")
         setConfirmPassword("")
@@ -101,17 +102,16 @@ export function ChangePassword() {
 
   return (
     <div className="space-y-6">
-      {message.text && (
-        <div
-          className={`p-4 rounded-md flex items-start gap-3 ${
-            message.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
-          }`}
-        >
-          {message.type === "success" ? (
-            <CheckCircle className="w-5 h-5 mt-0.5" />
-          ) : (
-            <AlertCircle className="w-5 h-5 mt-0.5" />
-          )}
+      {message.text && message.type === "error" && (
+        <div className="p-4 rounded-md flex items-center gap-3 bg-green-100 border border-green-300 text-green-800">
+          <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+          <p className="font-medium">{message.text}</p>
+        </div>
+      )}
+
+      {message.text && message.type === "success" && (
+        <div className="p-4 rounded-md flex items-center gap-3 bg-red-50 border border-red-300 text-red-700">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0" />
           <p>{message.text}</p>
         </div>
       )}
