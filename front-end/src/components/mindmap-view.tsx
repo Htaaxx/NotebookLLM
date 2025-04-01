@@ -106,7 +106,9 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
       console.log("Fetching mindmap for documents:", documentIds)
 
-      const response = await fetch("http://localhost:8000/get_smaller_branches_from_docs", {
+      // Use our Next.js API route instead of calling the external API directly
+      // This avoids CORS issues
+      const response = await fetch("/api/drawMindMap", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -359,7 +361,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
           style={{
             position: "relative",
             overflow: "hidden",
-            maxHeight: "80vh",    
+            maxHeight: "80vh",
           }}
         ></div>
       )}
