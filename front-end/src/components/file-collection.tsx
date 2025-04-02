@@ -417,7 +417,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
     try {
       // Upload file to server
-      const uploadResponse = await fetch(process.env.BACKEND_API_URL+"/user/upload", {
+      const uploadResponse = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL+"/user/upload", {
         method: "POST",
         body: formData,
       })
@@ -723,7 +723,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const deleteFile = useCallback(
     async (fileId: string, folderId?: string) => {
       try {
-        const response = await fetch(process.env.BACKEND_API_URL+"/user/delete", {
+        const response = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL+"/user/delete", {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
@@ -771,7 +771,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
         for (const fileId of filesToDelete) {
           try {
-            await fetch(process.env.BACKEND_API_URL+"/user/delete", {
+            await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL+"/user/delete", {
               method: "DELETE",
               headers: {
                 "Content-Type": "application/json",
