@@ -15,7 +15,7 @@ const MONGO_URI = process.env.MONGO_URI ;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
-app.use(cors({ credentials: true, origin: "http://localhost:3000" })); // Allow frontend
+app.use(cors({ credentials: true, origin: process.env.FRONTEND_API_URL })); // Allow frontend
 
 // Connect to MongoDB
 mongoose.connect(MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
