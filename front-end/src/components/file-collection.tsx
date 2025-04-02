@@ -162,20 +162,22 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
   // Loads folders from localStorage
   const loadFoldersFromStorage = useCallback((userId: string) => {
-    try {
-      const storedFolders = localStorage.getItem(`${FOLDERS_STORAGE_KEY}_${userId}`)
-      if (storedFolders) {
-        return JSON.parse(storedFolders) as FolderType[]
+    if (typeof window !== "undefined") {
+      try {
+        const storedFolders = localStorage.getItem(`${FOLDERS_STORAGE_KEY}_${userId}`)
+        if (storedFolders) {
+          return JSON.parse(storedFolders) as FolderType[]
+        }
+      } catch (error) {
+        console.error("Error loading folders from localStorage:", error)
       }
-    } catch (error) {
-      console.error("Error loading folders from localStorage:", error)
     }
     return []
   }, [])
 
   // Saves folders to localStorage when they change
   useEffect(() => {
-    if (userID && rootFolders.length > 0) {
+    if (typeof window !== "undefined" && userID && rootFolders.length > 0) {
       try {
         localStorage.setItem(`${FOLDERS_STORAGE_KEY}_${userID}`, JSON.stringify(rootFolders))
       } catch (error) {
@@ -355,11 +357,13 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
   // Loads user files on component mount
   useEffect(() => {
-    const storedUserID = localStorage.getItem("user_id")
-    if (storedUserID && !dataFetchedRef.current) {
-      setUserID(storedUserID)
-      dataFetchedRef.current = true
-      handleDisplayUserFiles(storedUserID)
+    if (typeof window !== "undefined") {
+      const storedUserID = localStorage.getItem("user_id")
+      if (storedUserID && !dataFetchedRef.current) {
+        setUserID(storedUserID)
+        dataFetchedRef.current = true
+        handleDisplayUserFiles(storedUserID)
+      }
     }
   }, [handleDisplayUserFiles])
 
@@ -1108,7 +1112,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   // Ensures folder structure changes are immediately saved to localStorage
   useEffect(() => {
     const saveToLocalStorage = () => {
-      if (userID && rootFolders.length >= 0) {
+      if (typeof window !== "undefined" && userID && rootFolders.length >= 0) {
         try {
           localStorage.setItem(`${FOLDERS_STORAGE_KEY}_${userID}`, JSON.stringify(rootFolders))
           console.log("Saved updated folder structure to localStorage")

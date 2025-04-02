@@ -24,22 +24,24 @@ export function NavBar() {
   const { language, setLanguage, t } = useLanguage()
 
   useEffect(() => {
-    const storedUsername = localStorage.getItem("username")
-    const token = localStorage.getItem("accessToken")
+    if (typeof window !== "undefined") {
+      const storedUsername = localStorage.getItem("username")
+      const token = localStorage.getItem("accessToken")
 
-    if (storedUsername) {
-      setUserName(storedUsername)
+      if (storedUsername) {
+        setUserName(storedUsername)
+      }
+
+      // Check if user is logged in
+      setIsLoggedIn(!!token)
+
+      const handleScroll = () => {
+        setIsScrolled(window.scrollY > 10)
+      }
+
+      window.addEventListener("scroll", handleScroll)
+      return () => window.removeEventListener("scroll", handleScroll)
     }
-
-    // Check if user is logged in
-    setIsLoggedIn(!!token)
-
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10)
-    }
-
-    window.addEventListener("scroll", handleScroll)
-    return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
   const handleSignOut = async () => {
