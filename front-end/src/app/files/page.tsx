@@ -145,7 +145,7 @@ export default function FilesPage() {
           formData.append("document_id", documentId)
 
           // Upload file to server
-          const uploadResponse = await fetch("http://localhost:5000/user/upload", {
+          const uploadResponse = await fetch(process.env.BACKEND_API_URL+"/user/upload", {
             method: "POST",
             body: formData,
           })
@@ -202,7 +202,7 @@ export default function FilesPage() {
 
     try {
       // Delete from storage
-      await fetch("http://localhost:5000/user/delete", {
+      await fetch(process.env.BACKEND_API_URL+"/user/delete", {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -364,7 +364,7 @@ export default function FilesPage() {
           formData.append("document_id", documentId)
 
           // Upload file to server
-          const uploadResponse = await fetch("http://localhost:5000/user/upload", {
+          const uploadResponse = await fetch(process.env.BACKEND_API_URL+"/user/upload", {
             method: "POST",
             body: formData,
           })
