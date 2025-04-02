@@ -4,7 +4,7 @@ console.log('API_URL:', API_URL);
 
 // Tạo instance axios với cấu hình mặc định
 const api = axios.create({
-  baseURL: API_URL,
+  baseURL: API_URL + '/api',
   headers: {
     'Content-Type': 'application/json',
   },
