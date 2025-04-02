@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+const API_URL = process.env.BACKEND_API_URL;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -8,9 +9,11 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Document ID is required" }, { status: 400 })
   }
 
+  const url = API_URL + `/get_smaller_branches_from_docs?documentId=${documentId}`;
+
   try {
     // Proxy the request to the external API
-    const response = await fetch(`http://localhost:8000/get_smaller_branches_from_docs?documentId=${documentId}`, {
+    const response = await fetch(url, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",

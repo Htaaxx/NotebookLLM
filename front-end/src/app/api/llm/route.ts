@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+const API_URL = process.env.BACKEND_API_URL;
 
 export async function POST(request: Request) {
   try {
@@ -8,7 +9,7 @@ export async function POST(request: Request) {
 
     // Forward the request to the LLM API
     const userId = body.user_id || "default_user";
-    const url = `http://localhost:8000/get_LLM_response?user_id=${userId}`;
+    const url = API_URL + `/get_LLM_response?user_id=${userId}`;
     
     const response = await fetch(url, {
       method: "POST",

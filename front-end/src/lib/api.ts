@@ -1,7 +1,5 @@
-import { ChangePassword } from '@/components/profile/change-password';
 import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
+const API_URL = process.env.BACKEND_DB_URL;
 
 // Tạo instance axios với cấu hình mặc định
 const api = axios.create({
