@@ -43,6 +43,9 @@ from extract_file_content_api.extract_file_content_api import extract_text
 from sklearn.cluster import KMeans
 # load_dotenv()
 
+from dotenv import load_dotenv
+load_dotenv()
+
 app = FastAPI()
 hf = SentenceTransformer("all-MiniLM-L6-v2")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
