@@ -409,7 +409,7 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
         results = index.search(query)
         # Extract documents safely
         docs = getattr(results, "docs", None)  # RediSearch results store documents in `.docs`
-        # print('docs:',docs)
+        print('docs:',docs)
         if not docs:
             raise TypeError(f"Unexpected search result format: {dir(results)}")
 
@@ -418,7 +418,10 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
             chunk = getattr(doc, "content", None)
             all_chunks.append(chunk)
     embeddings = embed_texts(all_chunks)
-
+    # check if num_clusters is greater than number of chunks
+    if num_clusters > len(all_chunks):
+        num_clusters = len(all_chunks)
+    
     if not all_chunks or not embeddings:
         raise ValueError("No valid chunks or embeddings found.")
 
