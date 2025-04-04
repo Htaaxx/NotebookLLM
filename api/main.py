@@ -3,6 +3,11 @@ from fastapi import FastAPI, File, UploadFile, Form
 from rag_api.rag import query_openai, QueryRequest, store_embeddings, get_smaller_branches_from_docs
 import uvicorn
 from typing import List
+import sys
+import io
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
+
 # init fastAPI
 
 from dotenv import load_dotenv
