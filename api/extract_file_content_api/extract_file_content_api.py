@@ -1,23 +1,17 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import HTTPException
 from pydantic import BaseModel
-from typing import List, Dict
+from typing import List
 import os
 import re
 import unicodedata
 import docx
-import pytesseract  # Please download/install pytesseract before importing
+import pytesseract
 import docx2txt
-import PyPDF2
 from PIL import Image
+import fitz
 
 # Langchain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-import fitz
-
-# If you are using windows, please change the path to suit your machine
-# pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
-
-app = FastAPI()
 
 
 class ChunkWithMetadata(BaseModel):
@@ -27,7 +21,7 @@ class ChunkWithMetadata(BaseModel):
 
 class FileContentResponse(BaseModel):
     file_id: str
-    chunks: List[ChunkWithMetadata] # Định nghĩa đúng cấu trúc trả về
+    chunks: List[ChunkWithMetadata]
 
 
 def clean_transcript(text: str) -> str:
@@ -107,11 +101,6 @@ def merge_bounding_boxes(bounding_boxes):
     return [x0, y0, x1, y1]
 
 
-import os
-import pytesseract
-from PIL import Image
-import docx
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 def extract_text_from_docx(file_path: str):
     """
@@ -227,11 +216,3 @@ def extract_text(file_content: str, filename: str):
         "file_id": filename,
         "chunks": chunks_with_metadata,
     }
-
-
-
-# @app.get("/")
-# def read_root():
-#     return {"message": "YouTube Transcript API is running"}
-
-# Run API: uvicorn extract_file_content_api:app --reload
