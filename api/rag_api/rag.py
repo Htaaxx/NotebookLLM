@@ -412,7 +412,7 @@ def extract_all_headers(text):
     lines = text.split("\n")
     for line in lines:
         if line.startswith("#"):
-            header_text += line + "\n"
+            header_text += '#' + line + "\n"
     return header_text
 
 async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: int = 5):
@@ -446,7 +446,7 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
     print('kmeans_predictions:', kmeans_predictions)
     combined_chunks = combine_chunks(all_chunks, kmeans_predictions)
     # print('combined_chunks:', combined_chunks)
-    result = ""
+    result = "# root\n"
     for i in range(num_clusters):
         try:
             completion = openai_client.chat.completions.create(
