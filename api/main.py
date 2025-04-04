@@ -5,6 +5,9 @@ import uvicorn
 from typing import List
 # init fastAPI
 
+from dotenv import load_dotenv
+load_dotenv()
+
 app = FastAPI()
 
 @app.get("/")

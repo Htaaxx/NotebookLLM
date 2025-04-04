@@ -9,7 +9,7 @@ export async function POST(request: Request) {
 
     // Forward the request to the LLM API
     const userId = body.user_id || "default_user";
-    const url = API_URL + `/get_LLM_response?user_id=${userId}`;
+    const url = API_URL + `/get_LLM_response?userId=${userId}`;
     
     const response = await fetch(url, {
       method: "POST",
