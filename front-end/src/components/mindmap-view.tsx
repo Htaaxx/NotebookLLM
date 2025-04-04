@@ -86,6 +86,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [loadedContent, setLoadedContent] = useState<string>(markdownContent || "")
   const [markdown, setMarkdown] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [mindElixirLoaded, setMindElixirLoaded] = useState(false)
 
   // Fetch mindmap data from API based on selected files
   const fetchMindMapFromAPI = async (selectedFiles: any[]) => {
@@ -98,8 +99,11 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     setError(null)
 
     try {
-      // Get user ID from localStorage
-      const userId = localStorage.getItem("user_id") || "default_user"
+      // Get user ID from localStorage safely
+      let userId = "default_user"
+      if (typeof window !== "undefined") {
+        userId = localStorage.getItem("user_id") || "default_user"
+      }
 
       // Get document IDs from selected files
       const documentIds = selectedFiles.map((file) => file.id)
@@ -120,6 +124,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       })
 
       if (!response.ok) {
+        console.error(`API error: ${response.status} ${response.statusText}`)
         throw new Error(`API error: ${response.status}`)
       }
 
@@ -268,6 +273,13 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     const contentToUse = loadedContent || DEFAULT_MARKDOWN
     console.log("Initializing mind map with content length:", contentToUse.length)
 
+    // Ensure MindElixir is loaded
+    if (!mindElixirLoaded) {
+      // This is a workaround for SSR/hydration issues
+      setMindElixirLoaded(true)
+      return
+    }
+
     try {
       // Clean up any existing instance
       if (container._mindElixirInstance) {
@@ -288,9 +300,11 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         delete container._mindElixirInstance
       }
 
-      // Clear the container
-      while (container.firstChild) {
-        container.removeChild(container.firstChild)
+      // Clear the container safely
+      if (container.firstChild) {
+        while (container.firstChild) {
+          container.removeChild(container.firstChild)
+        }
       }
 
       // Parse markdown to mind map structure
@@ -305,16 +319,26 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         toolBar: true,
         nodeMenu: true,
         keypress: true,
-        // Remove the theme property that's causing the type error
         allowUndo: true,
+        // Remove the theme property that's causing the error
       }
 
       // Initialize MindElixir
-      const me = new MindElixir(options) as MindElixirInstance
-      container._mindElixirInstance = me
-      me.init(parsedData as any)
+      try {
+        console.log("Creating MindElixir instance with options:", options)
+        const me = new MindElixir(options) as MindElixirInstance
+        container._mindElixirInstance = me
 
-      console.log("Mind map initialized successfully")
+        console.log("Initializing with data:", parsedData)
+        me.init(parsedData)
+
+        console.log("Mind map initialized successfully")
+      } catch (initError) {
+        console.error("Error during MindElixir initialization:", initError)
+        setError(
+          `MindElixir initialization error: ${initError instanceof Error ? initError.message : String(initError)}`
+        )
+      }
 
       // Clean up function
       return () => {
@@ -340,7 +364,12 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       console.error("Error initializing mind map:", err)
       setError(`Failed to initialize mind map: ${err instanceof Error ? err.message : String(err)}`)
     }
-  }, [loadedContent])
+  }, [loadedContent, mindElixirLoaded])
+
+  // Set mindElixirLoaded to true after component mounts
+  useEffect(() => {
+    setMindElixirLoaded(true)
+  }, [])
 
   // Render component
   return (
@@ -353,6 +382,15 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       ) : error ? (
         <div className="p-4 text-red-500">
           <div>Error: {error}</div>
+          <button
+            className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            onClick={() => {
+              setError(null)
+              setLoadedContent(DEFAULT_MARKDOWN)
+            }}
+          >
+            Load Default Mindmap
+          </button>
         </div>
       ) : (
         <div
@@ -361,6 +399,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
           style={{
             position: "relative",
             overflow: "hidden",
+            minHeight: "400px",
             maxHeight: "80vh",
           }}
         ></div>
@@ -368,4 +407,3 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     </div>
   )
 }
-
