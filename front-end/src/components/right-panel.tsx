@@ -9,6 +9,10 @@ import { motion, AnimatePresence } from "framer-motion"
 import { fadeIn, buttonAnimation } from "@/lib/motion-utils"
 import { PdfPreview } from "@/components/pdf-preview"
 import "@/styles/pdf-preview.css"
+// Import the CheatsheetView component at the top of the file
+import { CheatsheetView } from "@/components/cheatsheet-view"
+// Add this import near the top of the file with the other imports
+import "@/styles/cheatsheet.css"
 
 interface FileItem {
   id: string
@@ -188,11 +192,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
             transition={{ duration: 0.3 }}
             className="flex-grow flex flex-col overflow-hidden"
           >
-            <motion.div
-              variants={fadeIn("down", 0.1)}
-              initial="hidden"
-              animate="show"
-            >
+            <motion.div variants={fadeIn("down", 0.1)} initial="hidden" animate="show">
               {!selectedPdf && (
                 <div className="flex gap-2">
                   <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
@@ -319,16 +319,17 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
         {activePanel === "cheatsheet" && (
           <motion.div
             key="cheatsheet"
-            className="h-full bg-muted rounded-lg p-4"
+            className="h-full bg-white rounded-lg"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <p className="text-sm text-muted-foreground">Cheatsheet View</p>
+            <CheatsheetView initialMarkdown={selectedMarkdownFile ? markdownContent : undefined} />
           </motion.div>
         )}
       </AnimatePresence>
     </motion.div>
   )
 }
+

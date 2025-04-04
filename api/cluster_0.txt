@@ -1,0 +1,48 @@
+# Thông tin cá nhân
+**Họ và tên:** Nguyễn Quốc Thắng  
+**MSSV:** 22127385  
+
+# Classification Encoding
+Biến đổi dữ liệu thành dạng số để máy học hiểu.
+
+## Các phương pháp mã hóa
+### Integer Encoding
+Mỗi lớp là một số nguyên.
+
+### One-Hot Encoding
+Mỗi lớp là một vector nhị phân.
+
+### Embedding
+Biểu diễn lớp bằng vector số thực (hay dùng trong NLP).
+
+# Logistic Regression
+## Binary Classification
+Phân loại dữ liệu thành 2 nhóm.
+
+### Hàm Sigmoid
+Chuyển đổi giá trị thành xác suất.
+
+### Likelihood & Log Likelihood
+- Xác suất mô hình dự đoán đúng.
+- Lấy log để dễ tính toán.
+
+### Cập nhật trọng số
+Dùng Gradient Descent để tối ưu mô hình.
+
+# Evaluation
+## ROC Curve & AUC
+Đánh giá mô hình theo các ngưỡng khác nhau.
+- **AUC ~1:** Mô hình tốt.
+- **AUC ~0.5:** Mô hình đoán ngẫu nhiên.
+
+## Loss function cho hồi quy
+- **MSE:** Sai số bình phương trung bình.
+- **MAE:** Sai số trung bình tuyệt đối.
+
+# Multi-class Classification
+## One-vs-All (OvA)
+Dùng nhiều mô hình nhị phân, chọn lớp có xác suất cao nhất.
+
+## One-vs-One (OvO)
+So sánh từng cặp lớp, lớp nào có nhiều phiếu bầu nhất thì chọn.
+- OvO công bằng hơn OvA nhưng tốn tài nguyên hơn.
