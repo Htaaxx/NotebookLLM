@@ -401,9 +401,19 @@ def combine_chunks(chunks, predictions):
             combined_chunks[predictions[i]] += ' ' + chunk
     return combined_chunks
 def write_to_file(file_path, content):
-    with open(file_path, "w") as f:
+    with open(file_path, "w", encoding='utf-8') as f:
         f.write(content)
-
+def extract_all_headers(text):
+    """
+    Extract headers from text.
+    --------
+    """
+    header_text = ""
+    lines = text.split("\n")
+    for line in lines:
+        if line.startswith("#"):
+            header_text += line + "\n"
+    return header_text
 
 async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: int = 5):
     all_chunks = []
@@ -436,22 +446,28 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
     print('kmeans_predictions:', kmeans_predictions)
     combined_chunks = combine_chunks(all_chunks, kmeans_predictions)
     # print('combined_chunks:', combined_chunks)
-    result = []
+    result = ""
     for i in range(num_clusters):
         try:
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": 
-                        "You are a helpful assistant that reformats to markdown text for better readability with \n # for header 1, \n ## for header 2, \n ### header 3 and the doc."},
+                        "You are a helpful assistant that reformats to markdown text for better readability with \n"
+                        "# for header 1, \n ## for header 2, \n ### header 3 and the doc. \n the header must appear in order # -> ## -> ###"
+                    },
                     {"role": "user", "content": combined_chunks[i]}
                 ]
             )
-            result.append(completion.choices[0].message.content)
+            # Extract the content from the response
+            text = completion.choices[0].message.content
+            # Extract headers
+            header_text = extract_all_headers(text)
+            result += header_text
             write_to_file(f"cluster_{i}.txt", completion.choices[0].message.content)
+            
         except Exception as e:
             print(f"Error generating completion: {e}")
-            result.append("Error processing this chunk.")
 
     return result
 
