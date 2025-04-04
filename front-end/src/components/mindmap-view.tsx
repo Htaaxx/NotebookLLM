@@ -99,28 +99,15 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     setError(null)
 
     try {
-      // Get user ID from localStorage safely
-      let userId = "default_user"
-      if (typeof window !== "undefined") {
-        userId = localStorage.getItem("user_id") || "default_user"
-      }
-
-      // Get document IDs from selected files
       const documentIds = selectedFiles.map((file) => file.id)
 
-      console.log("Fetching mindmap for documents:", documentIds)
-
-      // Use our Next.js API route instead of calling the external API directly
-      // This avoids CORS issues
+      // Fixed: Send document_ids as a property in the request body
       const response = await fetch("/api/drawMindMap", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          user_id: userId,
-          document_ids: documentIds,
-        }),
+        body: JSON.stringify({ document_ids: documentIds }),
       })
 
       if (!response.ok) {
@@ -336,7 +323,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       } catch (initError) {
         console.error("Error during MindElixir initialization:", initError)
         setError(
-          `MindElixir initialization error: ${initError instanceof Error ? initError.message : String(initError)}`
+          `MindElixir initialization error: ${initError instanceof Error ? initError.message : String(initError)}`,
         )
       }
 
@@ -407,3 +394,4 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     </div>
   )
 }
+

@@ -285,17 +285,18 @@ async def query_openai(request: QueryRequest, user_id: str):
     """
     Retrieve context from Redis and query OpenAI.
     """ 
+    print('bug conversation?')
     conversation_history = get_conversation_history(user_id)
-
+    print('bug embedding?')
     # Tạo embedding cho câu hỏi
     query_embedding = hf.encode(f"query: {request.query}")
-
+    print('bug history?')
     # Lấy lịch sử hội thoại liên quan
     relevant_history = get_relevant_history(query_embedding, conversation_history)
     formatted_history = "\n".join(
         [f"{msg['role']}: {msg['message']}" for msg in relevant_history]
     )
-
+    print(123)
     # Truy vấn vector để lấy context
     vector_query = VectorQuery(
         vector=query_embedding,
@@ -304,6 +305,7 @@ async def query_openai(request: QueryRequest, user_id: str):
         return_fields=["chunk_id", "doc_id", "page_number", "bounding_box", "content", "is_active"],
         return_score=True,
     )
+    print('wth')
 
     result = index.query(vector_query)
 
@@ -412,7 +414,7 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
         results = index.search(query)
         # Extract documents safely
         docs = getattr(results, "docs", None)  # RediSearch results store documents in `.docs`
-        # print('docs:',docs)
+        print('docs:',docs)
         if not docs:
             raise TypeError(f"Unexpected search result format: {dir(results)}")
 
@@ -421,7 +423,10 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
             chunk = getattr(doc, "content", None)
             all_chunks.append(chunk)
     embeddings = embed_texts(all_chunks)
-
+    # check if num_clusters is greater than number of chunks
+    if num_clusters > len(all_chunks):
+        num_clusters = len(all_chunks)
+    
     if not all_chunks or not embeddings:
         raise ValueError("No valid chunks or embeddings found.")
 
