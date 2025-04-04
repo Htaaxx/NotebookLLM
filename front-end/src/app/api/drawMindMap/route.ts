@@ -1,22 +1,30 @@
-import { NextResponse } from "next/server"
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000"
 
 // Add POST handler
 export async function POST(request: Request) {
   try {
     const body = await request.json()
+
+    // Check if document_ids exists and log it
+    if (!body.document_ids) {
+      console.error("document_ids is undefined in request body:", body)
+      return new Response("Missing document_ids in request body", { status: 400 })
+    }
+
     console.log("Received request body:", body.document_ids)
     const num_clusters = 5
 
     const url = API_URL + `/get_smaller_branches_from_docs?num_clusters=${num_clusters}`
 
-    // Make the request to the backend API
+    // Make the request to the backend API with properly formatted JSON
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Accept-Charset": "UTF-8", // Explicitly request UTF-8 encoding
       },
-      body: (body.document_ids),
+      // Send just the array of document IDs
+      body: JSON.stringify(body.document_ids),
     })
 
     if (!response.ok) {
@@ -24,23 +32,33 @@ export async function POST(request: Request) {
       // Return default markdown if the API fails
       return new Response(DEFAULT_MARKDOWN, {
         headers: {
-          "Content-Type": "text/plain",
+          "Content-Type": "text/plain; charset=utf-8",
         },
       })
     }
 
-    const data = await response.text()
-    return new Response(data, {
-      headers: {
-        "Content-Type": "text/plain",
-      },
-    })
+    try {
+      // Try to get the response as text
+      const data = await response.text()
+      return new Response(data, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+        },
+      })
+    } catch (encodingError) {
+      console.error("Error processing response text:", encodingError)
+      return new Response(DEFAULT_MARKDOWN, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+        },
+      })
+    }
   } catch (error) {
     console.error("Error in drawMindMap POST:", error)
     // Return default markdown if there's an error
     return new Response(DEFAULT_MARKDOWN, {
       headers: {
-        "Content-Type": "text/plain",
+        "Content-Type": "text/plain; charset=utf-8",
       },
     })
   }
@@ -80,3 +98,4 @@ const DEFAULT_MARKDOWN = `# Machine Learning Concepts
 #### Gradient Descent
 #### Regularization
 `
+

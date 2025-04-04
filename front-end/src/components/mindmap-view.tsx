@@ -101,12 +101,13 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     try {
       const documentIds = selectedFiles.map((file) => file.id)
 
+      // Fixed: Send document_ids as a property in the request body
       const response = await fetch("/api/drawMindMap", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: (documentIds).length > 0 ? JSON.stringify({ document_ids: documentIds }) : JSON.stringify({ document_ids: [] }),
+        body: JSON.stringify({ document_ids: documentIds }),
       })
 
       if (!response.ok) {
@@ -322,7 +323,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       } catch (initError) {
         console.error("Error during MindElixir initialization:", initError)
         setError(
-          `MindElixir initialization error: ${initError instanceof Error ? initError.message : String(initError)}`
+          `MindElixir initialization error: ${initError instanceof Error ? initError.message : String(initError)}`,
         )
       }
 
@@ -393,3 +394,4 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     </div>
   )
 }
+
