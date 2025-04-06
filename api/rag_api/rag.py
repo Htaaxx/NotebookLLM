@@ -2,16 +2,22 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Form
 from typing import List
 import os
+
 # encode tobyte
 import base64
 
 # Automatic API testing
 from pydantic import BaseModel, HttpUrl
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from app.services.vector_store import vector_store
+import tempfile
 
 # import PyPDF2
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
 # Redis
 from redisvl.query import VectorQuery
 from redisvl.index import SearchIndex
@@ -35,15 +41,20 @@ import requests
 
 # import cosine similarity
 from sklearn.metrics.pairwise import cosine_similarity
+
 # api
 import sys
+
 sys.path.append(os.path.join(os.path.dirname(__file__), ".."))
 from extract_file_content_api.extract_file_content_api import extract_text
+
 # Kmean
 from sklearn.cluster import KMeans
+
 # load_dotenv()
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 app = FastAPI()
@@ -90,14 +101,18 @@ def process_file(file: UploadFile):
 
             ocr_text = response.json().get("text", "")
             # Chia văn bản OCR thành các chunk
-            text_splitter = RecursiveCharacterTextSplitter(chunk_size=2500, chunk_overlap=0)
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=2500, chunk_overlap=0
+            )
             ocr_chunks = text_splitter.split_text(ocr_text)
             for chunk in ocr_chunks:
-                chunks_with_metadata.append({
-                    "page_number": 1,  # Hình ảnh không có khái niệm trang, mặc định là 1
-                    "bounding_box": None,  # OCR không cung cấp bounding box
-                    "text": chunk
-                })
+                chunks_with_metadata.append(
+                    {
+                        "page_number": 1,  # Hình ảnh không có khái niệm trang, mặc định là 1
+                        "bounding_box": None,  # OCR không cung cấp bounding box
+                        "text": chunk,
+                    }
+                )
 
         else:
             return None, "Unsupported file format"
@@ -110,8 +125,6 @@ def process_file(file: UploadFile):
 
     except Exception as e:
         return None, f"Error processing file: {str(e)}"
-
-
 
 
 def process_youtube_url(url):
@@ -149,7 +162,11 @@ index_name = "redisvl"
 schema = {
     "index": {"name": index_name, "prefix": "chunk"},
     "fields": [
-        {"name": "chunk_id", "type": "tag", "attrs": {"sortable": True}},  # ID của chunk
+        {
+            "name": "chunk_id",
+            "type": "tag",
+            "attrs": {"sortable": True},
+        },  # ID của chunk
         {"name": "doc_id", "type": "tag"},  # ID của tài liệu
         {"name": "content", "type": "text"},  # Nội dung chunk
         {"name": "is_active", "type": "numeric"},  # Trạng thái
@@ -167,7 +184,6 @@ schema = {
         },
     ],
 }
-
 
 
 # Create Redis index
@@ -196,21 +212,25 @@ def store_message(conversation_id, role, message):
 
     client.set(key, json.dumps(history), ex=86400)  # Đặt TTL = 24 giờ
 
+
 def get_relevant_history(query_embedding, conversation_history, top_k=3):
     """
     Take relevant chat history and find the most relevant messages.
     """
     # Đảm bảo query_embedding là 2D (1, n_features)
     query_embedding = np.array(query_embedding).reshape(1, -1)
-    
+
     # Tính độ tương đồng và sắp xếp
     relevant = sorted(
         conversation_history,
-        key=lambda msg: float(cosine_similarity(query_embedding, np.array(msg["embedding"]).reshape(1, -1))),
+        key=lambda msg: float(
+            cosine_similarity(
+                query_embedding, np.array(msg["embedding"]).reshape(1, -1)
+            )
+        ),
         reverse=True,
     )
     return relevant[:top_k]
-
 
 
 def get_conversation_history(conversation_id):
@@ -229,7 +249,9 @@ class URLData(BaseModel):
 
 
 @app.post("/store_embeddings/")
-async def store_embeddings(documentID: str = None, file: UploadFile = File(None), url: str = Form(None)):
+async def store_embeddings(
+    documentID: str = None, file: UploadFile = File(None), url: str = Form(None)
+):
     # Process file or URL
     if file is None and url is None and documentID is None:
         raise HTTPException(status_code=400, detail="No file or URL provided")
@@ -243,36 +265,41 @@ async def store_embeddings(documentID: str = None, file: UploadFile = File(None)
 
     if error:
         raise HTTPException(status_code=400, detail=error)
-    
+
     # print(chunks)
     # print('type chunk:',type(chunks))
 
     if error:
         return {"error": error}
-    embeddings = embed_texts(chunks['chunks'])
-    print('len embeddings:', len(embeddings))
+    embeddings = embed_texts(chunks["chunks"])
+    print("len embeddings:", len(embeddings))
     # Temporary
-    
+
     doc_id = documentID
 
     # Convert embeddings to Redis-storable format
     data = [
-    {
-        "chunk_id": f"{doc_id}-{i}",
-        "doc_id": doc_id,
-        "content": chunk.get("text", ""),  # Nội dung chunk
-        "is_active": 0,  # Đảm bảo thêm trường is_active
-        "page_number": chunk["page_number"],  # Thêm số trang
-        "bounding_box": json.dumps(chunk["bounding_box"]),  # Chuyển bounding box thành JSON
-        "text_embedding": np.array(embeddings[i], dtype="float32").tobytes(),  # Embedding
-    }
-    for i, chunk in enumerate(chunks['chunks'])]
+        {
+            "chunk_id": f"{doc_id}-{i}",
+            "doc_id": doc_id,
+            "content": chunk.get("text", ""),  # Nội dung chunk
+            "is_active": 0,  # Đảm bảo thêm trường is_active
+            "page_number": chunk["page_number"],  # Thêm số trang
+            "bounding_box": json.dumps(
+                chunk["bounding_box"]
+            ),  # Chuyển bounding box thành JSON
+            "text_embedding": np.array(
+                embeddings[i], dtype="float32"
+            ).tobytes(),  # Embedding
+        }
+        for i, chunk in enumerate(chunks["chunks"])
+    ]
 
     keys = index.load(data, id_field="chunk_id")
     return {
         "message": "Embeddings stored successfully",
         "doc_id": doc_id,
-        "num_chunks": len(chunks['chunks']),
+        "num_chunks": len(chunks["chunks"]),
         "keys": keys,
     }
 
@@ -284,13 +311,13 @@ class QueryRequest(BaseModel):
 async def query_openai(request: QueryRequest, user_id: str):
     """
     Retrieve context from Redis and query OpenAI.
-    """ 
-    print('bug conversation?')
+    """
+    print("bug conversation?")
     conversation_history = get_conversation_history(user_id)
-    print('bug embedding?')
+    print("bug embedding?")
     # Tạo embedding cho câu hỏi
     query_embedding = hf.encode(f"query: {request.query}")
-    print('bug history?')
+    print("bug history?")
     # Lấy lịch sử hội thoại liên quan
     relevant_history = get_relevant_history(query_embedding, conversation_history)
     formatted_history = "\n".join(
@@ -302,10 +329,17 @@ async def query_openai(request: QueryRequest, user_id: str):
         vector=query_embedding,
         vector_field_name="text_embedding",
         num_results=3,  # tăng số lượng kết quả để cải thiện độ phủ
-        return_fields=["chunk_id", "doc_id", "page_number", "bounding_box", "content", "is_active"],
+        return_fields=[
+            "chunk_id",
+            "doc_id",
+            "page_number",
+            "bounding_box",
+            "content",
+            "is_active",
+        ],
         return_score=True,
     )
-    print('wth')
+    print("wth")
 
     result = index.query(vector_query)
 
@@ -314,11 +348,12 @@ async def query_openai(request: QueryRequest, user_id: str):
         print("Record:", r)
         print("is_active value:", r.get("is_active"))
 
-    # Lọc các chunk đang hoạt động 
-    filtered_result = [r for r in result if r.get("is_active") == "1"]  # Convert to int and handle missing field
+    # Lọc các chunk đang hoạt động
+    filtered_result = [
+        r for r in result if r.get("is_active") == "1"
+    ]  # Convert to int and handle missing field
 
     print(filtered_result)
-
 
     if not filtered_result:
         raise HTTPException(status_code=404, detail="No relevant context found.")
@@ -331,22 +366,24 @@ async def query_openai(request: QueryRequest, user_id: str):
         chunk_id = r["chunk_id"]  # Example: "123abc-0"
         doc_id = chunk_id.split("-")[0]  # Extract doc_id -> "123abc"
         page_number = r["page_number"]
-        bounding_box = json.loads(r["bounding_box"])  # Chuyển bounding_box từ JSON thành list
+        bounding_box = json.loads(
+            r["bounding_box"]
+        )  # Chuyển bounding_box từ JSON thành list
         content = r["content"]
-        
-         # Thêm thông tin vào dữ liệu UI
-        ui_data.append({
-            "doc_id": doc_id,
-            "page_number": page_number,
-            "bounding_box": bounding_box,
-            "content": content
-        })
 
+        # Thêm thông tin vào dữ liệu UI
+        ui_data.append(
+            {
+                "doc_id": doc_id,
+                "page_number": page_number,
+                "bounding_box": bounding_box,
+                "content": content,
+            }
+        )
 
         # Thêm vào context để gửi đến LLM
         context_chunks.append(f"[{doc_id}] {content} {ui_data}")
 
-       
     # Xây dựng prompt đầy đủ
     context = "\n\n".join(context_chunks)
     full_prompt = f"""
@@ -387,10 +424,11 @@ async def query_openai(request: QueryRequest, user_id: str):
         return {
             "response": llm_response,
             "full_prompt": full_prompt,
-            "chunks": ui_data  # Trả về thông tin bounding box và page_number cho UI
+            "chunks": ui_data,  # Trả về thông tin bounding box và page_number cho UI
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error querying OpenAI: {str(e)}")
+
 
 def combine_chunks(chunks, predictions):
     combined_chunks = {}
@@ -398,11 +436,15 @@ def combine_chunks(chunks, predictions):
         if predictions[i] not in combined_chunks:
             combined_chunks[predictions[i]] = chunk
         else:
-            combined_chunks[predictions[i]] += ' ' + chunk
+            combined_chunks[predictions[i]] += " " + chunk
     return combined_chunks
+
+
 def write_to_file(file_path, content):
-    with open(file_path, "w", encoding='utf-8') as f:
+    with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
+
+
 def extract_all_headers(text):
     """
     Extract headers from text.
@@ -412,19 +454,22 @@ def extract_all_headers(text):
     lines = text.split("\n")
     for line in lines:
         if line.startswith("#"):
-            header_text += '#' + line + "\n"
+            header_text += "#" + line + "\n"
     return header_text
+
 
 async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: int = 5):
     all_chunks = []
     embeddings = []
     for document_id in documentIDs:
-        query = f'@doc_id:{{{document_id}}}'
+        query = f"@doc_id:{{{document_id}}}"
         # Perform the search
         results = index.search(query)
         # Extract documents safely
-        docs = getattr(results, "docs", None)  # RediSearch results store documents in `.docs`
-        print('docs:',docs)
+        docs = getattr(
+            results, "docs", None
+        )  # RediSearch results store documents in `.docs`
+        print("docs:", docs)
         if not docs:
             raise TypeError(f"Unexpected search result format: {dir(results)}")
 
@@ -436,14 +481,14 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
     # check if num_clusters is greater than number of chunks
     if num_clusters > len(all_chunks):
         num_clusters = len(all_chunks)
-    
+
     if not all_chunks or not embeddings:
         raise ValueError("No valid chunks or embeddings found.")
 
     # # Clustering embeddings
     kmeans_model = KMeans(n_clusters=num_clusters, random_state=42)
     kmeans_predictions = kmeans_model.fit_predict(embeddings)
-    print('kmeans_predictions:', kmeans_predictions)
+    print("kmeans_predictions:", kmeans_predictions)
     combined_chunks = combine_chunks(all_chunks, kmeans_predictions)
     # print('combined_chunks:', combined_chunks)
     result = "# root\n"
@@ -452,12 +497,13 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
             completion = openai_client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": 
-                        "You are a helpful assistant that reformats to markdown text for better readability with \n"
-                        "# for header 1, \n ## for header 2, \n ### header 3 and the doc. \n the header must appear in order # -> ## -> ###"
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that reformats to markdown text for better readability with \n"
+                        "# for header 1, \n ## for header 2, \n ### header 3 and the doc. \n the header must appear in order # -> ## -> ###",
                     },
-                    {"role": "user", "content": combined_chunks[i]}
-                ]
+                    {"role": "user", "content": combined_chunks[i]},
+                ],
             )
             # Extract the content from the response
             text = completion.choices[0].message.content
@@ -465,9 +511,8 @@ async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: i
             header_text = extract_all_headers(text)
             result += header_text
             write_to_file(f"cluster_{i}.txt", completion.choices[0].message.content)
-            
+
         except Exception as e:
             print(f"Error generating completion: {e}")
 
     return result
-
