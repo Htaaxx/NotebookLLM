@@ -2,6 +2,15 @@
 
 import { useEffect, useRef, useState } from "react"
 import MindElixir from "mind-elixir"
+import {
+  allThemes,
+  applyThemeToNode,
+  customizeLines,
+  themeTemplates,
+  type MindMapTheme,
+} from "../lib/mind-elixir-themes"
+import { MindMapTaskbar } from "./mindmap-taskbar"
+import "../styles/mindmap.css"
 
 const DEFAULT_MARKDOWN = `# Machine Learning Concepts
 
@@ -43,13 +52,8 @@ const DEFAULT_MARKDOWN = `# Machine Learning Concepts
 
 declare global {
   interface HTMLDivElement {
-    _mindElixirInstance?: MindElixirInstance
+    _mindElixirInstance?: any // Use any to avoid type conflicts
   }
-}
-
-interface MindElixirInstance {
-  init: (data?: any) => void
-  destroy?: () => void
 }
 
 interface MindMapViewProps {
@@ -63,6 +67,13 @@ type TopicNode = {
   topic: string
   id: string
   children?: TopicNode[]
+  style?: {
+    background?: string
+    color?: string
+    fontSize?: string
+    fontWeight?: string
+    shape?: "oval" | "rectangle"
+  }
 }
 
 interface MindElixirData {
@@ -70,6 +81,7 @@ interface MindElixirData {
     id: string
     topic: string
     children?: any[]
+    style?: any
     [key: string]: any
   }
   linkData?: any
@@ -87,12 +99,85 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [markdown, setMarkdown] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [mindElixirLoaded, setMindElixirLoaded] = useState(false)
+  const [currentTheme, setCurrentTheme] = useState("original")
+  const [needsReinitialize, setNeedsReinitialize] = useState(false)
+  const [scale, setScale] = useState(1)
+
+  // Get the current theme object
+  const getThemeObject = (): MindMapTheme => {
+    return allThemes.find((theme) => theme.name === currentTheme) || allThemes[0]
+  }
+
+  // Handle theme change
+  const handleThemeChange = (themeName: string) => {
+    // First, safely destroy the current instance if it exists
+    if (containerRef.current && containerRef.current._mindElixirInstance) {
+      try {
+        const instance = containerRef.current._mindElixirInstance
+        if (typeof instance.destroy === "function") {
+          instance.destroy()
+        }
+        delete containerRef.current._mindElixirInstance
+
+        // Clear the container safely
+        containerRef.current.innerHTML = ""
+      } catch (e) {
+        console.error("Error cleaning up before theme change:", e)
+      }
+    }
+
+    setCurrentTheme(themeName)
+
+    // If no custom content is loaded, use the theme's template
+    if (!markdownContent && !markdownFilePath && (!selectedFiles || selectedFiles.length === 0)) {
+      setLoadedContent(themeTemplates[themeName as keyof typeof themeTemplates] || themeTemplates.original)
+    }
+
+    // Use a timeout to ensure React has time to update the state before reinitializing
+    setTimeout(() => {
+      setNeedsReinitialize(true)
+    }, 50)
+  }
+
+  // Handle zoom in
+  const handleZoomIn = () => {
+    setScale((prev) => Math.min(prev + 0.1, 2))
+
+    // Apply zoom to the mind map
+    if (containerRef.current && containerRef.current._mindElixirInstance) {
+      const me = containerRef.current._mindElixirInstance
+      me.scale(scale + 0.1)
+    }
+  }
+
+  // Handle zoom out
+  const handleZoomOut = () => {
+    setScale((prev) => Math.max(prev - 0.1, 0.5))
+
+    // Apply zoom to the mind map
+    if (containerRef.current && containerRef.current._mindElixirInstance) {
+      const me = containerRef.current._mindElixirInstance
+      me.scale(scale - 0.1)
+    }
+  }
+
+  // Handle reset view
+  const handleReset = () => {
+    setScale(1)
+
+    // Reset the mind map view
+    if (containerRef.current && containerRef.current._mindElixirInstance) {
+      const me = containerRef.current._mindElixirInstance
+      me.scale(1)
+      me.toCenter()
+    }
+  }
 
   // Fetch mindmap data from API based on selected files
   const fetchMindMapFromAPI = async (selectedFiles: any[]) => {
     if (!selectedFiles || selectedFiles.length === 0) {
       console.log("No files selected for mindmap generation")
-      return DEFAULT_MARKDOWN
+      return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
     }
 
     setIsLoading(true)
@@ -120,14 +205,14 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
       if (!data || data.trim() === "") {
         console.warn("Empty markdown received from API, using default")
-        return DEFAULT_MARKDOWN
+        return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
       }
 
       return data
     } catch (error) {
       console.error("Error fetching mindmap from API:", error)
       setError(`Failed to fetch mindmap: ${error instanceof Error ? error.message : String(error)}`)
-      return DEFAULT_MARKDOWN
+      return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
     } finally {
       setIsLoading(false)
     }
@@ -149,7 +234,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       .then((content) => {
         if (!content || content.trim() === "") {
           console.warn("Empty markdown file loaded, using default")
-          return DEFAULT_MARKDOWN
+          return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
         }
         return content
       })
@@ -170,8 +255,8 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         .catch((err) => {
           console.error("Error fetching mindmap:", err)
           setError(`Failed to fetch mindmap: ${err instanceof Error ? err.message : String(err)}`)
-          setMarkdown(DEFAULT_MARKDOWN)
-          setLoadedContent(DEFAULT_MARKDOWN)
+          setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+          setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
         })
     } else if (markdownFilePath) {
       // If no selected files but a file path is provided, load from public folder
@@ -183,36 +268,48 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         .catch((err) => {
           console.error("Error loading markdown from file:", err)
           setError(`Failed to load markdown file: ${err instanceof Error ? err.message : String(err)}`)
-          setMarkdown(DEFAULT_MARKDOWN)
-          setLoadedContent(DEFAULT_MARKDOWN)
+          setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+          setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
         })
     } else if (markdownContent) {
       // If direct markdown content is provided
       setMarkdown(markdownContent)
       setLoadedContent(markdownContent)
     } else {
-      // Default case
-      setMarkdown(DEFAULT_MARKDOWN)
-      setLoadedContent(DEFAULT_MARKDOWN)
+      // Default case - use the current theme's template
+      setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+      setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
     }
-  }, [markdownContent, markdownFilePath, selectedFiles])
+  }, [markdownContent, markdownFilePath, selectedFiles, currentTheme])
 
   // Generate unique ID for mind map nodes
   const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2)
 
-  // Convert markdown content to MindElixir data structure
+  // Convert markdown content to MindElixir data structure with styling
   const parseMarkdownToMindMap = (markdown: string): MindElixirData => {
     if (!markdown || markdown.trim() === "") {
-      markdown = DEFAULT_MARKDOWN
+      markdown = themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
     }
 
     try {
+      const theme = getThemeObject()
       const lines = markdown.split("\n")
       const rootTopic = lines.find((line) => line.trim().startsWith("# "))?.replace("# ", "") || "Mind Map"
-      const rootNode: TopicNode = { id: "root", topic: rootTopic, children: [] }
+      const rootNode: TopicNode = {
+        id: "root",
+        topic: rootTopic,
+        children: [],
+        style: {
+          background: theme.nodeColors?.root || theme.nodeStyles.root.background,
+          color: theme.nodeStyles.root.color || theme.color,
+          fontSize: theme.nodeStyles.root.fontSize,
+          fontWeight: theme.nodeStyles.root.fontWeight,
+        },
+      }
 
       let currentLevel = 0
       const currentParentStack: TopicNode[] = [rootNode]
+      let nodeIndex = 0
 
       lines.forEach((line) => {
         const trimmedLine = line.trim()
@@ -228,7 +325,37 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
             currentLevel--
           }
 
-          const newNode: TopicNode = { id: generateId(), topic, children: [] }
+          // Get style based on level
+          const styleObj = level === 1 ? theme.nodeStyles.primary : theme.nodeStyles.secondary
+
+          // Get color based on level and index
+          const colorIndex =
+            nodeIndex %
+            (level === 1 && theme.nodeColors?.level1
+              ? theme.nodeColors.level1.length
+              : level === 2 && theme.nodeColors?.level2
+                ? theme.nodeColors.level2.length
+                : 1)
+
+          const background =
+            level === 1 && theme.nodeColors?.level1
+              ? theme.nodeColors.level1[colorIndex]
+              : level === 2 && theme.nodeColors?.level2
+                ? theme.nodeColors.level2[colorIndex]
+                : styleObj.background
+
+          const newNode: TopicNode = {
+            id: generateId(),
+            topic,
+            children: [],
+            style: {
+              background,
+              color: styleObj.color || theme.color,
+              fontSize: styleObj.fontSize,
+              fontWeight: styleObj.fontWeight,
+            },
+          }
+
           const currentParent = currentParentStack[currentParentStack.length - 1]
 
           if (!currentParent.children) {
@@ -238,6 +365,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
           currentParent.children.push(newNode)
           currentParentStack.push(newNode)
           currentLevel = level
+          nodeIndex++
         }
       })
 
@@ -250,22 +378,49 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     }
   }
 
-  // Initialize MindElixir when content changes
+  // Apply custom styling to nodes after rendering
+  const applyCustomStyling = (container: HTMLElement) => {
+    if (!container) return
+
+    const theme = getThemeObject()
+
+    // Get all nodes
+    const nodes = container.querySelectorAll(".map-container .node")
+
+    // Apply custom styles to each node
+    nodes.forEach((node, index) => {
+      const nodeElement = node as HTMLElement
+      const level = Number.parseInt(nodeElement.getAttribute("data-level") || "0")
+      applyThemeToNode(nodeElement, theme, level, index)
+    })
+
+    // Customize connection lines
+    customizeLines(container, theme)
+  }
+
+  // Effect to reinitialize when theme changes
   useEffect(() => {
+    if (needsReinitialize && mindElixirLoaded) {
+      // Use a timeout to ensure the DOM is ready
+      const timer = setTimeout(() => {
+        initializeMindMap()
+        setNeedsReinitialize(false)
+      }, 100)
+
+      return () => clearTimeout(timer)
+    }
+  }, [needsReinitialize, mindElixirLoaded, currentTheme]) // Add currentTheme to dependencies
+
+  // Initialize MindElixir
+  const initializeMindMap = () => {
     // Skip if prerequisites aren't met
     if (!containerRef.current) return
     const container = containerRef.current
 
     // Use the loaded content or default
-    const contentToUse = loadedContent || DEFAULT_MARKDOWN
+    const contentToUse =
+      loadedContent || themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
     console.log("Initializing mind map with content length:", contentToUse.length)
-
-    // Ensure MindElixir is loaded
-    if (!mindElixirLoaded) {
-      // This is a workaround for SSR/hydration issues
-      setMindElixirLoaded(true)
-      return
-    }
 
     try {
       // Clean up any existing instance
@@ -273,51 +428,62 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         try {
           if (container._mindElixirInstance.destroy) {
             const instance = container._mindElixirInstance
-            setTimeout(() => {
-              try {
-                instance.destroy && instance.destroy()
-              } catch (e) {
-                console.error("Delayed destroy failed:", e)
-              }
-            }, 0)
+            try {
+              instance.destroy()
+            } catch (e) {
+              console.error("Error destroying old instance:", e)
+            }
           }
         } catch (e) {
-          console.error("Error destroying old instance:", e)
+          console.error("Error accessing destroy method:", e)
         }
         delete container._mindElixirInstance
       }
 
       // Clear the container safely
-      if (container.firstChild) {
-        while (container.firstChild) {
-          container.removeChild(container.firstChild)
-        }
+      try {
+        // Use a safer approach to clear the container
+        container.innerHTML = ""
+      } catch (e) {
+        console.error("Error clearing container:", e)
       }
 
       // Parse markdown to mind map structure
       const parsedData = parseMarkdownToMindMap(contentToUse)
+      const theme = getThemeObject()
 
       // Configure MindElixir options
       const options = {
         el: container,
-        direction: 2, // right-to-left
+        direction: MindElixir.SIDE, // Use side direction for better layout
         draggable: true,
         contextMenu: true,
         toolBar: true,
         nodeMenu: true,
         keypress: true,
         allowUndo: true,
-        // Remove the theme property that's causing the error
+        overflowHidden: false,
+        primaryLinkStyle: {
+          lineWidth: theme.lineStyle.width,
+          lineColor: theme.lineStyle.color,
+        },
+        primaryNodeHorizontalGap: 80,
+        primaryNodeVerticalGap: 30,
       }
 
       // Initialize MindElixir
       try {
         console.log("Creating MindElixir instance with options:", options)
-        const me = new MindElixir(options) as MindElixirInstance
+        const me = new MindElixir(options) as any // Use type assertion to any
         container._mindElixirInstance = me
 
         console.log("Initializing with data:", parsedData)
         me.init(parsedData)
+
+        // Apply custom styling after initialization
+        setTimeout(() => {
+          applyCustomStyling(container)
+        }, 100)
 
         console.log("Mind map initialized successfully")
       } catch (initError) {
@@ -326,54 +492,78 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
           `MindElixir initialization error: ${initError instanceof Error ? initError.message : String(initError)}`,
         )
       }
-
-      // Clean up function
-      return () => {
-        if (!container) return
-        try {
-          const instance = container._mindElixirInstance
-          if (instance) {
-            delete container._mindElixirInstance
-
-            setTimeout(() => {
-              try {
-                instance.destroy && instance.destroy()
-              } catch (e) {
-                console.error("Cleanup destroy error:", e)
-              }
-            }, 0)
-          }
-        } catch (e) {
-          console.error("Error during cleanup:", e)
-        }
-      }
     } catch (err) {
       console.error("Error initializing mind map:", err)
       setError(`Failed to initialize mind map: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  // Initialize mind map when content changes
+  useEffect(() => {
+    if (mindElixirLoaded) {
+      // Use a timeout to ensure the DOM is ready
+      const timer = setTimeout(() => {
+        initializeMindMap()
+      }, 100)
+
+      return () => clearTimeout(timer)
     }
   }, [loadedContent, mindElixirLoaded])
 
   // Set mindElixirLoaded to true after component mounts
   useEffect(() => {
     setMindElixirLoaded(true)
+
+    // Clean up function
+    return () => {
+      if (!containerRef.current) return
+
+      try {
+        const container = containerRef.current
+        const instance = container._mindElixirInstance
+
+        if (instance) {
+          try {
+            if (typeof instance.destroy === "function") {
+              instance.destroy()
+            }
+          } catch (e) {
+            console.error("Cleanup destroy error:", e)
+          }
+
+          delete container._mindElixirInstance
+        }
+      } catch (e) {
+        console.error("Error during cleanup:", e)
+      }
+    }
   }, [])
 
   // Render component
   return (
-    <div className={`w-full h-full ${className || ""}`}>
+    <div className={`w-full h-full flex flex-col ${className || ""}`}>
+      <MindMapTaskbar
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onReset={handleReset}
+        containerRef={containerRef as React.RefObject<HTMLDivElement>}
+      />
+
       {isLoading ? (
-        <div className="p-4 text-center">
+        <div className="p-4 text-center flex-grow flex items-center justify-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
-          <p className="mt-2 text-gray-700">Generating mind map...</p>
+          <p className="mt-2 text-gray-700 ml-3">Generating mind map...</p>
         </div>
       ) : error ? (
-        <div className="p-4 text-red-500">
+        <div className="p-4 text-red-500 flex-grow flex flex-col items-center justify-center">
           <div>Error: {error}</div>
           <button
             className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={() => {
               setError(null)
-              setLoadedContent(DEFAULT_MARKDOWN)
+              setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
             }}
           >
             Load Default Mindmap
@@ -382,12 +572,12 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       ) : (
         <div
           ref={containerRef}
-          className="w-full h-full border border-gray-200 rounded map-container"
+          className="w-full flex-grow border border-gray-200 rounded map-container"
           style={{
             position: "relative",
             overflow: "hidden",
             minHeight: "400px",
-            maxHeight: "80vh",
+            background: getThemeObject().background,
           }}
         ></div>
       )}
