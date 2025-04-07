@@ -12,8 +12,8 @@ import tempfile
 import time
 from tqdm import tqdm
 from langchain_core.prompts import ChatPromptTemplate
-
-from typing import Tuple
+from sklearn.cluster import KMeans
+from typing import Tuple, List
 import re
 
 load_dotenv()
@@ -44,7 +44,7 @@ vector_store = Zilliz(
 
 # Set up LLM
 llm = ChatOpenAI(
-    model="gpt-4", temperature=0.2, openai_api_key=OPENAI_API_KEY
+    model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API_KEY
 )  # Fixed model name
 
 # Prompt from LangChain hub
@@ -293,3 +293,71 @@ def get_document_embeddings(doc_id: str):
 
     except Exception as e:
         raise ValueError(f"Error retrieving embeddings: {str(e)}")
+# mindmapppppppppppppppppppppppppp
+def combine_chunks(chunks, predictions):
+    combined_chunks = {}
+    for i, chunk in enumerate(chunks):
+        if predictions[i] not in combined_chunks:
+            combined_chunks[predictions[i]] = chunk
+        else:
+            combined_chunks[predictions[i]] += " " + chunk
+    return combined_chunks
+def extract_all_headers(text):
+    """
+    Extract headers from text.
+    --------
+    """
+    header_text = ""
+    lines = text.split("\n")
+    for line in lines:
+        if line.startswith("#"):
+            header_text += "#" + line + "\n"
+    return header_text
+def write_to_file(file_path, content):
+    with open(file_path, "w", encoding="utf-8") as f:
+        f.write(content)
+async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: int = 5):
+    all_chunks = []
+    embeddings = []
+    for doc_id in documentIDs:
+        result = get_document_embeddings(doc_id)
+        chunk = result["contents"]
+        embeddings = result["embeddings"]
+    # check if num_clusters is greater than number of chunks
+    if num_clusters > len(all_chunks):
+        num_clusters = len(all_chunks)
+
+    if not all_chunks or not embeddings:
+        raise ValueError("No valid chunks or embeddings found.")
+
+    # # Clustering embeddings
+    kmeans_model = KMeans(n_clusters=num_clusters, random_state=42)
+    kmeans_predictions = kmeans_model.fit_predict(embeddings)
+    print("kmeans_predictions:", kmeans_predictions)
+    combined_chunks = combine_chunks(all_chunks, kmeans_predictions)
+    # print('combined_chunks:', combined_chunks)
+    result = "# root\n"
+    for i in range(num_clusters):
+        try:
+            completion = llm.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a helpful assistant that reformats to markdown text for better readability with \n"
+                        "# for header 1, \n ## for header 2, \n ### header 3 and the doc. \n the header must appear in order # -> ## -> ###",
+                    },
+                    {"role": "user", "content": combined_chunks[i]},
+                ],
+            )
+            # Extract the content from the response
+            text = completion.choices[0].message.content
+            # Extract headers
+            header_text = extract_all_headers(text)
+            result += header_text
+            write_to_file(f"cluster_{i}.txt", completion.choices[0].message.content)
+
+        except Exception as e:
+            print(f"Error generating completion: {e}")
+
+    return result

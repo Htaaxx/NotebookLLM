@@ -461,23 +461,10 @@ def extract_all_headers(text):
 async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: int = 5):
     all_chunks = []
     embeddings = []
-    for document_id in documentIDs:
-        query = f"@doc_id:{{{document_id}}}"
-        # Perform the search
-        results = index.search(query)
-        # Extract documents safely
-        docs = getattr(
-            results, "docs", None
-        )  # RediSearch results store documents in `.docs`
-        print("docs:", docs)
-        if not docs:
-            raise TypeError(f"Unexpected search result format: {dir(results)}")
-
-        # Iterate through extracted docs
-        for doc in docs:
-            chunk = getattr(doc, "content", None)
-            all_chunks.append(chunk)
-    embeddings = embed_texts(all_chunks)
+    for doc_id in documentIDs:
+        result = get_embedding(doc_id)
+        chunk = result["chunks"]
+        embeddings = result["embeddings"]
     # check if num_clusters is greater than number of chunks
     if num_clusters > len(all_chunks):
         num_clusters = len(all_chunks)
