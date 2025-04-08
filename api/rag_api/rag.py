@@ -10,7 +10,7 @@ import base64
 from pydantic import BaseModel, HttpUrl
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from app.services.vector_store import vector_store
+# from app.services.vector_store import vector_store
 import tempfile
 
 # import PyPDF2

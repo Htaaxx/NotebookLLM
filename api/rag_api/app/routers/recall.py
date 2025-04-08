@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Body
 from pydantic import BaseModel
 import uuid
-from app.services import recall_service  # Import service mới
+from rag_api.app.services import recall_service  # Import service mới
 from typing import List, Optional
 
 router = APIRouter()

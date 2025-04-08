@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from app.services.rag_pipeline import ask_question
+from rag_api.app.services.rag_pipeline import ask_question
 
 router = APIRouter()
 

@@ -22,6 +22,9 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ZILLIZ_CLOUD_URI = os.getenv("ZILLIZ_CLOUD_URI")
 ZILLIZ_CLOUD_TOKEN = os.getenv("ZILLIZ_CLOUD_TOKEN")
+# print(
+#     f"OPENAI_API_KEY: {OPENAI_API_KEY}, ZILLIZ_CLOUD_URI: {ZILLIZ_CLOUD_URI}, ZILLIZ_CLOUD_TOKEN: {ZILLIZ_CLOUD_TOKEN}"
+# )  # Debugging line to check if the keys are loaded correctly
 
 # Set up embedding
 embeddings = HuggingFaceEmbeddings(
@@ -196,63 +199,6 @@ def delete_embeddings(filter_dict=None, document_id=None):
     except Exception as e:
         print(f"Error deleting embeddings: {e}")
         raise e
-
-
-# def get_document_embeddings(doc_id: str):
-#     try:
-#         client = vector_store.client
-#         collection = client.get_collection("rag_collection")
-#         collection.load()
-
-#         # Step 1: Truy xuất các metadata và pk theo doc_id
-#         metadata_results = collection.query(
-#             expr=f'doc_id == "{doc_id}"',
-#             output_fields=[
-#                 "pk",
-#                 "chunk_id",
-#                 "chunk_index",
-#                 "page_number",
-#                 "content",
-#                 "filename",
-#             ],
-#         )
-
-#         pk_list = [item["pk"] for item in metadata_results]
-
-#         # Step 2: Truy xuất embedding cho các pk
-#         embedding_results = collection.query(
-#             expr=f'pk in [{",".join(map(str, pk_list))}]',
-#             output_fields=["pk", "embedding"],
-#         )
-
-#         # Mapping pk -> embedding
-#         pk_to_embedding = {item["pk"]: item["embedding"] for item in embedding_results}
-
-#         # Gộp lại metadata + embedding
-#         combined_chunks = []
-#         for item in metadata_results:
-#             combined_chunks.append(
-#                 {
-#                     "chunk_id": item["chunk_id"],
-#                     "chunk_index": item["chunk_index"],
-#                     "page_number": item["page_number"],
-#                     "content_preview": item["content"][:200] + "...",
-#                     "embedding": pk_to_embedding.get(item["pk"]),
-#                 }
-#             )
-
-#         return {
-#             "doc_id": doc_id,
-#             "filename": (
-#                 metadata_results[0]["filename"] if metadata_results else "unknown"
-#             ),
-#             "total_chunks": len(combined_chunks),
-#             "embeddings": combined_chunks,
-#         }
-
-#     except Exception as e:
-#         raise ValueError(f"Error retrieving full embeddings: {str(e)}")
-
 
 def get_document_embeddings(doc_id: str):
     try:

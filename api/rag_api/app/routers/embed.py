@@ -1,10 +1,11 @@
 from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Depends
 from pydantic import BaseModel
-from app.services.rag_pipeline import (
+from rag_api.app.services.rag_pipeline import (
     vector_store,
     process_and_store_pdf,
     delete_embeddings,
     get_document_embeddings,
+    get_smaller_branches_from_docs
 )
 from typing import Optional, Dict, Any, List
 
@@ -160,3 +161,24 @@ async def get_embeddings(document_id: str):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Lỗi khi lấy embeddings: {str(e)}")
+    
+@router.post("/get_smaller_branches_from_docs")
+async def get_smaller_branches_from_docs_api(
+    docs: List[str] = Query(..., description="List of documents to process"),
+    num_clusters: int = Query(5, description="Number of clusters to create"),
+):
+    """
+    Get smaller branches from documents using clustering.
+
+    Args:
+        docs: List of documents to process
+        num_clusters: Number of clusters to create
+
+    Returns:
+        A list of smaller branches
+    """
+    try:
+        smaller_branches = get_smaller_branches_from_docs(docs, num_clusters)
+        return {"smaller_branches": smaller_branches}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
