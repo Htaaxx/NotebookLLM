@@ -260,7 +260,7 @@ def get_document_embeddings(doc_id: str):
 
         results = collection.query(
             expr=f'doc_id == "{doc_id}"',
-            output_fields=["embedding", "chunk_id", "page_number"],
+            output_fields=["embedding", "chunk_id", "page_number", "content"],
         )
 
         if (
@@ -276,6 +276,7 @@ def get_document_embeddings(doc_id: str):
                         "chunk_id": result.get("chunk_id"),
                         "page_number": result.get("page_number"),
                         "embedding": result.get("embedding"),
+                        "content": result.get("content"),
                     }
                 )
 
@@ -293,6 +294,8 @@ def get_document_embeddings(doc_id: str):
 
     except Exception as e:
         raise ValueError(f"Error retrieving embeddings: {str(e)}")
+
+
 # mindmapppppppppppppppppppppppppp
 def combine_chunks(chunks, predictions):
     combined_chunks = {}
@@ -302,6 +305,8 @@ def combine_chunks(chunks, predictions):
         else:
             combined_chunks[predictions[i]] += " " + chunk
     return combined_chunks
+
+
 def extract_all_headers(text):
     """
     Extract headers from text.
@@ -313,16 +318,22 @@ def extract_all_headers(text):
         if line.startswith("#"):
             header_text += "#" + line + "\n"
     return header_text
+
+
 def write_to_file(file_path, content):
     with open(file_path, "w", encoding="utf-8") as f:
         f.write(content)
+
+
 async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: int = 5):
     all_chunks = []
     embeddings = []
     for doc_id in documentIDs:
-        result = get_document_embeddings(doc_id)
-        chunk = result["contents"]
-        embeddings = result["embeddings"]
+        result = await get_document_embeddings(doc_id)
+        for inner_chunk in result["embeddings"]:
+            chunk = inner_chunk["content"]
+            embeddings = inner_chunk["embeddings"]
+
     # check if num_clusters is greater than number of chunks
     if num_clusters > len(all_chunks):
         num_clusters = len(all_chunks)

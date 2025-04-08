@@ -16,6 +16,7 @@ class EmbeddingResponse(BaseModel):
     chunk_id: str
     embedding: List[float]
     page_number: int
+    content: str
 
 
 class DocumentEmbeddingsResponse(BaseModel):
@@ -151,6 +152,7 @@ async def get_embeddings(document_id: str):
                     chunk_id=str(chunk["chunk_id"]),
                     embedding=chunk["embedding"],
                     page_number=chunk["page_number"],
+                    content=chunk["content"],
                 )
                 for chunk in embeddings_data["embeddings"]
             ],
