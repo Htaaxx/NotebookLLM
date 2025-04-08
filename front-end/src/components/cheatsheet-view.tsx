@@ -2,14 +2,14 @@
 
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, Download, Edit2, Save, X } from "lucide-react"
+import { Plus, Trash2, Download, Edit2, Save, X, ChevronLeft, ChevronRight } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { fadeIn } from "@/lib/motion-utils"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
+import "../styles/cheatsheet.css"
 
 interface CheatsheetSection {
   id: string
@@ -17,9 +17,8 @@ interface CheatsheetSection {
   content: string
 }
 
-interface CheatsheetColumn {
+interface CheatsheetPage {
   id: string
-  title: string
   sections: CheatsheetSection[]
 }
 
@@ -28,72 +27,61 @@ interface CheatsheetViewProps {
 }
 
 export function CheatsheetView({ initialMarkdown }: CheatsheetViewProps) {
-  const [title, setTitle] = useState("Markdown Cheatsheet")
+  const [title, setTitle] = useState("Data Science Cheatsheet")
+  const [subtitle, setSubtitle] = useState("Compiled by NoteUS")
+  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleDateString())
   const [editingTitle, setEditingTitle] = useState(false)
-  const [columns, setColumns] = useState<CheatsheetColumn[]>([
+  const [editingSubtitle, setEditingSubtitle] = useState(false)
+  const [pages, setPages] = useState<CheatsheetPage[]>([
     {
-      id: "col1",
-      title: "Basic Syntax",
+      id: "page1",
       sections: [
         {
           id: "sec1",
-          title: "Headers",
-          content: `# Heading 1
-## Heading 2
-### Heading 3
-#### Heading 4
-##### Heading 5
-###### Heading 6`,
+          title: "What is Data Science?",
+          content: `Multi-disciplinary field that brings together concepts from computer science, statistics/machine learning, and data analysis to understand and extract insights from the ever-increasing amounts of data.
+
+Two paradigms of data research.
+1. **Hypothesis-Driven:** Given a problem, what kind of data do we need to help solve it?
+2. **Data-Driven:** Given some data, what interesting problems can be solved with it?
+
+The heart of data science is to always ask questions. Always be curious about the world.
+1. What can we learn from this data?
+2. What actions can we take once we find whatever it is we are looking for?`,
         },
         {
           id: "sec2",
-          title: "Emphasis",
-          content: `*Italic text*
-_Also italic text_
+          title: "Probability Overview",
+          content: `Probability theory provides a framework for reasoning about likelihood of events.
 
-**Bold text**
-__Also bold text__
-
-***Bold and italic***
-___Also bold and italic___`,
+**Terminology**
+Experiment: procedure that yields one of a possible set of outcomes e.g. repeatedly tossing a die or coin
+Sample Space S: set of possible outcomes of an experiment e.g. if tossing a die, S = {1,2,3,4,5,6}
+Event E: set of outcomes of an experiment e.g. event that a roll is 5, or the event that sum of 2 rolls is 7
+Probability of an Outcome s or P(s): number that satisfies 2 properties
+1. for each outcome s, 0 ≤ P(s) ≤ 1
+2. ∑ p(s) = 1`,
         },
-      ],
-    },
-    {
-      id: "col2",
-      title: "Lists & Links",
-      sections: [
         {
           id: "sec3",
-          title: "Lists",
-          content: `Unordered list:
-* Item 1
-* Item 2
-  * Subitem 2.1
-  * Subitem 2.2
+          title: "Descriptive Statistics",
+          content: `Provides a way of capturing a given data set or sample. There are two main types: centrality and variability measures.
 
-Ordered list:
-1. First item
-2. Second item
-3. Third item`,
-        },
-        {
-          id: "sec4",
-          title: "Links & Images",
-          content: `[Link text](https://www.example.com)
-
-![Alt text](image.jpg "Image title")`,
+**Centrality**
+Arithmetic Mean: Useful to characterize symmetric distributions without outliers μX = 1/n ∑ xi
+Geometric Mean: Useful for averaging ratios. Always less than arithmetic mean = √(a1a2...a3)
+Median: Exact middle value among a dataset. Useful for skewed distribution or data with outliers.
+Mode: Most frequent element in a dataset.`,
         },
       ],
     },
   ])
-
+  const [currentPageIndex, setCurrentPageIndex] = useState(0)
   const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
-  const [editingColumnId, setEditingColumnId] = useState<string | null>(null)
   const [tempSectionContent, setTempSectionContent] = useState("")
   const [tempSectionTitle, setTempSectionTitle] = useState("")
-  const [tempColumnTitle, setTempColumnTitle] = useState("")
   const [isExporting, setIsExporting] = useState(false)
+  const [fontSize, setFontSize] = useState(14) // Default font size in pixels
 
   const cheatsheetRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
@@ -102,15 +90,14 @@ Ordered list:
   useEffect(() => {
     if (initialMarkdown) {
       // This is a simplified approach - in a real app, you'd want to parse the markdown
-      // into the column/section structure more intelligently
-      setColumns([
+      // into the section structure more intelligently
+      setPages([
         {
-          id: "col1",
-          title: "Generated Content",
+          id: "page1",
           sections: [
             {
               id: "sec1",
-              title: "Content",
+              title: "Generated Content",
               content: initialMarkdown,
             },
           ],
@@ -119,56 +106,45 @@ Ordered list:
     }
   }, [initialMarkdown])
 
-  const addColumn = () => {
-    const newColumn: CheatsheetColumn = {
-      id: `col${Date.now()}`,
-      title: "New Column",
-      sections: [
-        {
-          id: `sec${Date.now()}`,
-          title: "New Section",
-          content: "Add your markdown content here",
-        },
-      ],
-    }
-    setColumns([...columns, newColumn])
-  }
-
-  const deleteColumn = (columnId: string) => {
-    setColumns(columns.filter((col) => col.id !== columnId))
-  }
-
-  const addSection = (columnId: string) => {
+  const addSection = () => {
     const newSection: CheatsheetSection = {
       id: `sec${Date.now()}`,
       title: "New Section",
-      content: "Add your markdown content here",
+      content: "Add your content here",
     }
 
-    setColumns(
-      columns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            sections: [...col.sections, newSection],
-          }
-        }
-        return col
-      }),
-    )
+    // Add to current page
+    const updatedPages = [...pages]
+    const currentPage = updatedPages[currentPageIndex]
+
+    // Add the new section to the current page
+    currentPage.sections.push(newSection)
+    setPages(updatedPages)
   }
 
-  const deleteSection = (columnId: string, sectionId: string) => {
-    setColumns(
-      columns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            sections: col.sections.filter((sec) => sec.id !== sectionId),
-          }
-        }
-        return col
-      }),
+  const deleteSection = (sectionId: string) => {
+    const updatedPages = pages.map((page) => ({
+      ...page,
+      sections: page.sections.filter((sec) => sec.id !== sectionId),
+    }))
+
+    // Remove empty pages
+    const filteredPages = updatedPages.filter((page) => page.sections.length > 0)
+
+    // If we deleted the last section on the current page, go to previous page
+    if (currentPageIndex >= filteredPages.length) {
+      setCurrentPageIndex(Math.max(0, filteredPages.length - 1))
+    }
+
+    setPages(
+      filteredPages.length > 0
+        ? filteredPages
+        : [
+            {
+              id: "page1",
+              sections: [],
+            },
+          ],
     )
   }
 
@@ -178,48 +154,44 @@ Ordered list:
     setTempSectionTitle(section.title)
   }
 
-  const saveEditingSection = (columnId: string, sectionId: string) => {
-    setColumns(
-      columns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            sections: col.sections.map((sec) => {
-              if (sec.id === sectionId) {
-                return {
-                  ...sec,
-                  title: tempSectionTitle,
-                  content: tempSectionContent,
-                }
-              }
-              return sec
-            }),
+  const saveEditingSection = (sectionId: string) => {
+    setPages(
+      pages.map((page) => ({
+        ...page,
+        sections: page.sections.map((sec) => {
+          if (sec.id === sectionId) {
+            return {
+              ...sec,
+              title: tempSectionTitle,
+              content: tempSectionContent,
+            }
           }
-        }
-        return col
-      }),
+          return sec
+        }),
+      })),
     )
     setEditingSectionId(null)
   }
 
-  const startEditingColumn = (column: CheatsheetColumn) => {
-    setEditingColumnId(column.id)
-    setTempColumnTitle(column.title)
+  const addPage = () => {
+    const newPage: CheatsheetPage = {
+      id: `page${Date.now()}`,
+      sections: [],
+    }
+    setPages([...pages, newPage])
+    setCurrentPageIndex(pages.length)
   }
 
-  const saveEditingColumn = (columnId: string) => {
-    setColumns(
-      columns.map((col) => {
-        if (col.id === columnId) {
-          return {
-            ...col,
-            title: tempColumnTitle,
-          }
-        }
-        return col
-      }),
-    )
-    setEditingColumnId(null)
+  const nextPage = () => {
+    if (currentPageIndex < pages.length - 1) {
+      setCurrentPageIndex(currentPageIndex + 1)
+    }
+  }
+
+  const prevPage = () => {
+    if (currentPageIndex > 0) {
+      setCurrentPageIndex(currentPageIndex - 1)
+    }
   }
 
   const exportToPdf = async () => {
@@ -228,77 +200,109 @@ Ordered list:
     try {
       setIsExporting(true)
 
-      // Create a clone of the content for exporting
-      const contentClone = contentRef.current.cloneNode(true) as HTMLElement
-
-      // Create a temporary container with fixed styling for export
-      const tempContainer = document.createElement("div")
-      tempContainer.style.position = "absolute"
-      tempContainer.style.left = "-9999px"
-      tempContainer.style.top = "0"
-      tempContainer.style.width = "1200px" // Fixed width for consistent PDF output
-      tempContainer.style.padding = "20px"
-      tempContainer.style.backgroundColor = "white"
-      tempContainer.style.zIndex = "-1"
-
-      // Add the clone to the temporary container
-      tempContainer.appendChild(contentClone)
-      document.body.appendChild(tempContainer)
-
-      // Wait for any images to load
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Generate the PDF
+      // Create a PDF with A4 portrait dimensions
       const pdf = new jsPDF({
-        orientation: "landscape",
+        orientation: "portrait",
         unit: "mm",
         format: "a4",
       })
 
-      // Calculate dimensions
-      const pdfWidth = pdf.internal.pageSize.getWidth()
-      const pdfHeight = pdf.internal.pageSize.getHeight()
+      // For each page in the cheatsheet
+      for (let i = 0; i < pages.length; i++) {
+        // If not the first page, add a new page to the PDF
+        if (i > 0) {
+          pdf.addPage()
+        }
 
-      // Capture the content
-      const canvas = await html2canvas(tempContainer, {
-        scale: 1,
-        useCORS: true,
-        logging: false,
-        windowWidth: 1200,
-        windowHeight: tempContainer.scrollHeight,
-      })
+        // Create a temporary container for this page
+        const tempContainer = document.createElement("div")
+        tempContainer.className = "pdf-export-container"
+        tempContainer.style.width = "210mm"
+        tempContainer.style.padding = "10mm"
+        tempContainer.style.backgroundColor = "white"
+        tempContainer.style.position = "absolute"
+        tempContainer.style.left = "-9999px"
+        tempContainer.style.top = "0"
+        tempContainer.style.zIndex = "-1"
 
-      // Convert to image
-      const imgData = canvas.toDataURL("image/jpeg", 1.0)
+        // Create the page content
+        const pageContent = document.createElement("div")
+        pageContent.className = "cheatsheet-container"
 
-      // Calculate how many pages we need
-      const imgWidth = pdfWidth - 20 // Margins
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
-      const pageCount = Math.ceil(imgHeight / (pdfHeight - 20)) // Margins
+        // Add header only to the first page
+        if (i === 0) {
+          const headerDiv = document.createElement("div")
+          headerDiv.className = "cheatsheet-header"
 
-      // Add each page
-      let heightLeft = imgHeight
-      let position = 10 // Initial position
-      let page = 0
+          const titleEl = document.createElement("h1")
+          titleEl.className = "cheatsheet-title"
+          titleEl.textContent = title
 
-      // Add first page
-      pdf.addImage(imgData, "JPEG", 10, position, imgWidth, imgHeight)
-      heightLeft -= pdfHeight - 20
+          const subtitleEl = document.createElement("p")
+          subtitleEl.className = "cheatsheet-subtitle"
+          subtitleEl.textContent = subtitle
 
-      // Add additional pages if needed
-      while (heightLeft > 0) {
-        page++
-        position = -pdfHeight * page + 10 // Adjust position for next page
-        pdf.addPage()
-        pdf.addImage(imgData, "JPEG", 10, position, imgWidth, imgHeight)
-        heightLeft -= pdfHeight - 20
+          const dateEl = document.createElement("p")
+          dateEl.className = "cheatsheet-date"
+          dateEl.textContent = `Last Updated ${lastUpdated}`
+
+          headerDiv.appendChild(titleEl)
+          headerDiv.appendChild(subtitleEl)
+          headerDiv.appendChild(dateEl)
+          pageContent.appendChild(headerDiv)
+        }
+
+        // Create grid for this page
+        const gridDiv = document.createElement("div")
+        gridDiv.className = "cheatsheet-grid"
+
+        // Add sections for this page
+        pages[i].sections.forEach((section) => {
+          const sectionDiv = document.createElement("div")
+          sectionDiv.className = "cheatsheet-section"
+
+          // Add header
+          const headerDiv = document.createElement("div")
+          headerDiv.className = "cheatsheet-section-header"
+          headerDiv.textContent = section.title
+          sectionDiv.appendChild(headerDiv)
+
+          // Add content
+          const contentDiv = document.createElement("div")
+          contentDiv.className = "cheatsheet-section-content"
+          contentDiv.innerHTML = formatContent(section.content)
+          sectionDiv.appendChild(contentDiv)
+
+          gridDiv.appendChild(sectionDiv)
+        })
+
+        pageContent.appendChild(gridDiv)
+        tempContainer.appendChild(pageContent)
+        document.body.appendChild(tempContainer)
+
+        // Wait for any images to load
+        await new Promise((resolve) => setTimeout(resolve, 300))
+
+        // Capture the content
+        const canvas = await html2canvas(tempContainer, {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          windowWidth: 595, // A4 width in pixels at 72 dpi
+          windowHeight: 842, // A4 height in pixels at 72 dpi
+          backgroundColor: "#ffffff",
+        })
+
+        // Add to PDF
+        const imgData = canvas.toDataURL("image/jpeg", 1.0)
+        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297) // A4 dimensions in mm
+
+        // Clean up
+        document.body.removeChild(tempContainer)
       }
 
       // Save the PDF
       pdf.save(`${title.replace(/\s+/g, "_")}.pdf`)
-
-      // Clean up
-      document.body.removeChild(tempContainer)
       setIsExporting(false)
     } catch (error) {
       console.error("Error exporting PDF:", error)
@@ -307,43 +311,30 @@ Ordered list:
     }
   }
 
-  // Simple function to format markdown content for display
-  const formatMarkdown = (content: string) => {
-    // Replace code blocks with styled pre elements
-    const formatted = content
-      .replace(
-        /```(\w*)([\s\S]*?)```/g,
-        '<pre class="bg-gray-100 p-2 rounded my-2 overflow-x-auto text-sm font-mono">$2</pre>',
-      )
-      // Replace inline code with styled code elements
-      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 px-1 rounded text-sm font-mono">$1</code>')
-      // Replace headers
-      .replace(/^# (.*$)/gm, '<h1 class="text-xl font-bold my-2">$1</h1>')
-      .replace(/^## (.*$)/gm, '<h2 class="text-lg font-bold my-2">$1</h2>')
-      .replace(/^### (.*$)/gm, '<h3 class="text-md font-bold my-2">$1</h3>')
-      // Replace bold
-      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-      .replace(/__(.*?)__/g, "<strong>$1</strong>")
-      // Replace italic
-      .replace(/\*(.*?)\*/g, "<em>$1</em>")
-      .replace(/_(.*?)_/g, "<em>$1</em>")
-      // Replace links
-      .replace(/\[(.*?)\]$$(.*?)$$/g, '<a href="$2" class="text-blue-500 underline">$1</a>')
-      // Replace unordered lists
-      .replace(/^\* (.*$)/gm, '<li class="ml-4">$1</li>')
-      // Replace ordered lists
-      .replace(/^(\d+)\. (.*$)/gm, '<li class="ml-4">$2</li>')
-      // Replace paragraphs
-      .replace(/^(?!<[hl]|<li|<pre|<code)(.*$)/gm, '<p class="my-1">$1</p>')
-      // Replace newlines with breaks for better formatting
-      .replace(/\n/g, "<br />")
+  // Format content with basic markdown-like syntax
+  const formatContent = (content: string) => {
+    if (!content) return ""
+
+    // Replace line breaks with <br> tags
+    let formatted = content.replace(/\n/g, "<br>")
+
+    // Bold text
+    formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    formatted = formatted.replace(/__(.*?)__/g, "<strong>$1</strong>")
+
+    // Italic text
+    formatted = formatted.replace(/\*(.*?)\*/g, "<em>$1</em>")
+    formatted = formatted.replace(/_(.*?)_/g, "<em>$1</em>")
+
+    // Highlight terms (e.g., "Term:" at the beginning of a line)
+    formatted = formatted.replace(/(^|<br>)([A-Za-z\s]+):/g, '$1<span class="term">$2:</span>')
 
     return formatted
   }
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-center justify-between p-4 bg-green-600 text-white">
+      <div className="flex items-center justify-between p-4 bg-green-600 text-white cheatsheet-header-bar">
         <div className="flex items-center">
           {editingTitle ? (
             <div className="flex items-center">
@@ -353,23 +344,78 @@ Ordered list:
                 className="mr-2 bg-white text-black"
                 autoFocus
               />
-              <Button size="sm" variant="ghost" className="text-white" onClick={() => setEditingTitle(false)}>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-white hover:bg-green-700"
+                onClick={() => setEditingTitle(false)}
+              >
                 <Save className="h-4 w-4" />
               </Button>
             </div>
           ) : (
             <div className="flex items-center">
-              <h2 className="text-xl font-bold">{title}</h2>
-              <Button size="sm" variant="ghost" className="ml-2 text-white" onClick={() => setEditingTitle(true)}>
+              <h2 className="text-xl font-bold">Academic Cheatsheet</h2>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="ml-2 text-white hover:bg-green-700"
+                onClick={() => setEditingTitle(true)}
+              >
                 <Edit2 className="h-4 w-4" />
               </Button>
             </div>
           )}
         </div>
-        <div className="flex space-x-2">
-          <Button size="sm" variant="outline" className="bg-white text-green-600 hover:bg-gray-100" onClick={addColumn}>
-            <Plus className="h-4 w-4 mr-1" /> Add Column
+
+        <div className="flex items-center">
+          <div className="flex items-center mr-4 text-center">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white hover:bg-green-700"
+              onClick={prevPage}
+              disabled={currentPageIndex === 0}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <div className="mx-2">
+              <span className="font-bold">
+                Page {currentPageIndex + 1} of {pages.length}
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-white hover:bg-green-700"
+              onClick={nextPage}
+              disabled={currentPageIndex === pages.length - 1}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="flex items-center mr-4">
+            <span className="text-white mr-2">Font Size:</span>
+            <Input
+              type="number"
+              min="8"
+              max="24"
+              value={fontSize}
+              onChange={(e) => setFontSize(Number.parseInt(e.target.value) || 14)}
+              className="w-16 h-8 text-black bg-white"
+            />
+          </div>
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="bg-white text-green-600 hover:bg-gray-100 mr-2"
+            onClick={addSection}
+          >
+            <Plus className="h-4 w-4 mr-1" /> Add Section
           </Button>
+
           <Button
             size="sm"
             variant="outline"
@@ -378,31 +424,61 @@ Ordered list:
             disabled={isExporting}
           >
             <Download className="h-4 w-4 mr-1" />
-            {isExporting ? "Exporting..." : "Export PDF"}
+            Export PDF
           </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 bg-gray-50">
+      <div className="flex-1 overflow-auto p-4 bg-white" style={{ fontSize: `${fontSize}px` }}>
         <div ref={cheatsheetRef} className="h-full">
-          <div ref={contentRef} className="flex flex-wrap gap-4">
-            <AnimatePresence>
-              {columns.map((column) => (
-                <motion.div
-                  key={column.id}
-                  className="w-full md:w-[calc(50%-1rem)] lg:w-[calc(33.333%-1rem)]"
-                  variants={fadeIn("up", 0.2)}
-                  initial="hidden"
-                  animate="show"
-                  exit={{ opacity: 0, y: 20 }}
-                >
-                  <Card className="h-full">
-                    <CardHeader className="bg-green-500 text-white py-2 px-4 flex flex-row items-center justify-between">
-                      {editingColumnId === column.id ? (
+          <div ref={contentRef} className="cheatsheet-container">
+            <div className="cheatsheet-header">
+              <h1 className="cheatsheet-title">{title}</h1>
+              {editingSubtitle ? (
+                <div className="flex items-center justify-center mb-2">
+                  <Input
+                    value={subtitle}
+                    onChange={(e) => setSubtitle(e.target.value)}
+                    className="w-64 mr-2"
+                    autoFocus
+                  />
+                  <Button size="sm" variant="ghost" onClick={() => setEditingSubtitle(false)}>
+                    <Save className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <p className="cheatsheet-subtitle">
+                  {subtitle}
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="ml-2 h-6 w-6 p-0"
+                    onClick={() => setEditingSubtitle(true)}
+                  >
+                    <Edit2 className="h-3 w-3" />
+                  </Button>
+                </p>
+              )}
+              <p className="cheatsheet-date">Last Updated {lastUpdated}</p>
+            </div>
+
+            <div className="cheatsheet-grid">
+              <AnimatePresence>
+                {pages[currentPageIndex]?.sections.map((section) => (
+                  <motion.div
+                    key={section.id}
+                    className="cheatsheet-section"
+                    variants={fadeIn("up", 0.2)}
+                    initial="hidden"
+                    animate="show"
+                    exit={{ opacity: 0, y: 20 }}
+                  >
+                    <div className="cheatsheet-section-header">
+                      {editingSectionId === section.id ? (
                         <div className="flex items-center w-full">
                           <Input
-                            value={tempColumnTitle}
-                            onChange={(e) => setTempColumnTitle(e.target.value)}
+                            value={tempSectionTitle}
+                            onChange={(e) => setTempSectionTitle(e.target.value)}
                             className="mr-2 bg-white text-black"
                             autoFocus
                           />
@@ -410,106 +486,89 @@ Ordered list:
                             size="sm"
                             variant="ghost"
                             className="text-white"
-                            onClick={() => saveEditingColumn(column.id)}
+                            onClick={() => saveEditingSection(section.id)}
                           >
                             <Save className="h-4 w-4" />
                           </Button>
                         </div>
                       ) : (
                         <>
-                          <CardTitle className="text-lg">{column.title}</CardTitle>
-                          <div className="flex space-x-1">
+                          <div>{section.title}</div>
+                          <div className="flex space-x-1 edit-buttons">
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0 text-white"
-                              onClick={() => startEditingColumn(column)}
+                              className="h-6 w-6 p-0 text-white"
+                              onClick={() => startEditingSection(section)}
                             >
-                              <Edit2 className="h-4 w-4" />
+                              <Edit2 className="h-3 w-3" />
                             </Button>
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-8 w-8 p-0 text-white"
-                              onClick={() => deleteColumn(column.id)}
+                              className="h-6 w-6 p-0 text-white"
+                              onClick={() => deleteSection(section.id)}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              <Trash2 className="h-3 w-3" />
                             </Button>
                           </div>
                         </>
                       )}
-                    </CardHeader>
-                    <CardContent className="p-0">
-                      {column.sections.map((section) => (
-                        <div key={section.id} className="border-b last:border-b-0">
-                          {editingSectionId === section.id ? (
-                            <div className="p-4">
-                              <Input
-                                value={tempSectionTitle}
-                                onChange={(e) => setTempSectionTitle(e.target.value)}
-                                className="mb-2"
-                                placeholder="Section title"
-                              />
-                              <Textarea
-                                value={tempSectionContent}
-                                onChange={(e) => setTempSectionContent(e.target.value)}
-                                className="min-h-[200px] font-mono text-sm"
-                                placeholder="Markdown content"
-                              />
-                              <div className="flex justify-end mt-2 space-x-2">
-                                <Button size="sm" variant="outline" onClick={() => setEditingSectionId(null)}>
-                                  <X className="h-4 w-4 mr-1" /> Cancel
-                                </Button>
-                                <Button size="sm" onClick={() => saveEditingSection(column.id, section.id)}>
-                                  <Save className="h-4 w-4 mr-1" /> Save
-                                </Button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="relative group">
-                              <div className="absolute right-2 top-2 hidden group-hover:flex space-x-1 bg-white/80 rounded p-1 shadow-sm z-10">
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0"
-                                  onClick={() => startEditingSection(section)}
-                                >
-                                  <Edit2 className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0 text-red-500"
-                                  onClick={() => deleteSection(column.id, section.id)}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
-                              <div className="bg-green-100 px-4 py-2 font-medium">{section.title}</div>
-                              <div className="p-4 max-w-none">
-                                <div
-                                  className="markdown-content"
-                                  dangerouslySetInnerHTML={{ __html: formatMarkdown(section.content) }}
-                                />
-                              </div>
-                            </div>
-                          )}
+                    </div>
+                    <div className="cheatsheet-section-content">
+                      {editingSectionId === section.id ? (
+                        <div className="p-2">
+                          <Textarea
+                            value={tempSectionContent}
+                            onChange={(e) => setTempSectionContent(e.target.value)}
+                            className="min-h-[200px] font-serif text-sm"
+                            placeholder="Content"
+                          />
+                          <div className="flex justify-end mt-2 space-x-2">
+                            <Button size="sm" variant="outline" onClick={() => setEditingSectionId(null)}>
+                              <X className="h-4 w-4 mr-1" /> Cancel
+                            </Button>
+                            <Button size="sm" onClick={() => saveEditingSection(section.id)}>
+                              <Save className="h-4 w-4 mr-1" /> Save
+                            </Button>
+                          </div>
                         </div>
-                      ))}
-                      <div className="p-4">
-                        <Button variant="outline" className="w-full" onClick={() => addSection(column.id)}>
-                          <Plus className="h-4 w-4 mr-1" /> Add Section
+                      ) : (
+                        <div className="relative group">
+                          <div className="absolute right-0 top-0 hidden group-hover:flex space-x-1 bg-white/80 rounded p-1 shadow-sm z-10 edit-buttons">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0"
+                              onClick={() => startEditingSection(section)}
+                            >
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="h-6 w-6 p-0 text-red-500"
+                              onClick={() => deleteSection(section.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div dangerouslySetInnerHTML={{ __html: formatContent(section.content) }} />
+                        </div>
+                      )}
+                      <div className="add-subsection-button">
+                        <Button variant="ghost" size="sm" className="w-full text-xs">
+                          <Plus className="h-3 w-3 mr-1" /> Add Subsection
                         </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </div>
     </div>
   )
 }
-

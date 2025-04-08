@@ -1,492 +1,308 @@
-//import type { MindMapTheme } from "./types/mind-elixir-types"
-
-// Type definitions for mind-elixir themes
-
-export interface NodeStyle {
-    background: string
-    color: string
-    fontSize: string
-    fontWeight: string
-    borderRadius: string
-    padding: string
-    border?: string
-    boxShadow?: string
-  }
-  
-  export interface LineStyle {
-    color: string
-    width: string
-    dash: boolean
-    lineType: "straight" | "curved"
-  }
-  
-  export interface ArrowStyle {
-    color: string
-    size: string
-  }
-  
-  export interface NodeColors {
-    root: string
-    level1: string[]
-    level2: string[]
-  }
-  
-  export interface MindMapTheme {
-    name: string
-    displayName: string
-    background: string
-    color: string
-    nodeColors?: NodeColors
-    nodeStyles: {
-      root: NodeStyle
-      primary: NodeStyle
-      secondary: NodeStyle
+export interface MindMapTheme {
+  name: string
+  background: string
+  color: string
+  nodeStyles: {
+    root: {
+      background?: string
+      color?: string
+      fontSize?: string
+      fontWeight?: string
+      borderRadius?: string
+      padding?: string
     }
-    lineStyle: LineStyle
-    arrowStyle?: ArrowStyle
+    primary: {
+      background?: string
+      color?: string
+      fontSize?: string
+      fontWeight?: string
+      borderRadius?: string
+      padding?: string
+    }
+    secondary: {
+      background?: string
+      color?: string
+      fontSize?: string
+      fontWeight?: string
+      borderRadius?: string
+      padding?: string
+    }
   }
-  
-  
-
-// Define the theme templates - markdown content for each theme
-export const themeTemplates = {
-  original: `# Mind Map
-## Topic 1
-### Subtopic 1.1
-### Subtopic 1.2
-## Topic 2
-### Subtopic 2.1
-### Subtopic 2.2
-## Topic 3
-### Subtopic 3.1
-### Subtopic 3.2
-## Topic 4
-### Subtopic 4.1
-### Subtopic 4.2`,
-
-  planner: `# Mind Map Planner
-## Project
-### Goal
-### Timeline
-### Resources
-## Ideas
-### Concept 1
-### Concept 2
-### Concept 3
-## Tasks
-### To-Do
-### In Progress
-### Completed
-## Notes
-### Key Points
-### Questions
-### References`,
-
-  pastel: `# Mind Mapping
-## Habits
-### Plan
-### Study
-### System
-## Organization
-## Learning Style
-### Read
-### Listen
-### Summarize
-## Goals
-### Research
-### Lecture
-### Conclusions
-## Motivation
-### Tips
-### Roadmap
-## Review
-### Notes
-### Method
-### Discuss`,
-
-  creative: `# Mental Map
-## Audience test
-## Definition of persona
-## Innovation
-## Creating solutions
-## Creativity
-## Market research`,
-
-  strategy: `# Marketing Strategy
-## Market Analysis
-### Target Audience
-### Competitors
-### Trends
-## Brand Identity
-### Values
-### Messaging
-### Visual Elements
-## Channels
-### Social Media
-### Email
-### Website
-## Campaigns
-### Goals
-### Timeline
-### Budget
-## Metrics
-### KPIs
-### Analytics
-### Reporting`,
+  nodeColors?: {
+    root?: string
+    level1?: string[]
+    level2?: string[]
+  }
+  lineStyle: {
+    color: string
+    width: number
+    dashArray?: string
+  }
 }
 
-// Define all available themes
+// Theme templates for different mindmap styles
+export const themeTemplates: Record<string, string> = {
+  original: `# Machine Learning Concepts
+
+## Supervised Learning
+### Classification
+#### Decision Trees
+#### Support Vector Machines
+#### Neural Networks
+### Regression
+#### Linear Regression
+#### Polynomial Regression
+
+## Unsupervised Learning
+### Clustering
+#### K-Means
+#### Hierarchical Clustering
+### Dimensionality Reduction
+#### PCA
+#### t-SNE
+
+## Reinforcement Learning
+### Q-Learning
+### Deep Q Networks
+
+## Deep Learning
+### Neural Networks
+#### Feed Forward Networks
+#### Convolutional Neural Networks
+#### Recurrent Neural Networks
+### Training Techniques
+#### Backpropagation
+#### Gradient Descent
+#### Regularization`,
+
+  academic: `# Data Science Fundamentals
+
+## Statistical Methods
+### Descriptive Statistics
+#### Measures of Central Tendency
+#### Measures of Dispersion
+### Inferential Statistics
+#### Hypothesis Testing
+#### Confidence Intervals
+#### p-values
+
+## Machine Learning
+### Supervised Learning
+#### Classification Algorithms
+#### Regression Algorithms
+### Unsupervised Learning
+#### Clustering
+#### Dimensionality Reduction
+### Model Evaluation
+#### Cross-Validation
+#### Metrics
+
+## Data Processing
+### Data Cleaning
+#### Handling Missing Values
+#### Outlier Detection
+### Feature Engineering
+#### Feature Selection
+#### Feature Extraction`,
+
+  business: `# Business Strategy
+
+## Market Analysis
+### Competitor Research
+#### SWOT Analysis
+#### Market Share
+### Customer Segmentation
+#### Demographics
+#### Behavioral Patterns
+#### Psychographics
+
+## Financial Planning
+### Revenue Streams
+#### Product Sales
+#### Service Subscriptions
+### Cost Structure
+#### Fixed Costs
+#### Variable Costs
+### Investment Strategy
+#### ROI Analysis
+#### Risk Assessment
+
+## Growth Strategy
+### Expansion Options
+#### New Markets
+#### Product Development
+### Partnership Opportunities
+#### Strategic Alliances
+#### Acquisitions`,
+}
+
+// Define available themes
 export const allThemes: MindMapTheme[] = [
   {
     name: "original",
-    displayName: "Original",
-    background: "#ffffff",
-    color: "#333333",
-    nodeColors: {
-      root: "#4f4f4f",
-      level1: ["#5c7cfa", "#51cf66", "#fcc419", "#ff6b6b"],
-      level2: ["#748ffc", "#69db7c", "#ffda3d", "#ff8787"],
-    },
+    background: "#f5f5f5",
+    color: "#333",
     nodeStyles: {
       root: {
-        background: "#4f4f4f",
-        color: "#ffffff",
-        fontSize: "16px",
+        background: "#4caf50",
+        color: "#fff",
+        fontSize: "18px",
         fontWeight: "bold",
-        borderRadius: "4px",
-        padding: "8px 12px",
+        borderRadius: "5px",
+        padding: "10px 15px",
       },
       primary: {
-        background: "#5c7cfa",
-        color: "#ffffff",
-        fontSize: "14px",
-        fontWeight: "normal",
-        borderRadius: "4px",
-        padding: "6px 10px",
+        background: "#2196f3",
+        color: "#fff",
+        fontSize: "16px",
+        fontWeight: "bold",
+        borderRadius: "5px",
+        padding: "8px 12px",
       },
       secondary: {
-        background: "#748ffc",
-        color: "#ffffff",
-        fontSize: "12px",
+        background: "#f5f5f5",
+        color: "#333",
+        fontSize: "14px",
         fontWeight: "normal",
-        borderRadius: "4px",
-        padding: "4px 8px",
+        borderRadius: "5px",
+        padding: "6px 10px",
       },
     },
-    lineStyle: {
-      color: "#aaaaaa",
-      width: "1.5px",
-      dash: false,
-      lineType: "straight",
+    nodeColors: {
+      root: "#4caf50",
+      level1: ["#2196f3", "#03a9f4", "#00bcd4", "#009688", "#4caf50"],
+      level2: ["#f44336", "#e91e63", "#9c27b0", "#673ab7", "#3f51b5"],
     },
-    arrowStyle: {
-      color: "#aaaaaa",
-      size: "6px",
+    lineStyle: {
+      color: "#999",
+      width: 2,
     },
   },
   {
-    name: "planner",
-    displayName: "Planner",
+    name: "academic",
+    background: "#ffffff",
+    color: "#000000",
+    nodeStyles: {
+      root: {
+        background: "#000000",
+        color: "#ffffff",
+        fontSize: "18px",
+        fontWeight: "bold",
+        borderRadius: "0px",
+        padding: "10px 15px",
+      },
+      primary: {
+        background: "#ffffff",
+        color: "#000000",
+        fontSize: "16px",
+        fontWeight: "bold",
+        borderRadius: "0px",
+        padding: "8px 12px",
+      },
+      secondary: {
+        background: "#f5f5f5",
+        color: "#333333",
+        fontSize: "14px",
+        fontWeight: "normal",
+        borderRadius: "0px",
+        padding: "6px 10px",
+      },
+    },
+    lineStyle: {
+      color: "#000000",
+      width: 1,
+      dashArray: "5,5",
+    },
+  },
+  {
+    name: "business",
     background: "#f8f9fa",
-    color: "#333333",
-    nodeColors: {
-      root: "#333333",
-      level1: ["#e9ecef", "#e9ecef", "#e9ecef", "#e9ecef"],
-      level2: ["#f1f3f5", "#f1f3f5", "#f1f3f5", "#f1f3f5"],
-    },
+    color: "#343a40",
     nodeStyles: {
       root: {
-        background: "#333333",
+        background: "#343a40",
         color: "#ffffff",
         fontSize: "18px",
         fontWeight: "bold",
-        borderRadius: "2px",
+        borderRadius: "3px",
         padding: "10px 15px",
-        border: "1px solid #333333",
       },
       primary: {
-        background: "#ffffff",
-        color: "#333333",
-        fontSize: "14px",
-        fontWeight: "bold",
-        borderRadius: "2px",
-        padding: "8px 12px",
-        border: "1px solid #333333",
-      },
-      secondary: {
-        background: "#ffffff",
-        color: "#333333",
-        fontSize: "12px",
-        fontWeight: "normal",
-        borderRadius: "2px",
-        padding: "6px 10px",
-        border: "1px solid #333333",
-      },
-    },
-    lineStyle: {
-      color: "#333333",
-      width: "1px",
-      dash: true,
-      lineType: "straight",
-    },
-    arrowStyle: {
-      color: "#333333",
-      size: "6px",
-    },
-  },
-  {
-    name: "pastel",
-    displayName: "Pastel",
-    background: "#ffffff",
-    color: "#333333",
-    nodeColors: {
-      root: "#a78bfa", // Purple for central node
-      level1: ["#d1fae5", "#fed7aa", "#fecaca", "#ddd6fe"], // Mint green, peach, pink, light purple
-      level2: ["#a7f3d0", "#fdba74", "#fca5a5", "#c4b5fd"], // Darker versions
-    },
-    nodeStyles: {
-      root: {
-        background: "#a78bfa",
-        color: "#ffffff",
-        fontSize: "18px",
-        fontWeight: "bold",
-        borderRadius: "16px",
-        padding: "12px 20px",
-      },
-      primary: {
-        background: "#d1fae5", // Will be overridden by nodeColors
-        color: "#333333",
-        fontSize: "14px",
-        fontWeight: "bold",
-        borderRadius: "12px",
-        padding: "8px 16px",
-      },
-      secondary: {
-        background: "#a7f3d0", // Will be overridden by nodeColors
-        color: "#333333",
-        fontSize: "12px",
-        fontWeight: "normal",
-        borderRadius: "16px", // More rounded for secondary nodes
-        padding: "6px 12px",
-      },
-    },
-    lineStyle: {
-      color: "#333333",
-      width: "2px",
-      dash: false,
-      lineType: "curved",
-    },
-    arrowStyle: {
-      color: "#333333",
-      size: "8px",
-    },
-  },
-  {
-    name: "creative",
-    displayName: "Creative Pink",
-    background: "#fff5f7",
-    color: "#ffffff",
-    nodeColors: {
-      root: "#ffffff",
-      level1: ["#f8a5c2", "#f8a5c2", "#f8a5c2", "#f8a5c2"],
-      level2: ["#f8a5c2", "#f8a5c2", "#f8a5c2", "#f8a5c2"],
-    },
-    nodeStyles: {
-      root: {
-        background: "#ffffff",
-        color: "#f06595",
-        fontSize: "22px",
-        fontWeight: "bold",
-        borderRadius: "4px",
-        padding: "15px 20px",
-        border: "3px solid #f8a5c2",
-        boxShadow: "3px 3px 0 #f8a5c2",
-      },
-      primary: {
-        background: "#f8a5c2",
+        background: "#6c757d",
         color: "#ffffff",
         fontSize: "16px",
         fontWeight: "bold",
-        borderRadius: "0px",
-        padding: "10px 20px",
-        border: "none",
-        boxShadow: "none",
-      },
-      secondary: {
-        background: "#f8a5c2",
-        color: "#ffffff",
-        fontSize: "14px",
-        fontWeight: "normal",
-        borderRadius: "0px",
-        padding: "8px 16px",
-        border: "none",
-        boxShadow: "none",
-      },
-    },
-    lineStyle: {
-      color: "#f06595",
-      width: "3px",
-      dash: false,
-      lineType: "curved",
-    },
-    arrowStyle: {
-      color: "#f06595",
-      size: "10px",
-    },
-  },
-  {
-    name: "strategy",
-    displayName: "Strategy",
-    background: "#ffffff",
-    color: "#333333",
-    nodeColors: {
-      root: "#e7f5ff",
-      level1: ["#e7f5ff", "#e7f5ff", "#e7f5ff", "#e7f5ff"],
-      level2: ["#e7f5ff", "#e7f5ff", "#e7f5ff", "#e7f5ff"],
-    },
-    nodeStyles: {
-      root: {
-        background: "#e7f5ff",
-        color: "#1c7ed6",
-        fontSize: "16px",
-        fontWeight: "bold",
-        borderRadius: "4px",
-        padding: "10px 15px",
-        border: "1px solid #1c7ed6",
-      },
-      primary: {
-        background: "#ffffff",
-        color: "#333333",
-        fontSize: "14px",
-        fontWeight: "normal",
-        borderRadius: "4px",
+        borderRadius: "3px",
         padding: "8px 12px",
-        border: "1px solid #1c7ed6",
       },
       secondary: {
-        background: "#ffffff",
-        color: "#333333",
-        fontSize: "12px",
+        background: "#e9ecef",
+        color: "#343a40",
+        fontSize: "14px",
         fontWeight: "normal",
-        borderRadius: "4px",
+        borderRadius: "3px",
         padding: "6px 10px",
-        border: "1px solid #1c7ed6",
       },
     },
-    lineStyle: {
-      color: "#1c7ed6",
-      width: "1px",
-      dash: true,
-      lineType: "straight",
+    nodeColors: {
+      root: "#343a40",
+      level1: ["#495057", "#6c757d", "#adb5bd"],
+      level2: ["#ced4da", "#dee2e6", "#e9ecef"],
     },
-    arrowStyle: {
-      color: "#1c7ed6",
-      size: "6px",
+    lineStyle: {
+      color: "#6c757d",
+      width: 1,
     },
   },
 ]
 
-// Function to apply theme to a node
+// Helper function to apply theme to a node
 export function applyThemeToNode(node: HTMLElement, theme: MindMapTheme, level: number, index: number): void {
-  if (!node) return
+  // Determine which style to apply based on level
+  let style
+  let background
 
-  // Get the appropriate style based on level
-  const styleObj =
-    level === 0 ? theme.nodeStyles.root : level === 1 ? theme.nodeStyles.primary : theme.nodeStyles.secondary
-
-  // Get color based on level and index
-  let background = styleObj.background
-
-  if (level === 0 && theme.nodeColors?.root) {
-    background = theme.nodeColors.root
-  } else if (level === 1 && theme.nodeColors?.level1) {
-    background = theme.nodeColors.level1[index % theme.nodeColors.level1.length]
-  } else if (level >= 2 && theme.nodeColors?.level2) {
-    background = theme.nodeColors.level2[index % theme.nodeColors.level2.length]
+  if (level === 0) {
+    style = theme.nodeStyles.root
+    background = theme.nodeColors?.root || style.background
+  } else if (level === 1) {
+    style = theme.nodeStyles.primary
+    if (theme.nodeColors?.level1) {
+      const colorIndex = index % theme.nodeColors.level1.length
+      background = theme.nodeColors.level1[colorIndex]
+    } else {
+      background = style.background
+    }
+  } else {
+    style = theme.nodeStyles.secondary
+    if (theme.nodeColors?.level2) {
+      const colorIndex = index % theme.nodeColors.level2.length
+      background = theme.nodeColors.level2[colorIndex]
+    } else {
+      background = style.background
+    }
   }
 
   // Apply styles
-  node.style.background = background
-  node.style.color = styleObj.color || theme.color
-  node.style.fontSize = styleObj.fontSize
-  node.style.fontWeight = styleObj.fontWeight
-  node.style.borderRadius = styleObj.borderRadius
-  node.style.padding = styleObj.padding
-
-  // Apply optional styles if they exist
-  if (styleObj.border) node.style.border = styleObj.border
-  if (styleObj.boxShadow) node.style.boxShadow = styleObj.boxShadow
-
-  // Set data attributes for CSS targeting
-  node.setAttribute("data-level", level.toString())
-  node.setAttribute("data-theme", theme.name)
-
-  // For pastel theme, determine if node should be oval
-  if (theme.name === "pastel" && level > 0) {
-    const topic = node.querySelector(".topic")?.textContent || ""
-    const isShort = topic.length < 10
-
-    if (isShort) {
-      node.style.borderRadius = "50px"
-      node.setAttribute("data-shape", "oval")
-    } else {
-      node.setAttribute("data-shape", "rectangle")
-    }
-  }
+  if (background) node.style.backgroundColor = background
+  if (style.color) node.style.color = style.color
+  if (style.fontSize) node.style.fontSize = style.fontSize
+  if (style.fontWeight) node.style.fontWeight = style.fontWeight
+  if (style.borderRadius) node.style.borderRadius = style.borderRadius
+  if (style.padding) node.style.padding = style.padding
 }
 
-// Function to customize the connection lines
+// Helper function to customize connection lines
 export function customizeLines(container: HTMLElement, theme: MindMapTheme): void {
-  if (!container) return
-
-  // Select all SVG paths (connection lines)
-  const paths = container.querySelectorAll("svg path")
-
-  paths.forEach((path) => {
-    // Set line color and width
-    path.setAttribute("stroke", theme.lineStyle.color)
-    path.setAttribute("stroke-width", theme.lineStyle.width)
-
-    // Apply dashed style if specified
-    if (theme.lineStyle.dash) {
-      path.setAttribute("stroke-dasharray", "5,5")
-    } else {
-      path.removeAttribute("stroke-dasharray")
-    }
-
-    // Make lines curved if specified
-    if (theme.lineStyle.lineType === "curved") {
-      const d = path.getAttribute("d")
-      if (d && !d.includes("C") && !d.includes("Q")) {
-        // This is a simple approach - for production, you'd want a more sophisticated
-        // algorithm to create proper bezier curves
-        const points = d.split(/[ML]/g).filter(Boolean)
-        if (points.length >= 2) {
-          const start = points[0].trim().split(",").map(Number)
-          const end = points[points.length - 1].trim().split(",").map(Number)
-
-          // Create a control point for the bezier curve
-          const controlX = (start[0] + end[0]) / 2
-          const controlY = (start[1] + end[1]) / 2
-
-          // Create a new curved path
-          const newPath = `M${start[0]},${start[1]} Q${controlX},${controlY} ${end[0]},${end[1]}`
-          path.setAttribute("d", newPath)
-        }
+  const lines = container.querySelectorAll(".map-container .line")
+  lines.forEach((line) => {
+    const svgLine = line.querySelector("path")
+    if (svgLine) {
+      svgLine.setAttribute("stroke", theme.lineStyle.color)
+      svgLine.setAttribute("stroke-width", theme.lineStyle.width.toString())
+      if (theme.lineStyle.dashArray) {
+        svgLine.setAttribute("stroke-dasharray", theme.lineStyle.dashArray)
       }
     }
   })
-
-  // Add arrows to the lines if theme has arrow style
-  if (theme.arrowStyle) {
-    const arrows = container.querySelectorAll(".arrow")
-    arrows.forEach((arrow) => {
-      if (theme.arrowStyle) {
-        arrow.setAttribute("fill", theme.arrowStyle.color)
-        arrow.setAttribute("width", theme.arrowStyle.size)
-        arrow.setAttribute("height", theme.arrowStyle.size)
-      }
-    })
-  }
 }
-
