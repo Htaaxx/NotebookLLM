@@ -53,22 +53,32 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API
 # Prompt from LangChain hub
 prompt = ChatPromptTemplate.from_template(
     """
-Bạn là chuyên gia phân tích tài liệu. Hãy trả lời câu hỏi với các yêu cầu:
+Bạn là chuyên gia phân tích tài liệu. Nhiệm vụ của bạn là trả lời câu hỏi của người dùng.
 
-1. Sử dụng chú thích vuông [number] khi dùng thông tin từ tài liệu
-2. Mỗi fact/claim phải có ít nhất 1 citation
-3. Giữ nguyên số citation trong cả response
+**QUAN TRỌNG:** Trước tiên, hãy đánh giá câu hỏi của người dùng ({question}).
+1.  **Nếu câu hỏi không rõ ràng, quá ngắn, không có ngữ nghĩa cụ thể để tìm kiếm thông tin (ví dụ: 'hello', '?', 'abc', 'bạn khỏe không?'), hoặc chỉ là lời chào hỏi đơn thuần:**
+    * **BỎ QUA HOÀN TOÀN** phần TÀI LIỆU THAM KHẢO dưới đây.
+    * **CHỈ trả lời MỘT TRONG CÁC CÂU SAU:** "Yêu cầu không có ngữ nghĩa." hoặc "Chưa xác định rõ yêu cầu của bạn, vui lòng cung cấp câu hỏi cụ thể hơn." (Chọn một câu phù hợp).
+    * **KHÔNG** thêm bất kỳ thông tin nào khác, không giải thích, không thêm citation.
+
+2.  **Nếu câu hỏi có vẻ hợp lệ và có thể trả lời được dựa trên tài liệu:**
+    * Hãy sử dụng các TÀI LIỆU THAM KHẢO ({context}) để trả lời chi tiết cho câu hỏi ({question}).
+    * **TUÂN THỦ NGHIÊM NGẶT CÁC YÊU CẦU SAU:**
+        * Sử dụng chú thích vuông [number] NGAY SAU thông tin được lấy từ tài liệu tham khảo. Ví dụ: Fact A [1], Claim B [2].
+        * Mỗi fact/claim trong câu trả lời PHẢI CÓ ít nhất một citation [number] tương ứng.
+        * Giữ nguyên số citation [number] đã được đánh dấu trong phần TÀI LIỆU THAM KHẢO khi bạn trích dẫn chúng.
+        * Câu trả lời phải chi tiết, mạch lạc.
+        * Cuối cùng, thêm phần `REFERENCES:` liệt kê đầy đủ các tài liệu đã được trích dẫn trong câu trả lời, theo đúng format:
+            [1] File: "tên file", Trang: X, Nội dung: "trích đoạn ngắn gọn từ context"
+            [2] File: ... (tương tự)
+            (Chỉ liệt kê những citation [number] bạn đã thực sự dùng trong câu trả lời).
 
 CÂU HỎI: {question}
 
-TÀI LIỆU THAM KHẢO:
+TÀI LIỆU THAM KHẢO (Chỉ dùng nếu câu hỏi hợp lệ):
 {context}
 
-YÊU CẦU FORMAT:
-- Câu trả lời chi tiết với citations [1][2]...
-- Phần REFERENCES cuối cùng liệt kê đầy đủ:
-[1] File: "tên file", Trang: X, Nội dung: "trích đoạn"
-[2] File: ... (tương tự)
+CÂU TRẢ LỜI CỦA BẠN:
 """
 )
 
