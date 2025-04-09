@@ -409,71 +409,103 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     [],
   )
 
-  // Helper function to handle upload
+  // Helper function to handle upload and trigger embedding
   const handleUpload = async (file: File, documentId: string, filePath: string): Promise<FileItem | null> => {
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("document_id", documentId)
+    // 1. Prepare FormData for the FIRST upload (/user/upload)
+    // Assuming this endpoint MIGHT need 'document_id' (adjust if needed)
+    const mainUploadFormData = new FormData();
+    mainUploadFormData.append("file", file);
+    mainUploadFormData.append("document_id", documentId); // Keep IF /user/upload needs it
 
     try {
-      // Upload file to server
-      const uploadResponse = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL+"/user/upload", {
+      // 2. Upload file to the main backend server (/user/upload)
+      const uploadUrl = `${process.env.NEXT_PUBLIC_BACKEND_DB_URL}/user/upload`;
+      console.log("Uploading file to:", uploadUrl);
+      const uploadResponse = await fetch(uploadUrl, {
         method: "POST",
-        body: formData,
-      })
+        body: mainUploadFormData, // Use FormData for the first upload
+      });
 
       if (!uploadResponse.ok) {
-        throw new Error(`Upload failed: ${uploadResponse.status}`)
+        const errorText = await uploadResponse.text();
+        console.error("Upload failed:", uploadResponse.status, errorText);
+        throw new Error(`Upload failed: ${uploadResponse.status}`);
       }
 
-      const data = await uploadResponse.json()
-      console.log("Upload successful:", data)
+      const data = await uploadResponse.json();
+      console.log("Upload successful:", data);
 
-      // Try to call the embeddings API separately
-      try {
-        // The correct endpoint from Swagger is /store_embeddings with documentID as query param
-        const embeddingsUrl = `http://localhost:8000/store_embeddings?documentID=${documentId}`
-        console.log("Calling embeddings API:", embeddingsUrl)
+      // 3. Trigger the embedding API asynchronously (/embed/)
+      setTimeout(async () => {
+        // --- MODIFICATION START ---
+        // Create SEPARATE FormData for the embedding API call
+        const embedFormData = new FormData();
+        // Append the file part (backend expects key 'file')
+        embedFormData.append("file", file);
+        // Append the doc_id part (backend expects key 'doc_id')
+        embedFormData.append("doc_id", documentId);
 
-        // Use a timeout to avoid blocking the UI
-        setTimeout(async () => {
-          try {
-            // Send the same formData to the embeddings API
-            const embeddingsResponse = await fetch(embeddingsUrl, {
-              method: "POST",
-              body: formData,
-            })
+        // Construct the embedding API URL WITHOUT query parameter
+        const embeddingsUrl = `http://localhost:8000/embed/`;
+        console.log("Calling Embedding API:", embeddingsUrl);
+        console.log("Sending FormData with keys:", Array.from(embedFormData.keys())); // Log keys being sent
 
-            if (embeddingsResponse.ok) {
-              const responseText = await embeddingsResponse.text()
-              console.log("Embeddings stored successfully:", responseText)
-            } else {
-              console.warn("Embeddings API returned error:", embeddingsResponse.status)
+        try {
+          const embeddingsResponse = await fetch(embeddingsUrl, {
+            method: "POST",
+            body: embedFormData, // Send FormData with 'file' and 'doc_id' parts
+            // Note: 'Content-Type': 'multipart/form-data' is set automatically by fetch with FormData
+          });
+          // --- MODIFICATION END ---
+
+          if (embeddingsResponse.ok) {
+            const result = await embeddingsResponse.json(); // Assuming it returns JSON like EmbedPDFResponse
+            console.log("Embedding API call successful:", result);
+          } else {
+            // Try to get more detailed error from response body
+            let errorDetail = `Embedding API returned error: ${embeddingsResponse.status}`;
+            try {
+                const errorJson = await embeddingsResponse.json();
+                errorDetail += ` - ${JSON.stringify(errorJson)}`;
+            } catch (e) {
+                // If response is not JSON, try text
+                try {
+                   const errorText = await embeddingsResponse.text();
+                   errorDetail += ` - ${errorText}`;
+                } catch (e2) {
+                   // Ignore if text also fails
+                }
             }
-          } catch (err) {
-            console.warn("Embeddings API call failed, but continuing:", err)
+            console.warn(errorDetail);
           }
-        }, 100)
-      } catch (embeddingsError) {
-        console.warn("Failed to trigger embeddings, but continuing:", embeddingsError)
-      }
+        } catch (err) {
+          // Log network errors or other fetch failures
+          console.warn("Embedding API call failed (Network Error or other issue):", err);
+        }
+      }, 100); // Delay slightly
 
-      // Return the file item regardless of embeddings success
+      // 4. Return the file item for UI update
+      // (Rest of the code remains the same)
+      const fileExtension = getFileExtension(file.name);
+      const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${documentId}${fileExtension}`;
+      const fileType = getFileTypeFromName(file.name);
+
       return {
         id: documentId,
         name: file.name,
         selected: false,
-        type: file.type,
-        url: data.url || `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${documentId}`,
+        type: fileType || file.type,
+        url: data.url || cloudinaryURL, // Use URL from the FIRST upload response if available
         size: file.size,
         cloudinaryId: documentId,
         FilePath: filePath,
-      }
+      };
+
     } catch (error) {
-      console.error("Error in upload process:", error)
-      return null
+      console.error("Error in main upload process:", error);
+      return null;
     }
-  }
+  };
 
   // Update the file upload handler to ensure it doesn't cause duplicates
   const handleFileUpload = useCallback(

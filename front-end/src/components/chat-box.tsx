@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { motion, AnimatePresence } from "framer-motion"
 import { fadeIn, buttonAnimation } from "@/lib/motion-utils"
+import ReactMarkdown from 'react-markdown';
 
 export function ChatBox() {
   const [showSettings, setShowSettings] = useState(false)
@@ -38,51 +39,75 @@ export function ChatBox() {
   }, [chatHistory])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!message.trim()) return
+    e.preventDefault();
+    const userMessage = message.trim();
+    if (!userMessage) return;
+
+    setChatHistory((prev) => [...prev, { text: userMessage, isUser: true }]);
+    setMessage("");
+    setIsLoading(true);
 
     try {
-      // Add user message to chat history
-      setChatHistory((prev) => [...prev, { text: message, isUser: true }])
-      setIsLoading(true)
+      const queryApiUrl = "http://localhost:8000/query/";
+      const requestBody = {
+        question: userMessage,
+      };
 
-      // Get user ID from localStorage
-      const userId = localStorage.getItem("user_id") || "default_user"
+      console.log("Sending request to:", queryApiUrl);
+      console.log("Request body:", JSON.stringify(requestBody));
 
-      // Call our Next.js API route instead of directly calling the external API
-      const response = await fetch("/api/llm", {
+      const response = await fetch(queryApiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          user_id: userId,
-          query: message,
-        }),
-      })
+        body: JSON.stringify(requestBody),
+      });
 
       if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
+        // ... (error handling như cũ) ...
+        let errorDetails = `API error: ${response.status}`;
+        try {
+            const errorData = await response.json();
+            errorDetails += ` - ${JSON.stringify(errorData)}`;
+        } catch (e) {
+            try {
+               const errorText = await response.text();
+               errorDetails += ` - ${errorText}`;
+            } catch (e2) { /* Ignore */ }
+        }
+        throw new Error(errorDetails);
       }
 
-      // Parse the response
-      const data = await response.text()
+      // --- THAY ĐỔI Ở ĐÂY ---
+      // Parse response dưới dạng JSON
+      const data = await response.json();
 
-      // Add LLM response to chat history
-      setChatHistory((prev) => [...prev, { text: data, isUser: false }])
+      // Kiểm tra xem có thuộc tính 'answer' không
+      if (data && typeof data.answer === 'string') {
+        console.log("Received response data:", data);
+        // Thêm nội dung từ data.answer vào lịch sử chat
+        setChatHistory((prev) => [...prev, { text: data.answer, isUser: false }]);
+      } else {
+        console.error("Invalid response format. 'answer' field missing or not a string:", data);
+        // Có thể thêm một tin nhắn lỗi vào chat nếu muốn
+        setChatHistory((prev) => [
+          ...prev,
+          { text: "Sorry, received an invalid response from the server.", isUser: false },
+        ]);
+      }
+      // --- KẾT THÚC THAY ĐỔI ---
 
-      // Clear the input field
-      setMessage("")
     } catch (error) {
-      console.error("Failed to send message", error)
+      console.error("Failed to send message to /query/ API", error);
       setChatHistory((prev) => [
         ...prev,
-        { text: "Sorry, I couldn't process your request. Please try again.", isUser: false },
-      ])
+        { text: `Sorry, I couldn't process your request. Error: ${error instanceof Error ? error.message : String(error)}`, isUser: false },
+      ]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };  
 
   // Also update the regenerateLastResponse function:
   const regenerateLastResponse = async () => {
@@ -154,19 +179,28 @@ export function ChatBox() {
             animate={{ opacity: 1, y: 0, x: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
+            {/* ---- THAY ĐỔI BÊN TRONG DIV NÀY ---- */}
             <div
-              className={`p-3 rounded-2xl max-w-[80%] ${
-                msg.isUser ? "bg-green-500 text-white rounded-tr-none" : "bg-gray-100 text-black rounded-tl-none"
+              // Thêm class 'prose' nếu bạn dùng Tailwind Typography plugin để có style cơ bản
+              // Bạn cũng có thể cần 'prose-invert' cho nền tối (tin nhắn người dùng)
+              // Nếu không dùng Tailwind Typography, bạn cần tự style các thẻ H1, p, ul,...
+              className={`prose prose-sm max-w-none p-3 rounded-2xl ${
+                msg.isUser
+                  ? "bg-green-500 text-white rounded-tr-none prose-invert" // Thêm prose-invert cho nền tối
+                  : "bg-gray-100 text-black rounded-tl-none"
               }`}
             >
-              {msg.text}
+              {/* Sử dụng ReactMarkdown để render nội dung */}
+              <ReactMarkdown>{msg.text}</ReactMarkdown>
             </div>
+            {/* ---- KẾT THÚC THAY ĐỔI ---- */}
           </motion.div>
         ))}
         {isLoading && (
           <motion.div className="flex justify-start mb-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <div className="bg-gray-100 text-black p-3 rounded-2xl rounded-tl-none max-w-[80%]">
-              <div className="flex space-x-2">
+              {/* ... (phần loading indicator) */}
+               <div className="flex space-x-2">
                 <div
                   className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
                   style={{ animationDelay: "0ms" }}
@@ -188,6 +222,7 @@ export function ChatBox() {
 
       {/* Chat Input */}
       <motion.div className="border-t p-4 bg-white" variants={fadeIn("up", 0.3)} initial="hidden" animate="show">
+         {/* ... (phần settings và form input giữ nguyên như cũ) ... */}
         <div className="flex items-center justify-between mb-2">
           <motion.button
             onClick={() => setShowSettings(!showSettings)}
@@ -210,7 +245,8 @@ export function ChatBox() {
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.3 }}
             >
-              <div className="space-y-4">
+              {/* ... Nội dung settings ... */}
+               <div className="space-y-4">
                 <h3 className="text-sm font-medium">AI Model Settings</h3>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -311,34 +347,36 @@ export function ChatBox() {
         </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-3xl mx-auto">
-          <Input
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={t("typeMessage")}
-            className="flex-1 bg-white text-black border-gray-300"
-            disabled={isLoading}
-          />
-          <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
-              <Send className="w-4 h-4 mr-2" />
-              {t("send")}
-            </Button>
-          </motion.div>
-          <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-            <Button
-              type="button"
-              variant="outline"
-              className="border-gray-300 text-black"
-              onClick={regenerateLastResponse}
-              disabled={isLoading || chatHistory.length === 0}
-            >
-              <RefreshCw className="w-4 h-4 mr-2" />
-              {t("regenerate")}
-            </Button>
-          </motion.div>
+            {/* ... Nội dung form ... */}
+             <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder={t("typeMessage")}
+                className="flex-1 bg-white text-black border-gray-300"
+                disabled={isLoading}
+              />
+              <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+                <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
+                  <Send className="w-4 h-4 mr-2" />
+                  {t("send")}
+                </Button>
+              </motion.div>
+              <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-gray-300 text-black"
+                  onClick={regenerateLastResponse}
+                  disabled={isLoading || chatHistory.length === 0}
+                >
+                  <RefreshCw className="w-4 h-4 mr-2" />
+                  {t("regenerate")}
+                </Button>
+              </motion.div>
         </form>
       </motion.div>
     </motion.div>
-  )
-}
+  );
+
+} // Đóng thẻ của component ChatBox (nếu có)
 
