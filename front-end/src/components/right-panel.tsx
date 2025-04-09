@@ -43,6 +43,21 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   const [selectedPage, setSelectedPage] = useState<number | null>(null)
   const [markdownContent, setMarkdownContent] = useState<string>("")
   const { t } = useLanguage()
+  // Add a state to track sidebar visibility
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  // Add an effect to listen for sidebar toggle events
+  useEffect(() => {
+    const handleSidebarToggle = (event: CustomEvent) => {
+      setSidebarOpen(event.detail.isOpen)
+    }
+
+    window.addEventListener("sidebarToggle", handleSidebarToggle as EventListener)
+
+    return () => {
+      window.removeEventListener("sidebarToggle", handleSidebarToggle as EventListener)
+    }
+  }, [])
 
   const selectedPdf = useMemo(() => {
     return (
@@ -176,7 +191,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
 
   return (
     <motion.div
-      className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black overflow-hidden"
+      className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black overflow-hidden`}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
@@ -332,4 +347,3 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
     </motion.div>
   )
 }
-
