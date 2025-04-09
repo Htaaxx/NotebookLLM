@@ -1,5 +1,5 @@
 import os
-from .rag_pipeline import vector_store, llm  # Tái sử dụng llm và vector_store
+from .rag_pipeline import llm, get_user_vector_store  # THAY ĐỔI
 from langchain_core.prompts import ChatPromptTemplate
 from typing import List, Dict, Optional
 
@@ -8,34 +8,41 @@ from typing import List, Dict, Optional
 active_sessions: Dict[str, Dict] = {}
 
 
-def start_recall_session(topic: str, session_id: str) -> Optional[str]:
-    """Bắt đầu phiên recall, lấy context và tạo câu hỏi đầu tiên."""
+# Ví dụ sửa đổi hàm start_recall_session
+def start_recall_session(user_id: str, topic: str, session_id: str) -> Optional[str]:
+    """Bắt đầu phiên recall, lấy context TỪ COLLECTION CỦA USER."""
     try:
-        # 1. Lấy context từ RAG
-        retrieved_docs = vector_store.similarity_search(topic, k=5)  # Lấy top 5 chunks
+        # 1. Lấy context từ RAG của user
+        vector_store = get_user_vector_store(user_id)  # Lấy store của user
+        retrieved_docs = vector_store.similarity_search(topic, k=5)
         if not retrieved_docs:
-            return None  # Không tìm thấy context
+            print(
+                f"No context found for topic '{topic}' in user '{user_id}' collection."
+            )
+            return None
 
-        # Format context đơn giản
         context = "\n\n".join([doc.page_content for doc in retrieved_docs])
 
-        # 2. Tạo câu hỏi đầu tiên
+        # 2. Tạo câu hỏi (giữ nguyên)
         first_question = generate_recall_question(topic, context)
         if not first_question:
-            return None  # Không tạo được câu hỏi
+            return None
 
-        # 3. Lưu session
+        # 3. Lưu session (có thể thêm user_id vào session data nếu cần)
         active_sessions[session_id] = {
+            "user_id": user_id,  # Lưu user_id vào session
             "topic": topic,
-            "context": context,
+            "context": context,  # Context này là của user
             "last_question": first_question,
-            "history": [],  # Có thể lưu lịch sử hỏi đáp
+            "history": [],
         }
-        print(f"Session {session_id} started for topic '{topic}'.")
+        print(f"Session {session_id} started for user '{user_id}', topic '{topic}'.")
         return first_question
 
     except Exception as e:
-        print(f"Error starting recall session for topic '{topic}': {e}")
+        print(
+            f"Error starting recall session for user '{user_id}', topic '{topic}': {e}"
+        )
         return None
 
 
