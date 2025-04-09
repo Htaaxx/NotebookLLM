@@ -14,6 +14,8 @@ export default function DefaultPageContent() {
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [files, setFiles] = useState<FileItem[]>([])
+  // Add a new state for sidebar visibility
+  const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const handleFileSelection = useCallback((files: FileItem[]) => {
     setSelectedFiles(files)
@@ -105,14 +107,29 @@ export default function DefaultPageContent() {
     }
   }, [previewFile])
 
+  // Add an effect to listen for sidebar toggle events
+  useEffect(() => {
+    const handleSidebarToggle = (event: CustomEvent) => {
+      setSidebarOpen(event.detail.isOpen)
+    }
+
+    window.addEventListener("sidebarToggle", handleSidebarToggle as EventListener)
+
+    return () => {
+      window.removeEventListener("sidebarToggle", handleSidebarToggle as EventListener)
+    }
+  }, [])
+
   return (
     <main className="min-h-screen flex flex-col bg-white text-black">
       <NavBar />
       <div className="flex flex-1 relative">
-        <div className="w-64 border-r h-[calc(100vh-64px)] bg-white">
+        <div className="h-[calc(100vh-64px)] bg-white">
           <FileCollection onFileSelect={handleFileSelection} key={`file-collection-${refreshTrigger}`} />
         </div>
-        <div className={`transition-all duration-300 bg-white ${activePanel ? "w-[42%]" : "flex-1"}`}>
+        <div
+          className={`transition-all duration-300 bg-white ${activePanel ? (sidebarOpen ? "w-[42%]" : "w-[50%]") : "flex-1"}`}
+        >
           <ChatBox />
         </div>
         <RightButtons onViewChange={handleViewChange} activeView={activePanel} />
@@ -121,4 +138,3 @@ export default function DefaultPageContent() {
     </main>
   )
 }
-

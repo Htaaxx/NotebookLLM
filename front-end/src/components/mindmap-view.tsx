@@ -2,10 +2,6 @@
 
 import { useEffect, useRef, useState } from "react"
 import MindElixir from "mind-elixir"
-import html2canvas from "html2canvas"
-import jsPDF from "jspdf"
-import { Button } from "@/components/ui/button"
-import { Loader2, ZoomIn, ZoomOut, RotateCcw, Download } from "lucide-react"
 import {
   allThemes,
   applyThemeToNode,
@@ -13,6 +9,7 @@ import {
   themeTemplates,
   type MindMapTheme,
 } from "../lib/mind-elixir-themes"
+import { MindMapTaskbar } from "./mindmap-taskbar"
 import "../styles/mindmap.css"
 
 const DEFAULT_MARKDOWN = `# Machine Learning Concepts
@@ -105,7 +102,6 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [currentTheme, setCurrentTheme] = useState("original")
   const [needsReinitialize, setNeedsReinitialize] = useState(false)
   const [scale, setScale] = useState(1)
-  const [isExporting, setIsExporting] = useState(false)
 
   // Get the current theme object
   const getThemeObject = (): MindMapTheme => {
@@ -177,102 +173,11 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     }
   }
 
-  // Export the entire mindmap to PDF
-  const exportToPDF = async () => {
-    if (!containerRef.current || !containerRef.current._mindElixirInstance) {
-      setError("Mind map not initialized")
-      return
-    }
-
-    setIsExporting(true)
-
-    try {
-      const me = containerRef.current._mindElixirInstance
-
-      // Store current scale and position
-      const currentScale = me.scaleVal
-      const currentTranslate = { x: me.translateX, y: me.translateY }
-
-      // Reset view to show the entire mindmap
-      me.scale(0.8) // Scale to fit more content
-      me.toCenter() // Center the mindmap
-
-      // Wait for the DOM to update
-      await new Promise((resolve) => setTimeout(resolve, 500))
-
-      // Get the map container (not just the visible part)
-      const mapContainer = containerRef.current.querySelector(".map-container") || containerRef.current
-      const mapRoot = mapContainer.querySelector(".root") || mapContainer
-
-      // Calculate the bounding box of all nodes to capture the entire mindmap
-      const nodes = mapContainer.querySelectorAll(".node")
-      let minX = Number.POSITIVE_INFINITY,
-        minY = Number.POSITIVE_INFINITY,
-        maxX = Number.NEGATIVE_INFINITY,
-        maxY = Number.NEGATIVE_INFINITY
-
-      nodes.forEach((node) => {
-        const rect = node.getBoundingClientRect()
-        minX = Math.min(minX, rect.left)
-        minY = Math.min(minY, rect.top)
-        maxX = Math.max(maxX, rect.right)
-        maxY = Math.max(maxY, rect.bottom)
-      })
-
-      // Add padding
-      const padding = 50
-      minX -= padding
-      minY -= padding
-      maxX += padding
-      maxY += padding
-
-      // Calculate dimensions
-      const width = maxX - minX
-      const height = maxY - minY
-
-      // Create a canvas with the calculated dimensions
-      const canvas = await html2canvas(mapRoot as HTMLElement, {
-        scale: 2, // Higher resolution
-        width: width,
-        height: height,
-        x: minX,
-        y: minY,
-        windowWidth: document.documentElement.offsetWidth,
-        windowHeight: document.documentElement.offsetHeight,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-      })
-
-      // Create PDF with appropriate dimensions
-      const imgData = canvas.toDataURL("image/png")
-      const pdf = new jsPDF({
-        orientation: width > height ? "landscape" : "portrait",
-        unit: "px",
-        format: [canvas.width, canvas.height],
-      })
-
-      pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height)
-      pdf.save("mindmap.pdf")
-
-      // Restore original view
-      me.scale(currentScale)
-      me.translateX = currentTranslate.x
-      me.translateY = currentTranslate.y
-      me.refresh()
-    } catch (err) {
-      console.error("Error exporting to PDF:", err)
-      setError(`Failed to export to PDF: ${err instanceof Error ? err.message : String(err)}`)
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
   // Fetch mindmap data from API based on selected files
   const fetchMindMapFromAPI = async (selectedFiles: any[]) => {
     if (!selectedFiles || selectedFiles.length === 0) {
       console.log("No files selected for mindmap generation")
-      return DEFAULT_MARKDOWN
+      return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
     }
 
     setIsLoading(true)
@@ -300,14 +205,14 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
       if (!data || data.trim() === "") {
         console.warn("Empty markdown received from API, using default")
-        return DEFAULT_MARKDOWN
+        return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
       }
 
       return data
     } catch (error) {
       console.error("Error fetching mindmap from API:", error)
       setError(`Failed to fetch mindmap: ${error instanceof Error ? error.message : String(error)}`)
-      return DEFAULT_MARKDOWN
+      return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
     } finally {
       setIsLoading(false)
     }
@@ -329,7 +234,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       .then((content) => {
         if (!content || content.trim() === "") {
           console.warn("Empty markdown file loaded, using default")
-          return DEFAULT_MARKDOWN
+          return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
         }
         return content
       })
@@ -350,8 +255,8 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         .catch((err) => {
           console.error("Error fetching mindmap:", err)
           setError(`Failed to fetch mindmap: ${err instanceof Error ? err.message : String(err)}`)
-          setMarkdown(DEFAULT_MARKDOWN)
-          setLoadedContent(DEFAULT_MARKDOWN)
+          setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+          setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
         })
     } else if (markdownFilePath) {
       // If no selected files but a file path is provided, load from public folder
@@ -363,19 +268,19 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         .catch((err) => {
           console.error("Error loading markdown from file:", err)
           setError(`Failed to load markdown file: ${err instanceof Error ? err.message : String(err)}`)
-          setMarkdown(DEFAULT_MARKDOWN)
-          setLoadedContent(DEFAULT_MARKDOWN)
+          setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+          setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
         })
     } else if (markdownContent) {
       // If direct markdown content is provided
       setMarkdown(markdownContent)
       setLoadedContent(markdownContent)
     } else {
-      // Default case
-      setMarkdown(DEFAULT_MARKDOWN)
-      setLoadedContent(DEFAULT_MARKDOWN)
+      // Default case - use the current theme's template
+      setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+      setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
     }
-  }, [markdownContent, markdownFilePath, selectedFiles])
+  }, [markdownContent, markdownFilePath, selectedFiles, currentTheme])
 
   // Generate unique ID for mind map nodes
   const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2)
@@ -637,29 +542,14 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   // Render component
   return (
     <div className={`w-full h-full flex flex-col ${className || ""}`}>
-      <div className="flex items-center justify-between p-2 bg-gray-100 dark:bg-gray-800 border-b">
-        <h3 className="text-lg font-semibold">Mind Map View</h3>
-        <div className="flex space-x-2">
-          <Button variant="outline" size="sm" onClick={handleZoomIn} title="Zoom In">
-            <ZoomIn className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleZoomOut} title="Zoom Out">
-            <ZoomOut className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="sm" onClick={handleReset} title="Reset View">
-            <RotateCcw className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={exportToPDF}
-            disabled={isExporting || isLoading || !!error}
-            title="Export to PDF"
-          >
-            {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          </Button>
-        </div>
-      </div>
+      <MindMapTaskbar
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
+        onZoomIn={handleZoomIn}
+        onZoomOut={handleZoomOut}
+        onReset={handleReset}
+        containerRef={containerRef as React.RefObject<HTMLDivElement>}
+      />
 
       {isLoading ? (
         <div className="p-4 text-center flex-grow flex items-center justify-center">
@@ -673,7 +563,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
             className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={() => {
               setError(null)
-              setLoadedContent(DEFAULT_MARKDOWN)
+              setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
             }}
           >
             Load Default Mindmap
@@ -687,7 +577,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
             position: "relative",
             overflow: "hidden",
             minHeight: "400px",
-            maxHeight: "80vh",
+            background: getThemeObject().background,
           }}
         ></div>
       )}

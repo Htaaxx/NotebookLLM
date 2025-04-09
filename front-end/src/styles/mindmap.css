@@ -1,76 +1,119 @@
-/* Base styles for the mindmap container */
+/* Custom styles for the mind map */
+
+/* Mind map container styles */
 .map-container {
-  background-color: #ffffff;
-  font-family: "Arial", sans-serif;
+  width: 100%;
+  height: 100%;
+  min-height: 400px;
+  position: relative;
+  overflow: hidden;
 }
 
-/* Root node styling */
-.map-container .root {
-  border: 2px solid #000;
-  border-radius: 5px;
-  padding: 8px 16px;
-  font-weight: bold;
-  font-size: 18px;
-  background-color: #000;
-  color: #fff;
+/* Node styles */
+.map-container .node {
+  transition: all 0.2s ease;
+  cursor: pointer;
 }
 
-/* Primary nodes (level 1) */
-.map-container [data-level="1"] {
-  border: 1px solid #000;
-  border-radius: 5px;
-  padding: 6px 12px;
-  font-weight: bold;
-  font-size: 16px;
-  background-color: #fff;
-  color: #000;
+/* Hover effect for nodes */
+.map-container .node:hover {
+  transform: scale(1.02);
+  z-index: 10;
 }
 
-/* Secondary nodes (level 2+) */
-.map-container [data-level="2"],
-.map-container [data-level="3"],
-.map-container [data-level="4"],
-.map-container [data-level="5"],
-.map-container [data-level="6"] {
-  border: 1px solid #000;
-  border-radius: 5px;
-  padding: 4px 10px;
-  font-size: 14px;
-  background-color: #f5f5f5;
-  color: #333;
+/* Theme-specific styles */
+
+/* Original theme */
+.map-container [data-theme="original"] {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: none !important;
 }
 
-/* Connection lines */
-.map-container .line path {
-  stroke: #000;
-  stroke-width: 1px;
+.map-container [data-theme="original"]:hover {
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
 }
 
-/* Selected node */
-.map-container .selected {
-  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+/* Planner theme */
+.map-container [data-theme="planner"] {
+  box-shadow: none;
 }
 
-/* Expanded/collapsed indicators */
-.map-container .expanded,
-.map-container .collapsed {
-  font-size: 12px;
-  color: #666;
+.map-container [data-theme="planner"]:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-/* Toolbar styling */
-.map-container .toolbar {
-  background-color: #f5f5f5;
-  border: 1px solid #ddd;
-  border-radius: 3px;
+/* Pastel theme */
+.map-container [data-theme="pastel"] {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  border: none !important;
 }
 
-.map-container .toolbar button {
-  background-color: #fff;
-  border: 1px solid #ddd;
-  color: #333;
+.map-container [data-theme="pastel"][data-shape="oval"] {
+  border-radius: 50px !important;
+  padding-left: 20px !important;
+  padding-right: 20px !important;
 }
 
-.map-container .toolbar button:hover {
-  background-color: #eee;
+.map-container [data-theme="pastel"]:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
+
+/* Creative theme */
+.map-container [data-theme="creative"] {
+  box-shadow: none;
+  transform-origin: center;
+}
+
+.map-container [data-theme="creative"][data-level="1"] {
+  clip-path: polygon(0% 0%, 100% 0%, 95% 100%, 5% 100%);
+}
+
+.map-container [data-theme="creative"]:hover {
+  transform: scale(1.05) rotate(1deg);
+}
+
+/* Strategy theme */
+.map-container [data-theme="strategy"] {
+  box-shadow: none;
+}
+
+.map-container [data-theme="strategy"]:hover {
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Line styles */
+.map-container svg path {
+  transition: stroke-width 0.3s ease;
+}
+
+/* Hover effect for connection lines */
+.map-container svg path:hover {
+  stroke-width: 3px;
+}
+
+/* Node menu styles */
+.map-container .mind-elixir-node-menu {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.map-container .node-menu {
+  background-color: white !important;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Context menu styles */
+.map-container .context-menu {
+  background-color: white !important;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Hide the default node border */
+.map-container .node .selected {
+  border: 2px solid rgba(0, 0, 0, 0.2) !important;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1) !important;
+}
+

@@ -6,6 +6,7 @@
   padding: 20px;
   background-color: white;
   color: black;
+  box-sizing: border-box;
 }
 
 .cheatsheet-header {
@@ -29,27 +30,39 @@
   font-style: italic;
 }
 
-/* Update the cheatsheet grid to ensure proper spacing */
+/* Fixed width grid layout */
 .cheatsheet-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 15px;
+  gap: 10px;
+  width: 100%;
 }
 
-/* Update the section styling to match the rounded border image */
+/* Column styling with fixed width */
+.cheatsheet-column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  overflow: visible;
+}
+
+/* Update the section styling to ensure proper A4 sizing */
 .cheatsheet-section {
   border: 1px solid #000;
-  border-radius: 8px;
+  border-radius: 0;
   overflow: hidden;
   break-inside: avoid;
   page-break-inside: avoid;
-  height: fit-content;
+  width: 100%;
   display: flex;
   flex-direction: column;
   margin-bottom: 15px;
+  box-sizing: border-box;
+  min-height: 100px; /* Ensure sections have a minimum height */
 }
 
-/* Update the section header to match the image */
+/* Section header styling */
 .cheatsheet-section-header {
   background-color: #000;
   color: #fff;
@@ -60,18 +73,26 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-/* Update the section content to match the image */
+/* Section content styling with proper text wrapping */
 .cheatsheet-section-content {
   padding: 10px;
   line-height: 1.4;
   flex-grow: 1;
   background-color: #fff;
+  width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .cheatsheet-section-content p {
   margin-bottom: 10px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .cheatsheet-section-content ol,
@@ -83,6 +104,8 @@
 
 .cheatsheet-section-content li {
   margin-bottom: 5px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .cheatsheet-section-content h3 {
@@ -117,29 +140,20 @@
   margin-top: 10px;
 }
 
-/* Add subsection button */
+/* Remove the add-subsection-button styles since we're removing that feature */
 .add-subsection-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 5px;
-  color: #666;
-  cursor: pointer;
-  font-size: 14px;
-  margin-top: 10px;
+  display: none;
 }
 
-.add-subsection-button:hover {
-  background-color: #f5f5f5;
-}
-
-/* PDF export container */
+/* Update the PDF export container to ensure A4 dimensions */
 .pdf-export-container {
   width: 210mm;
-  min-height: 297mm;
-  padding: 10mm;
+  height: 297mm;
+  padding: 15mm 10mm; /* Increase top/bottom padding for better margins */
   background-color: white;
   position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 /* Update the page navigation in the green header */
@@ -176,25 +190,30 @@
   }
 }
 
-/* Update the PDF export styles */
+/* Ensure proper column sizing for A4 paper */
 @media print {
   .cheatsheet-container {
-    padding: 0;
+    padding: 15mm 10mm;
     width: 210mm; /* A4 width */
     height: 297mm; /* A4 height */
+    margin: 0;
   }
 
   .cheatsheet-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    gap: 10mm; /* Increase gap for better spacing when printed */
+    width: 100%;
   }
 
   .cheatsheet-section {
-    break-inside: avoid;
-    page-break-inside: avoid;
-    border: 1px solid #000;
-    border-radius: 8px;
+    margin-bottom: 10mm; /* Increase margin for better spacing when printed */
+    min-height: 80px; /* Ensure sections have a minimum height */
+  }
+
+  /* Ensure proper section content height */
+  .cheatsheet-section-content {
+    min-height: 60px;
   }
 
   .cheatsheet-section-header {
@@ -202,6 +221,15 @@
     color: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .cheatsheet-section-content {
+    width: 100%;
+    box-sizing: border-box;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .edit-buttons,
@@ -213,4 +241,23 @@
   .cheatsheet-footer {
     display: none;
   }
+}
+
+/* Add these styles to ensure proper A4 sizing and overflow handling */
+
+/* A4 dimensions */
+:root {
+  --a4-width: 210mm;
+  --a4-height: 297mm;
+}
+
+.cheatsheet-container {
+  font-family: "Times New Roman", Times, serif;
+  max-width: var(--a4-width);
+  margin: 0 auto;
+  padding: 20px;
+  background-color: white;
+  color: black;
+  min-height: var(--a4-height);
+  box-sizing: border-box;
 }

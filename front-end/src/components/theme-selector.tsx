@@ -52,4 +52,3 @@ export function ThemeSelector({ currentTheme, onThemeChange }: ThemeSelectorProp
     </div>
   )
 }
-

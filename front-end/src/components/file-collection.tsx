@@ -76,6 +76,19 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const [chatHistory, setChatHistory] = useState<string[]>([])
   const dataFetchedRef = useRef(false)
   const [isInitialLoad, setIsInitialLoad] = useState(true)
+  // Add a new state for sidebar visibility at the top of the FileCollection component
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+
+  // Add a function to toggle sidebar
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((prev) => !prev)
+    // Dispatch a custom event so other components can react to this change
+    window.dispatchEvent(
+      new CustomEvent("sidebarToggle", {
+        detail: { isOpen: !sidebarOpen },
+      }),
+    )
+  }, [sidebarOpen])
 
   // Determines file type based on filename
   const getFileTypeFromName = (filename: string): string => {
@@ -418,10 +431,8 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     mainUploadFormData.append("document_id", documentId); // Keep IF /user/upload needs it
 
     try {
-      // 2. Upload file to the main backend server (/user/upload)
-      const uploadUrl = `${process.env.NEXT_PUBLIC_BACKEND_DB_URL}/user/upload`;
-      console.log("Uploading file to:", uploadUrl);
-      const uploadResponse = await fetch(uploadUrl, {
+      // Upload file to server
+      const uploadResponse = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL + "/user/upload", {
         method: "POST",
         body: mainUploadFormData, // Use FormData for the first upload
       });
@@ -755,7 +766,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const deleteFile = useCallback(
     async (fileId: string, folderId?: string) => {
       try {
-        const response = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL+"/user/delete", {
+        const response = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL + "/user/delete", {
           method: "DELETE",
           headers: {
             "Content-Type": "application/json",
@@ -803,7 +814,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
         for (const fileId of filesToDelete) {
           try {
-            await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL+"/user/delete", {
+            await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL + "/user/delete", {
               method: "DELETE",
               headers: {
                 "Content-Type": "application/json",
@@ -1158,112 +1169,89 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   }, [rootFolders, userID])
 
   return (
-    <div className="file-collection-container w-64 border-r h-[calc(100vh-64px)] p-4 flex flex-col gap-3 bg-white text-black">
-      <div className="flex items-center justify-between"></div>
-
-      <div className="space-y-2">
-        <div className="relative">
-          <Input
-            placeholder={t("searchAll")}
-            className="h-8 text-sm pr-8"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                handleSearch()
-              }
-            }}
-          />
-          {searchQuery && (
-            <button
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-              onClick={clearSearch}
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+    <div className="relative h-[calc(100vh-64px)] bg-white text-black">
+      {/* Toggle button - always visible */}
+      <div className={`absolute top-4 ${sidebarOpen ? "left-56" : "left-4"} z-10 transition-all duration-300`}>
         <Button
-          variant="secondary"
-          className="w-full h-8 text-sm bg-green-500 hover:bg-green-600 text-black"
-          onClick={handleSearch}
+          variant="outline"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={toggleSidebar}
+          title={sidebarOpen ? "Close sidebar" : "Open sidebar"}
         >
-          <Search className="w-4 h-4 mr-2" />
-          {t("searchInFiles")}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="9" y1="3" x2="9" y2="21"></line>
+          </svg>
         </Button>
       </div>
 
-      {searchResults ? (
-        <div className="flex-1 overflow-auto">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium">Search Results</h3>
-            <Button variant="ghost" size="sm" className="h-8 px-2" onClick={clearSearch}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-          {renderSearchResults()}
+      {/* Sidebar content - only visible when open */}
+      <div
+        className={`file-collection-container border-r h-full overflow-auto transition-all duration-300 ${
+          sidebarOpen ? "w-64 opacity-100" : "w-0 opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="p-4">
+          <h3 className="text-sm font-medium">File Collection</h3>
         </div>
-      ) : (
-        <>
-          <div className="mt-2 flex items-center justify-between">
-            <h3 className="text-sm font-medium">{t("chat")}</h3>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm" className="h-8 px-2">
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-white shadow-lg">
-                <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewChatInput(true)}>
-                  {t("createNewChat")}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
 
-          {showNewChatInput && (
-            <div className="flex gap-2 mb-2">
-              <Input
-                placeholder="Chatbox name"
-                value={newChatName}
-                onChange={(e) => setNewChatName(e.target.value)}
-                className="h-8 text-sm"
-              />
-              <Button size="sm" className="h-8" onClick={() => createNewChat()}>
-                {t("create")}
+        <div className="space-y-2 px-4">
+          <div className="relative">
+            <Input
+              placeholder={t("searchAll")}
+              className="h-8 text-sm pr-8"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  handleSearch()
+                }
+              }}
+            />
+            {searchQuery && (
+              <button
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                onClick={clearSearch}
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <Button
+            variant="secondary"
+            className="w-full h-8 text-sm bg-green-500 hover:bg-green-600 text-black"
+            onClick={handleSearch}
+          >
+            <Search className="w-4 h-4 mr-2" />
+            {t("searchInFiles")}
+          </Button>
+        </div>
+
+        {searchResults ? (
+          <div className="flex-1 overflow-auto px-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium">Search Results</h3>
+              <Button variant="ghost" size="sm" className="h-8 px-2" onClick={clearSearch}>
+                <X className="w-4 h-4" />
               </Button>
             </div>
-          )}
-
-          <div className="-mt-2 space-y-1 overflow-auto flex-1" style={{ maxHeight: "150px" }}>
-            {chatboxes.map((chatbox) => (
-              <div
-                key={chatbox.id}
-                className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${
-                  currentChatId === chatbox.id ? "bg-gray-200" : ""
-                }`}
-                onClick={() => switchChatbox(chatbox.id)}
-              >
-                <MessageSquare className="w-4 h-4 text-gray-400" />
-                <span className="text-sm truncate flex-grow">{chatbox.name}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 w-6 p-0"
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    deleteChatbox(chatbox.id)
-                  }}
-                >
-                  <Trash2 className="w-4 h-4 text-red-500" />
-                </Button>
-              </div>
-            ))}
+            {renderSearchResults()}
           </div>
-
-          <div className="mt-2 flex-1 overflow-auto">
-            <div className="flex items-center justify-between mb-2 sticky top-0 bg-white z-10">
-              <h3 className="text-sm font-medium">{t("fileCollection")}</h3>
+        ) : (
+          <>
+            <div className="mt-2 flex items-center justify-between px-4">
+              <h3 className="text-sm font-medium">{t("chat")}</h3>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="h-8 px-2">
@@ -1271,72 +1259,131 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="bg-white shadow-lg">
-                  <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(true)}>
-                    Add Folder
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="cursor-pointer"
-                    onSelect={() => document.getElementById("root-file-upload")?.click()}
-                  >
-                    Add File
+                  <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewChatInput(true)}>
+                    {t("createNewChat")}
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
 
-            {showNewFolderInput && (
-              <div className="flex gap-2 mb-2">
+            {showNewChatInput && (
+              <div className="flex gap-2 mb-2 px-4">
                 <Input
-                  placeholder="Folder name"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
+                  placeholder="Chatbox name"
+                  value={newChatName}
+                  onChange={(e) => setNewChatName(e.target.value)}
                   className="h-8 text-sm"
                 />
-                <Button
-                  size="sm"
-                  className="h-8"
-                  onClick={() => createFolder(typeof showNewFolderInput === "string" ? showNewFolderInput : undefined)}
-                >
+                <Button size="sm" className="h-8" onClick={() => createNewChat()}>
                   {t("create")}
                 </Button>
               </div>
             )}
 
-            <div className="space-y-1" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e)}>
-              {rootFolders.map((folder) => renderFolder(folder))}
-              {rootFiles.map((file) => renderFile(file))}
+            <div className="-mt-2 space-y-1 overflow-auto flex-1 px-4" style={{ maxHeight: "150px" }}>
+              {chatboxes.map((chatbox) => (
+                <div
+                  key={chatbox.id}
+                  className={`flex items-center gap-2 hover:bg-gray-50 rounded-md p-1 cursor-pointer ${
+                    currentChatId === chatbox.id ? "bg-gray-200" : ""
+                  }`}
+                  onClick={() => switchChatbox(chatbox.id)}
+                >
+                  <MessageSquare className="w-4 h-4 text-gray-400" />
+                  <span className="text-sm truncate flex-grow">{chatbox.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      deleteChatbox(chatbox.id)
+                    }}
+                  >
+                    <Trash2 className="w-4 h-4 text-red-500" />
+                  </Button>
+                </div>
+              ))}
             </div>
-          </div>
-        </>
-      )}
 
-      <div className="mt-4">
-        <h3 className="text-sm font-medium mb-2">{t("quickUpload")}</h3>
-        <div
-          className="border-2 border-dashed rounded-lg p-4 text-center"
-          onDragOver={handleDragOver}
-          onDrop={(e) => handleDrop(e)}
-        >
-          <p className="text-sm text-muted-foreground">{t("dropFileHere")}</p>
-          <p className="text-sm text-muted-foreground"> - or - </p>
-          <label className="cursor-pointer text-sm text-primary hover:underline">
-            {t("clickToUpload")}
-            <input
-              id="root-file-upload"
-              type="file"
-              className="hidden"
-              multiple
-              onChange={(e) => {
-                if (e.target.files) {
-                  handleFileUpload(e, userID)
-                  e.target.value = ""
-                }
-              }}
-            />
-          </label>
-        </div>
+            <div className="mt-2 flex-1 overflow-auto px-4">
+              <div className="flex items-center justify-between mb-2 sticky top-0 bg-white z-10">
+                <h3 className="text-sm font-medium">{t("fileCollection")}</h3>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="h-8 px-2">
+                      <Plus className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-white shadow-lg">
+                    <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(true)}>
+                      Add Folder
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="cursor-pointer"
+                      onSelect={() => document.getElementById("root-file-upload")?.click()}
+                    >
+                      Add File
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {showNewFolderInput && (
+                <div className="flex gap-2 mb-2">
+                  <Input
+                    placeholder="Folder name"
+                    value={newFolderName}
+                    onChange={(e) => setNewFolderName(e.target.value)}
+                    className="h-8 text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    className="h-8"
+                    onClick={() =>
+                      createFolder(typeof showNewFolderInput === "string" ? showNewFolderInput : undefined)
+                    }
+                  >
+                    {t("create")}
+                  </Button>
+                </div>
+              )}
+
+              <div className="space-y-1" onDragOver={handleDragOver} onDrop={(e) => handleDrop(e)}>
+                {rootFolders.map((folder) => renderFolder(folder))}
+                {rootFiles.map((file) => renderFile(file))}
+              </div>
+            </div>
+
+            <div className="mt-4 px-4 pb-4">
+              <h3 className="text-sm font-medium mb-2">{t("quickUpload")}</h3>
+              <div
+                className="border-2 border-dashed rounded-lg p-4 text-center"
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e)}
+              >
+                <p className="text-sm text-muted-foreground">{t("dropFileHere")}</p>
+                <p className="text-sm text-muted-foreground"> - or - </p>
+                <label className="cursor-pointer text-sm text-primary hover:underline">
+                  {t("clickToUpload")}
+                  <input
+                    id="root-file-upload"
+                    type="file"
+                    className="hidden"
+                    multiple
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        handleFileUpload(e, userID)
+                        e.target.value = ""
+                      }
+                    }}
+                  />
+                </label>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
 }
-
