@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2, Download, Edit2, Save, X, ChevronLeft, ChevronRight } from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { fadeIn } from "@/lib/motion-utils"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
@@ -15,11 +15,17 @@ interface CheatsheetSection {
   id: string
   title: string
   content: string
+  height?: number
+}
+
+interface CheatsheetColumn {
+  id: string
+  sections: CheatsheetSection[]
 }
 
 interface CheatsheetPage {
   id: string
-  sections: CheatsheetSection[]
+  columns: CheatsheetColumn[]
 }
 
 interface CheatsheetViewProps {
@@ -35,11 +41,14 @@ export function CheatsheetView({ initialMarkdown }: CheatsheetViewProps) {
   const [pages, setPages] = useState<CheatsheetPage[]>([
     {
       id: "page1",
-      sections: [
+      columns: [
         {
-          id: "sec1",
-          title: "What is Data Science?",
-          content: `Multi-disciplinary field that brings together concepts from computer science, statistics/machine learning, and data analysis to understand and extract insights from the ever-increasing amounts of data.
+          id: "col1",
+          sections: [
+            {
+              id: "sec1",
+              title: "What is Data Science?",
+              content: `Multi-disciplinary field that brings together concepts from computer science, statistics/machine learning, and data analysis to understand and extract insights from the ever-increasing amounts of data.
 
 Two paradigms of data research.
 1. **Hypothesis-Driven:** Given a problem, what kind of data do we need to help solve it?
@@ -48,11 +57,16 @@ Two paradigms of data research.
 The heart of data science is to always ask questions. Always be curious about the world.
 1. What can we learn from this data?
 2. What actions can we take once we find whatever it is we are looking for?`,
+            },
+          ],
         },
         {
-          id: "sec2",
-          title: "Probability Overview",
-          content: `Probability theory provides a framework for reasoning about likelihood of events.
+          id: "col2",
+          sections: [
+            {
+              id: "sec2",
+              title: "Probability Overview",
+              content: `Probability theory provides a framework for reasoning about likelihood of events.
 
 **Terminology**
 Experiment: procedure that yields one of a possible set of outcomes e.g. repeatedly tossing a die or coin
@@ -61,17 +75,24 @@ Event E: set of outcomes of an experiment e.g. event that a roll is 5, or the ev
 Probability of an Outcome s or P(s): number that satisfies 2 properties
 1. for each outcome s, 0 ≤ P(s) ≤ 1
 2. ∑ p(s) = 1`,
+            },
+          ],
         },
         {
-          id: "sec3",
-          title: "Descriptive Statistics",
-          content: `Provides a way of capturing a given data set or sample. There are two main types: centrality and variability measures.
+          id: "col3",
+          sections: [
+            {
+              id: "sec3",
+              title: "Descriptive Statistics",
+              content: `Provides a way of capturing a given data set or sample. There are two main types: centrality and variability measures.
 
 **Centrality**
 Arithmetic Mean: Useful to characterize symmetric distributions without outliers μX = 1/n ∑ xi
 Geometric Mean: Useful for averaging ratios. Always less than arithmetic mean = √(a1a2...a3)
 Median: Exact middle value among a dataset. Useful for skewed distribution or data with outliers.
 Mode: Most frequent element in a dataset.`,
+            },
+          ],
         },
       ],
     },
@@ -81,31 +102,38 @@ Mode: Most frequent element in a dataset.`,
   const [tempSectionContent, setTempSectionContent] = useState("")
   const [tempSectionTitle, setTempSectionTitle] = useState("")
   const [isExporting, setIsExporting] = useState(false)
-  const [fontSize, setFontSize] = useState(14) // Default font size in pixels
+  const [fontSize, setFontSize] = useState(14)
 
   const cheatsheetRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
+  const columnRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   // Initialize with provided markdown if available
   useEffect(() => {
     if (initialMarkdown) {
-      // This is a simplified approach - in a real app, you'd want to parse the markdown
-      // into the section structure more intelligently
       setPages([
         {
           id: "page1",
-          sections: [
+          columns: [
             {
-              id: "sec1",
-              title: "Generated Content",
-              content: initialMarkdown,
+              id: "col1",
+              sections: [
+                {
+                  id: "sec1",
+                  title: "Generated Content",
+                  content: initialMarkdown,
+                },
+              ],
             },
+            { id: "col2", sections: [] },
+            { id: "col3", sections: [] },
           ],
         },
       ])
     }
   }, [initialMarkdown])
 
+  // Add a new section to the cheatsheet
   const addSection = () => {
     const newSection: CheatsheetSection = {
       id: `sec${Date.now()}`,
@@ -113,38 +141,71 @@ Mode: Most frequent element in a dataset.`,
       content: "Add your content here",
     }
 
-    // Add to current page
+    // Create a copy of the current pages
     const updatedPages = [...pages]
     const currentPage = updatedPages[currentPageIndex]
 
-    // Add the new section to the current page
-    currentPage.sections.push(newSection)
-    setPages(updatedPages)
-  }
-
-  const deleteSection = (sectionId: string) => {
-    const updatedPages = pages.map((page) => ({
-      ...page,
-      sections: page.sections.filter((sec) => sec.id !== sectionId),
-    }))
-
-    // Remove empty pages
-    const filteredPages = updatedPages.filter((page) => page.sections.length > 0)
-
-    // If we deleted the last section on the current page, go to previous page
-    if (currentPageIndex >= filteredPages.length) {
-      setCurrentPageIndex(Math.max(0, filteredPages.length - 1))
+    // If we don't have a current page, create one with the new section in the first column
+    if (!currentPage) {
+      const newPage = {
+        id: `page${Date.now()}`,
+        columns: [
+          { id: `col${Date.now()}`, sections: [newSection] },
+          { id: `col${Date.now() + 1}`, sections: [] },
+          { id: `col${Date.now() + 2}`, sections: [] },
+        ],
+      }
+      updatedPages.push(newPage)
+      setPages(updatedPages)
+      setCurrentPageIndex(updatedPages.length - 1)
+      return
     }
 
+    // Define maximum sections per column for A4 sizing
+    // This is a more conservative number to ensure proper A4 printing
+    const MAX_SECTIONS_PER_COLUMN = 4
+
+    // Get the number of sections in each column
+    const sectionCounts = currentPage.columns.map((col) => col.sections.length)
+
+    // Find the column with the fewest sections
+    const targetColumnIndex = sectionCounts.indexOf(Math.min(...sectionCounts))
+
+    // Check if the target column has reached the maximum
+    if (sectionCounts[targetColumnIndex] >= MAX_SECTIONS_PER_COLUMN) {
+      // All columns on this page are full, create a new page
+      const newPage = {
+        id: `page${Date.now()}`,
+        columns: [
+          { id: `col${Date.now()}`, sections: [newSection] },
+          { id: `col${Date.now() + 1}`, sections: [] },
+          { id: `col${Date.now() + 2}`, sections: [] },
+        ],
+      }
+      updatedPages.push(newPage)
+      setPages(updatedPages)
+      setCurrentPageIndex(updatedPages.length - 1)
+    } else {
+      // Add the new section to the column with the fewest sections
+      currentPage.columns[targetColumnIndex].sections.push(newSection)
+      setPages(updatedPages)
+    }
+  }
+
+  const deleteSection = (columnId: string, sectionId: string) => {
     setPages(
-      filteredPages.length > 0
-        ? filteredPages
-        : [
-            {
-              id: "page1",
-              sections: [],
-            },
-          ],
+      pages.map((page) => ({
+        ...page,
+        columns: page.columns.map((col) => {
+          if (col.id === columnId) {
+            return {
+              ...col,
+              sections: col.sections.filter((sec) => sec.id !== sectionId),
+            }
+          }
+          return col
+        }),
+      })),
     )
   }
 
@@ -154,32 +215,31 @@ Mode: Most frequent element in a dataset.`,
     setTempSectionTitle(section.title)
   }
 
-  const saveEditingSection = (sectionId: string) => {
+  const saveEditingSection = (columnId: string, sectionId: string) => {
     setPages(
       pages.map((page) => ({
         ...page,
-        sections: page.sections.map((sec) => {
-          if (sec.id === sectionId) {
+        columns: page.columns.map((col) => {
+          if (col.id === columnId) {
             return {
-              ...sec,
-              title: tempSectionTitle,
-              content: tempSectionContent,
+              ...col,
+              sections: col.sections.map((sec) => {
+                if (sec.id === sectionId) {
+                  return {
+                    ...sec,
+                    title: tempSectionTitle,
+                    content: tempSectionContent,
+                  }
+                }
+                return sec
+              }),
             }
           }
-          return sec
+          return col
         }),
       })),
     )
     setEditingSectionId(null)
-  }
-
-  const addPage = () => {
-    const newPage: CheatsheetPage = {
-      id: `page${Date.now()}`,
-      sections: [],
-    }
-    setPages([...pages, newPage])
-    setCurrentPageIndex(pages.length)
   }
 
   const nextPage = () => {
@@ -218,32 +278,49 @@ Mode: Most frequent element in a dataset.`,
         const tempContainer = document.createElement("div")
         tempContainer.className = "pdf-export-container"
         tempContainer.style.width = "210mm"
+        tempContainer.style.height = "297mm"
         tempContainer.style.padding = "10mm"
         tempContainer.style.backgroundColor = "white"
         tempContainer.style.position = "absolute"
         tempContainer.style.left = "-9999px"
         tempContainer.style.top = "0"
         tempContainer.style.zIndex = "-1"
+        tempContainer.style.overflow = "hidden"
 
         // Create the page content
         const pageContent = document.createElement("div")
         pageContent.className = "cheatsheet-container"
+        pageContent.style.width = "100%"
+        pageContent.style.height = "100%"
+        pageContent.style.padding = "0"
+        pageContent.style.margin = "0"
+        pageContent.style.boxSizing = "border-box"
 
         // Add header only to the first page
         if (i === 0) {
           const headerDiv = document.createElement("div")
           headerDiv.className = "cheatsheet-header"
+          headerDiv.style.textAlign = "center"
+          headerDiv.style.marginBottom = "20px"
 
           const titleEl = document.createElement("h1")
           titleEl.className = "cheatsheet-title"
+          titleEl.style.fontSize = "24px"
+          titleEl.style.fontWeight = "bold"
+          titleEl.style.margin = "0 0 5px 0"
           titleEl.textContent = title
 
           const subtitleEl = document.createElement("p")
           subtitleEl.className = "cheatsheet-subtitle"
+          subtitleEl.style.fontSize = "14px"
+          subtitleEl.style.margin = "0 0 5px 0"
           subtitleEl.textContent = subtitle
 
           const dateEl = document.createElement("p")
           dateEl.className = "cheatsheet-date"
+          dateEl.style.fontSize = "14px"
+          dateEl.style.fontStyle = "italic"
+          dateEl.style.margin = "0"
           dateEl.textContent = `Last Updated ${lastUpdated}`
 
           headerDiv.appendChild(titleEl)
@@ -255,25 +332,59 @@ Mode: Most frequent element in a dataset.`,
         // Create grid for this page
         const gridDiv = document.createElement("div")
         gridDiv.className = "cheatsheet-grid"
+        gridDiv.style.display = "grid"
+        gridDiv.style.gridTemplateColumns = "repeat(3, 1fr)"
+        gridDiv.style.gap = "10px"
+        gridDiv.style.width = "100%"
 
-        // Add sections for this page
-        pages[i].sections.forEach((section) => {
-          const sectionDiv = document.createElement("div")
-          sectionDiv.className = "cheatsheet-section"
+        // Add columns for this page
+        pages[i].columns.forEach((column) => {
+          const columnDiv = document.createElement("div")
+          columnDiv.className = "cheatsheet-column"
+          columnDiv.style.display = "flex"
+          columnDiv.style.flexDirection = "column"
+          columnDiv.style.gap = "10px"
+          columnDiv.style.width = "100%"
 
-          // Add header
-          const headerDiv = document.createElement("div")
-          headerDiv.className = "cheatsheet-section-header"
-          headerDiv.textContent = section.title
-          sectionDiv.appendChild(headerDiv)
+          // Add sections for this column
+          column.sections.forEach((section) => {
+            const sectionDiv = document.createElement("div")
+            sectionDiv.className = "cheatsheet-section"
+            sectionDiv.style.marginBottom = "10px"
+            sectionDiv.style.borderRadius = "0"
+            sectionDiv.style.border = "1px solid #000"
+            sectionDiv.style.overflow = "hidden"
+            sectionDiv.style.width = "100%"
+            sectionDiv.style.breakInside = "avoid"
+            sectionDiv.style.pageBreakInside = "avoid"
 
-          // Add content
-          const contentDiv = document.createElement("div")
-          contentDiv.className = "cheatsheet-section-content"
-          contentDiv.innerHTML = formatContent(section.content)
-          sectionDiv.appendChild(contentDiv)
+            // Add header
+            const headerDiv = document.createElement("div")
+            headerDiv.className = "cheatsheet-section-header"
+            headerDiv.style.backgroundColor = "#000"
+            headerDiv.style.color = "#fff"
+            headerDiv.style.padding = "5px 10px"
+            headerDiv.style.fontWeight = "bold"
+            headerDiv.style.width = "100%"
+            headerDiv.style.boxSizing = "border-box"
+            headerDiv.textContent = section.title
+            sectionDiv.appendChild(headerDiv)
 
-          gridDiv.appendChild(sectionDiv)
+            // Add content
+            const contentDiv = document.createElement("div")
+            contentDiv.className = "cheatsheet-section-content"
+            contentDiv.style.padding = "10px"
+            contentDiv.style.width = "100%"
+            contentDiv.style.boxSizing = "border-box"
+            contentDiv.style.wordWrap = "break-word"
+            contentDiv.style.overflowWrap = "break-word"
+            contentDiv.innerHTML = formatContent(section.content)
+            sectionDiv.appendChild(contentDiv)
+
+            columnDiv.appendChild(sectionDiv)
+          })
+
+          gridDiv.appendChild(columnDiv)
         })
 
         pageContent.appendChild(gridDiv)
@@ -463,108 +574,111 @@ Mode: Most frequent element in a dataset.`,
             </div>
 
             <div className="cheatsheet-grid">
-              <AnimatePresence>
-                {pages[currentPageIndex]?.sections.map((section) => (
-                  <motion.div
-                    key={section.id}
-                    className="cheatsheet-section"
-                    variants={fadeIn("up", 0.2)}
-                    initial="hidden"
-                    animate="show"
-                    exit={{ opacity: 0, y: 20 }}
-                  >
-                    <div className="cheatsheet-section-header">
-                      {editingSectionId === section.id ? (
-                        <div className="flex items-center w-full">
-                          <Input
-                            value={tempSectionTitle}
-                            onChange={(e) => setTempSectionTitle(e.target.value)}
-                            className="mr-2 bg-white text-black"
-                            autoFocus
-                          />
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-white"
-                            onClick={() => saveEditingSection(section.id)}
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <>
-                          <div>{section.title}</div>
-                          <div className="flex space-x-1 edit-buttons">
+              {pages[currentPageIndex]?.columns.map((column, columnIndex) => (
+                <div
+                  key={column.id}
+                  className="cheatsheet-column"
+                  ref={(el) => {
+                    columnRefs.current[column.id] = el
+                  }}
+                >
+                  {column.sections.map((section, sectionIndex) => (
+                    <motion.div
+                      key={section.id}
+                      className="cheatsheet-section"
+                      variants={fadeIn("up", 0.2)}
+                      initial="hidden"
+                      animate="show"
+                      exit={{ opacity: 0, y: 20 }}
+                    >
+                      <div className="cheatsheet-section-header">
+                        {editingSectionId === section.id ? (
+                          <div className="flex items-center w-full">
+                            <Input
+                              value={tempSectionTitle}
+                              onChange={(e) => setTempSectionTitle(e.target.value)}
+                              className="mr-2 bg-white text-black"
+                              autoFocus
+                            />
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="h-6 w-6 p-0 text-white"
-                              onClick={() => startEditingSection(section)}
+                              className="text-white"
+                              onClick={() => saveEditingSection(column.id, section.id)}
                             >
-                              <Edit2 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0 text-white"
-                              onClick={() => deleteSection(section.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
+                              <Save className="h-4 w-4" />
                             </Button>
                           </div>
-                        </>
-                      )}
-                    </div>
-                    <div className="cheatsheet-section-content">
-                      {editingSectionId === section.id ? (
-                        <div className="p-2">
-                          <Textarea
-                            value={tempSectionContent}
-                            onChange={(e) => setTempSectionContent(e.target.value)}
-                            className="min-h-[200px] font-serif text-sm"
-                            placeholder="Content"
-                          />
-                          <div className="flex justify-end mt-2 space-x-2">
-                            <Button size="sm" variant="outline" onClick={() => setEditingSectionId(null)}>
-                              <X className="h-4 w-4 mr-1" /> Cancel
-                            </Button>
-                            <Button size="sm" onClick={() => saveEditingSection(section.id)}>
-                              <Save className="h-4 w-4 mr-1" /> Save
-                            </Button>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="relative group">
-                          <div className="absolute right-0 top-0 hidden group-hover:flex space-x-1 bg-white/80 rounded p-1 shadow-sm z-10 edit-buttons">
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0"
-                              onClick={() => startEditingSection(section)}
-                            >
-                              <Edit2 className="h-3 w-3" />
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-6 w-6 p-0 text-red-500"
-                              onClick={() => deleteSection(section.id)}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                          <div dangerouslySetInnerHTML={{ __html: formatContent(section.content) }} />
-                        </div>
-                      )}
-                      <div className="add-subsection-button">
-                        <Button variant="ghost" size="sm" className="w-full text-xs">
-                          <Plus className="h-3 w-3 mr-1" /> Add Subsection
-                        </Button>
+                        ) : (
+                          <>
+                            <div>{section.title}</div>
+                            <div className="flex space-x-1 edit-buttons">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-white"
+                                onClick={() => startEditingSection(section)}
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-white"
+                                onClick={() => deleteSection(column.id, section.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </>
+                        )}
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
+                      <div className="cheatsheet-section-content">
+                        {editingSectionId === section.id ? (
+                          <div className="p-2">
+                            <Textarea
+                              value={tempSectionContent}
+                              onChange={(e) => setTempSectionContent(e.target.value)}
+                              className="min-h-[200px] font-serif text-sm"
+                              placeholder="Content"
+                            />
+                            <div className="flex justify-end mt-2 space-x-2">
+                              <Button size="sm" variant="outline" onClick={() => setEditingSectionId(null)}>
+                                <X className="h-4 w-4 mr-1" /> Cancel
+                              </Button>
+                              <Button size="sm" onClick={() => saveEditingSection(column.id, section.id)}>
+                                <Save className="h-4 w-4 mr-1" /> Save
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="relative group">
+                            <div className="absolute right-0 top-0 hidden group-hover:flex space-x-1 bg-white/80 rounded p-1 shadow-sm z-10 edit-buttons">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0"
+                                onClick={() => startEditingSection(section)}
+                              >
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-6 w-6 p-0 text-red-500"
+                                onClick={() => deleteSection(column.id, section.id)}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </div>
+                            <div dangerouslySetInnerHTML={{ __html: formatContent(section.content) }} />
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
         </div>
