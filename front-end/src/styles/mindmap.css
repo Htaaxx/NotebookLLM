@@ -117,3 +117,96 @@
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Modal styles */
+.mind-node-modal {
+  z-index: 1000;
+}
+
+.mind-node-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+}
+
+.mind-node-modal-content {
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Bullet point styling */
+.bullet-point {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.bullet-marker {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10b981;
+  margin-top: 0.5rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Heading styles */
+.node-heading-2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+.node-heading-3 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #1f2937;
+}
+
+.node-heading-4 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+/* Node options menu */
+.mindmap-node-options {
+  animation: fadeIn 0.2s ease-in-out;
+  z-index: 9999 !important; /* Much higher z-index */
+  pointer-events: auto !important;
+  background: white !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2) !important;
+  border: 2px solid #22c55e !important; /* Make it more visible for debugging */
+  border-radius: 4px !important;
+  position: absolute !important;
+  top: auto !important; /* Add to prevent CSS conflicts */
+  left: auto !important; /* Add to prevent CSS conflicts */
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.mindmap-node-options button:hover {
+  background-color: #f3f4f6;
+}
