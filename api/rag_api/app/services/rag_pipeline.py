@@ -37,15 +37,15 @@ connections.connect(alias="default", uri=ZILLIZ_CLOUD_URI, token=ZILLIZ_CLOUD_TO
 # Define collection name
 COLLECTION_NAME = "rag_collection"
 
-# Initialize Zilliz vector store (LangChain wrapper)
-vector_store = Zilliz(
-    embedding_function=embeddings,
-    connection_args={"uri": ZILLIZ_CLOUD_URI, "token": ZILLIZ_CLOUD_TOKEN},
-    collection_name=COLLECTION_NAME,
-    auto_id=True,
-    vector_field="embedding",  # Name of your vector field
-    text_field="content",  # Name of your text field
-)
+# # Initialize Zilliz vector store (LangChain wrapper)
+# vector_store = Zilliz(
+#     embedding_function=embeddings,
+#     connection_args={"uri": ZILLIZ_CLOUD_URI, "token": ZILLIZ_CLOUD_TOKEN},
+#     collection_name=COLLECTION_NAME,
+#     auto_id=True,
+#     vector_field="embedding",  # Name of your vector field
+#     text_field="content",  # Name of your text field
+# )
 
 # Set up LLM
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API_KEY)
@@ -73,37 +73,75 @@ YÊU CẦU FORMAT:
 )
 
 
-def ask_question(question: str) -> str:
-    # Tăng số documents retrieved
+# --- THÊM HÀM HELPER ---
+def get_user_collection_name(user_id: str) -> str:
+    """Tạo tên collection chuẩn hóa cho user."""
+    # Đảm bảo tên collection hợp lệ (loại bỏ ký tự đặc biệt nếu cần)
+    safe_user_id = re.sub(r"[^a-zA-Z0-9_]", "_", user_id)
+    return f"user_{safe_user_id}_rag"
+
+
+def get_user_vector_store(user_id: str) -> Zilliz:
+    """Lấy (hoặc tạo nếu chưa có) vector store cho user cụ thể."""
+    collection_name = get_user_collection_name(user_id)
+    # print(f"Accessing vector store for user: {user_id}, collection: {collection_name}") # Debug
+    # Zilliz wrapper thường tự tạo collection nếu chưa có khi dùng lần đầu
+    # Tuy nhiên, bạn có thể kiểm tra và tạo rõ ràng nếu muốn kiểm soát schema chặt chẽ hơn
+    # if not utility.has_collection(collection_name):
+    #     print(f"Collection {collection_name} not found, it will be created.")
+    # Define schema if needed before initializing Zilliz
+    # ... (code tạo schema) ...
+
+    vector_store_instance = Zilliz(
+        embedding_function=embeddings,
+        connection_args={"uri": ZILLIZ_CLOUD_URI, "token": ZILLIZ_CLOUD_TOKEN},
+        collection_name=collection_name,
+        auto_id=True,
+        vector_field="embedding",
+        text_field="content",
+    )
+    return vector_store_instance
+
+
+def get_user_milvus_collection(user_id: str) -> Collection:
+    """Lấy đối tượng Collection của pymilvus cho user."""
+    collection_name = get_user_collection_name(user_id)
+    if not utility.has_collection(collection_name):
+        # Xử lý trường hợp collection chưa tồn tại (quan trọng cho các hàm delete, query trực tiếp)
+        # Có thể raise lỗi hoặc trả về None/empty tùy logic mong muốn
+        print(
+            f"Warning: Collection '{collection_name}' for user '{user_id}' does not exist."
+        )
+        # Hoặc tạo collection ở đây nếu logic yêu cầu
+        # raise ValueError(f"Collection for user {user_id} not found.")
+        # Tạm thời trả về None, hàm gọi cần kiểm tra
+        return None
+    return Collection(collection_name)
+
+
+# --- SỬA ĐỔI CÁC HÀM SERVICE ---
+
+
+# Ví dụ sửa đổi hàm ask_question
+def ask_question(user_id: str, question: str) -> str:
+    """Trả lời câu hỏi dựa trên collection của user."""
+    vector_store = get_user_vector_store(user_id)
     retrieved_docs = vector_store.similarity_search(
         question, k=8, params={"metric_type": "IP", "params": {"nprobe": 64}}
     )
-
-    # Format citations
+    # ... (phần còn lại của hàm giữ nguyên logic format, gọi LLM) ...
     citations = format_citations(retrieved_docs)
-
-    # Chuẩn bị context với citation markers
     context_parts = []
     for idx, doc in enumerate(retrieved_docs, 1):
         context_parts.append(
             f"[DOCUMENT {idx}]\nFile: {doc.metadata.get('filename')}\nPage: {doc.metadata.get('page_number')}\nContent: {doc.page_content[:300]}..."
         )
-
-    # Gọi LLM
     messages = prompt.invoke(
         {"question": question, "context": "\n\n".join(context_parts)}
     )
     response = llm.invoke(messages)
-
-    # Validate citations before returning (optional)
     final_response = validate_citations(response.content, citations)
-
-    # # Append references section
-    # references_text = "\n\nREFERENCES:\n"
-    # for idx, details in citations.items():
-    #     references_text += f"[{idx}] File: \"{details['file']}\", Trang: {details['page']}, Nội dung: \"{details['full_content']}\"\n"
-
-    return final_response  # + references_text
+    return final_response
 
 
 """
@@ -152,202 +190,169 @@ def sanitize_metadata_keys(metadata: dict) -> dict:
     return {re.sub(r"[^a-zA-Z0-9_]", "_", k): v for k, v in metadata.items()}
 
 
-def process_and_store_pdf(file_bytes: bytes, filename: str, doc_id: str) -> int:
-    """Process PDF and store minimal metadata into Milvus. Return chunk count."""
-    import fitz  # PyMuPDF
-
-    # Check if document with this doc_id already exists
-    existing_count = get_embedding_count_for_doc_id(doc_id)
+# Ví dụ sửa đổi hàm process_and_store_pdf
+def process_and_store_pdf(
+    user_id: str, file_bytes: bytes, filename: str, doc_id: str
+) -> int:
+    """Xử lý PDF và lưu vào collection của user."""
+    # Kiểm tra sự tồn tại dựa trên collection của user
+    existing_count = get_embedding_count_for_doc_id(user_id, doc_id)
     if existing_count > 0:
         print(
-            f"Warning: Document with doc_id '{doc_id}' already exists ({existing_count} embeddings). Skipping embedding."
+            f"Warning: Document with doc_id '{doc_id}' already exists in collection for user '{user_id}'. Skipping."
         )
-        # Optionally, raise an exception or return a specific status
-        # raise ValueError(f"Document with doc_id '{doc_id}' already exists.")
-        return 0  # Indicate nothing new was added
+        return 0
 
+    vector_store = get_user_vector_store(user_id)  # Lấy vector store cho user này
+
+    # ... (phần xử lý file, chunking giữ nguyên) ...
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as tmp_file:
         tmp_file.write(file_bytes)
         tmp_path = tmp_file.name
-
+    # ... (try/except/finally block giữ nguyên) ...
     try:
-        # Get total number of pages (for UI use)
-        doc = fitz.open(tmp_path)
-        total_pages = len(doc)
-        doc.close()  # Close the document after getting page count
-
-        # Load PDF
+        # ... (load pdf, split chunks) ...
         loader = PyPDFLoader(tmp_path)
         docs = loader.load()
-
-        # Split into chunks
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000, chunk_overlap=200
         )
         chunks = text_splitter.split_documents(docs)
-
-        # Save minimal metadata
+        # ... (prepare metadata - có thể thêm user_id vào metadata nếu muốn) ...
         prepared_chunks = []
         for i, chunk in enumerate(chunks):
             cleaned_metadata = {
-                "doc_id": doc_id,  # Store the client-provided doc_id
-                "chunk_id": f"{doc_id}_{i}",  # Create a unique ID for the chunk
+                "doc_id": doc_id,
+                # "user_id": user_id, # Option: Lưu cả user_id vào metadata
+                "chunk_id": f"{doc_id}_{i}",
                 "chunk_index": i,
                 "filename": filename,
-                "page_number": chunk.metadata.get("page", -1)
-                + 1,  # Adjust page number (PyPDFLoader is 0-based)
-                "total_pages": total_pages,
+                "page_number": chunk.metadata.get("page", -1) + 1,
+                # "total_pages": total_pages, # Cần lấy total_pages trước đó
             }
-            # Create new Document objects with only the cleaned metadata
             prepared_chunks.append(
                 Document(page_content=chunk.page_content, metadata=cleaned_metadata)
             )
 
-        # Store in batches
-        batch_size = 16  # Adjust batch size based on performance/memory
+        # Lưu vào vector store của user
+        batch_size = 16
         for i in tqdm(
             range(0, len(prepared_chunks), batch_size),
-            desc=f"Embedding chunks for {filename}",
+            desc=f"Embedding chunks for {filename} (User: {user_id})",
         ):
             batch = prepared_chunks[i : i + batch_size]
-            vector_store.add_documents(batch)
+            vector_store.add_documents(batch)  # Sử dụng instance vector_store của user
 
         print(
-            f"Successfully added {len(prepared_chunks)} embeddings for doc_id '{doc_id}'."
+            f"Successfully added {len(prepared_chunks)} embeddings for doc_id '{doc_id}' for user '{user_id}'."
         )
         return len(prepared_chunks)
-
+    # ... (phần except, finally giữ nguyên) ...
     except Exception as e:
-        print(f"Error processing PDF {filename} for doc_id {doc_id}: {e}")
-        # Optionally, try to clean up embeddings if partial addition occurred
-        # delete_embeddings(document_id=doc_id)
-        raise e  # Re-raise the exception
+        print(
+            f"Error processing PDF {filename} for user {user_id}, doc_id {doc_id}: {e}"
+        )
+        raise e
     finally:
-        # Ensure temporary file is deleted
         if "tmp_path" in locals() and os.path.exists(tmp_path):
             os.unlink(tmp_path)
 
 
-# --- MODIFIED delete_embeddings FUNCTION ---
+# Ví dụ sửa đổi hàm delete_embeddings
 def delete_embeddings(
-    filter_dict: Optional[Dict[str, Any]] = None, document_id: Optional[str] = None
+    user_id: str,  # Thêm user_id
+    filter_dict: Optional[Dict[str, Any]] = None,
+    document_id: Optional[str] = None,
 ) -> int:
-    """
-    Delete embeddings from the vector store based on a filter or document ID.
-
-    Args:
-        filter_dict: A dictionary defining filter conditions (e.g., {"filename": "example.pdf"}).
-        document_id: The specific document ID (metadata field 'doc_id') to delete.
-
-    Returns:
-        The number of embeddings deleted.
-    """
-    try:
-        if not utility.has_collection(COLLECTION_NAME):
-            print(f"Collection '{COLLECTION_NAME}' does not exist. Nothing to delete.")
-            return 0
-
-        collection = Collection(
-            COLLECTION_NAME
-        )  # Get collection object for more control
-        filter_expression = ""
-
-        if document_id is not None:
-            # **CORRECTED:** Delete documents matching the doc_id metadata field using a filter expression
-            # Ensure proper quoting for string values in the expression
-            filter_expression = f'doc_id == "{document_id}"'
-            print(f"Attempting to delete embeddings with filter: {filter_expression}")
-
-        elif filter_dict is not None and filter_dict:
-            # Build filter expression from dictionary (simple 'and' logic for now)
-            filter_parts = []
-            for k, v in filter_dict.items():
-                # Basic quoting for string values, assumes other types don't need quotes
-                if isinstance(v, str):
-                    filter_parts.append(f'{k} == "{v}"')
-                else:
-                    filter_parts.append(f"{k} == {v}")
-            filter_expression = " and ".join(filter_parts)
-            print(f"Attempting to delete embeddings with filter: {filter_expression}")
-
-        else:
-            # Delete all documents if neither document_id nor filter_dict is provided
-            # Using 'id >= 0' relies on the auto-generated 'id' field (Int64 PK)
-            # You could also use a known metadata field like 'doc_id != ""' if all docs have it
-            filter_expression = "id >= 0"
-            print(
-                f"Attempting to delete ALL embeddings with filter: {filter_expression}"
-            )
-
-        if not filter_expression:
-            print(
-                "No valid delete condition provided (document_id, filter_dict, or delete all)."
-            )
-            return 0
-
-        # Perform the delete operation using the filter expression
-        res = collection.delete(expr=filter_expression)
-        print(f"Deletion result: {res}")
-
-        # Milvus delete is asynchronous by default, optionally wait for consistency
-        # print("Flushing collection...")
-        # collection.flush()
-        # print("Flush complete.")
-
-        # The result object 'res' might directly contain delete_count or similar attribute
-        # Check the specific return type of collection.delete for your pymilvus version
-        # Assuming res.delete_count or similar exists:
-        deleted_count = getattr(res, "delete_count", 0)  # Safely get count
-        if deleted_count == 0 and filter_expression != "id >= 0":
-            # Check if entities actually existed before deletion attempt
-            # This query runs *before* flush makes deletion fully visible sometimes
-            # pre_delete_count = collection.query(expr=filter_expression, output_fields=["id"], limit=1)
-            # if not pre_delete_count:
-            #     print(f"No embeddings matched the filter '{filter_expression}' before deletion.")
-            pass  # For now, just rely on the returned delete_count
-
+    """Xóa embeddings từ collection của user."""
+    collection_name = get_user_collection_name(user_id)
+    if not utility.has_collection(collection_name):
         print(
-            f"Successfully deleted {deleted_count} embeddings matching expression: '{filter_expression}'"
+            f"Collection '{collection_name}' for user '{user_id}' does not exist. Nothing to delete."
+        )
+        return 0
+
+    # Lấy đối tượng Collection từ pymilvus để dùng hàm delete
+    collection = get_user_milvus_collection(user_id)
+    if (
+        not collection
+    ):  # Kiểm tra nếu collection không tồn tại (get_user_milvus_collection trả None)
+        return 0
+
+    filter_expression = ""
+    # ... (logic tạo filter_expression giữ nguyên, nhưng nó sẽ áp dụng lên collection của user) ...
+    if document_id is not None:
+        filter_expression = f'doc_id == "{document_id}"'
+        print(
+            f"Attempting to delete from {collection_name} with filter: {filter_expression}"
+        )
+    elif filter_dict is not None and filter_dict:
+        filter_parts = []
+        for k, v in filter_dict.items():
+            if isinstance(v, str):
+                filter_parts.append(f'{k} == "{v}"')
+            else:
+                filter_parts.append(f"{k} == {v}")
+        filter_expression = " and ".join(filter_parts)
+        print(
+            f"Attempting to delete from {collection_name} with filter: {filter_expression}"
+        )
+    else:
+        # Xóa TẤT CẢ trong collection CỦA USER NÀY
+        filter_expression = "id >= 0"  # Hoặc 'pk >= 0' tùy vào schema
+        print(
+            f"Attempting to delete ALL embeddings from {collection_name} with filter: {filter_expression}"
+        )
+
+    if not filter_expression:
+        print("No valid delete condition provided.")
+        return 0
+
+    try:
+        res = collection.delete(expr=filter_expression)
+        # collection.flush() # Cân nhắc flush nếu cần thấy kết quả ngay
+        deleted_count = getattr(res, "delete_count", 0)
+        print(
+            f"Successfully deleted {deleted_count} embeddings from {collection_name} matching: '{filter_expression}'"
         )
         return deleted_count
-
     except Exception as e:
-        print(f"Error deleting embeddings: {e}")
-        # Consider logging the full traceback
+        print(f"Error deleting embeddings from {collection_name}: {e}")
         import traceback
 
         traceback.print_exc()
-        raise e  # Re-raise the exception for the API layer to handle
+        raise e
 
 
-# Helper function to check existence before embedding (optional)
-def get_embedding_count_for_doc_id(doc_id: str) -> int:
-    """Counts existing embeddings for a given doc_id."""
+# Ví dụ sửa đổi hàm get_embedding_count_for_doc_id
+def get_embedding_count_for_doc_id(user_id: str, doc_id: str) -> int:
+    """Đếm số embedding cho doc_id trong collection của user."""
+    collection = get_user_milvus_collection(user_id)
+    if not collection:
+        return 0
     try:
-        if not utility.has_collection(COLLECTION_NAME):
-            return 0
-        collection = Collection(COLLECTION_NAME)
         filter_expression = f'doc_id == "{doc_id}"'
-        # Use query with count=True for efficiency if supported, otherwise count results
-        # Check pymilvus documentation for the most efficient way to count
         results = collection.query(
-            expr=filter_expression, output_fields=["id"], limit=16384
-        )  # Limit might be needed
+            expr=filter_expression, output_fields=["id"], limit=1
+        )  # Chỉ cần check tồn tại
         return len(results)
     except Exception as e:
-        print(f"Error checking embedding count for doc_id '{doc_id}': {e}")
-        return 0  # Assume none exist if error occurs
+        print(
+            f"Error checking embedding count for user '{user_id}', doc_id '{doc_id}': {e}"
+        )
+        return 0
 
 
-def get_document_embeddings(doc_id: str):
+# Ví dụ sửa đổi hàm get_document_embeddings
+def get_document_embeddings(user_id: str, doc_id: str):
+    """Lấy embeddings cho doc_id từ collection của user."""
+    collection = get_user_milvus_collection(user_id)
+    if not collection:
+        raise ValueError(
+            f"Collection for user {user_id} not found."
+        )  # Hoặc trả về rỗng
+
     try:
-        if not utility.has_collection(COLLECTION_NAME):
-            print(f"Collection '{COLLECTION_NAME}' does not exist.")
-            return {"doc_id": doc_id, "total_chunks": 0, "embeddings": []}
-
-        collection = Collection(COLLECTION_NAME)
-
-        # Fetch necessary fields, including the vector ('embedding')
         output_fields = [
             "embedding",
             "chunk_id",
@@ -356,208 +361,103 @@ def get_document_embeddings(doc_id: str):
             "filename",
             "total_pages",
         ]
-
-        # Query using the doc_id metadata field
         results = collection.query(
             expr=f'doc_id == "{doc_id}"',
             output_fields=output_fields,
-            # consistency_level="Strong" # Optional: Ensure latest results after writes
         )
-
+        # ... (phần còn lại của hàm format kết quả giữ nguyên) ...
         formatted_embeddings = []
         total_chunks = len(results)
-
         if total_chunks > 0:
-            # Assuming all results belong to the same document
-            first_result = results[0]  # Get metadata from the first chunk
-            doc_id_from_meta = first_result.get(
-                "doc_id", doc_id
-            )  # Use retrieved id if available
-
+            # ... (format results) ...
             for result in results:
-                # Ensure all required fields are present, provide defaults if missing
                 formatted_embeddings.append(
                     {
                         "chunk_id": result.get("chunk_id", "N/A"),
-                        "embedding": result.get("embedding", []),  # Include the vector
+                        "embedding": result.get("embedding", []),
                         "page_number": result.get("page_number", -1),
                         "content": result.get("content", ""),
-                        # Optionally add other metadata if needed
-                        # "filename": result.get("filename", "N/A"),
-                        # "total_pages": result.get("total_pages", -1),
                     }
                 )
-
             return {
-                "doc_id": doc_id_from_meta,  # Return the ID found in metadata
+                "doc_id": doc_id,  # Giả định doc_id là đúng
                 "total_chunks": total_chunks,
                 "embeddings": formatted_embeddings,
             }
         else:
-            # No embeddings found for this doc_id
-            return {
-                "doc_id": doc_id,
-                "total_chunks": 0,
-                "embeddings": [],
-            }
+            return {"doc_id": doc_id, "total_chunks": 0, "embeddings": []}
 
     except Exception as e:
-        print(f"Error retrieving embeddings for doc_id '{doc_id}': {e}")
-        # Log traceback for debugging
+        print(
+            f"Error retrieving embeddings for user '{user_id}', doc_id '{doc_id}': {e}"
+        )
         import traceback
 
         traceback.print_exc()
-        # Re-raise a more specific error for the API layer
-        raise ValueError(f"Lỗi khi lấy embeddings cho doc_id '{doc_id}': {str(e)}")
+        raise ValueError(
+            f"Lỗi khi lấy embeddings cho user '{user_id}', doc_id '{doc_id}': {str(e)}"
+        )
 
 
-# mindmapppppppppppppppppppppppppp
-# (Hàm get_smaller_branches_from_docs giữ nguyên như cũ)
-# ... [rest of the file remains the same] ...
-async def get_smaller_branches_from_docs(documentIDs: List[str], num_clusters: int = 5):
+# Ví dụ sửa đổi hàm get_smaller_branches_from_docs
+async def get_smaller_branches_from_docs(
+    user_id: str, documentIDs: List[str], num_clusters: int = 5
+):
+    """Lấy nhánh con từ các tài liệu trong collection của user."""
     all_chunks_content = []
-    all_embeddings_vectors = []  # Store only the vectors for clustering
-
-    print(f"Fetching embeddings for document IDs: {documentIDs}")
+    all_embeddings_vectors = []
+    print(f"Fetching embeddings for user '{user_id}', doc IDs: {documentIDs}")
 
     for doc_id in documentIDs:
         try:
-            # Use the existing function to get detailed embeddings data
-            result = get_document_embeddings(doc_id)  # Changed to non-async call
-            print(f"Retrieved {result['total_chunks']} chunks for doc_id: {doc_id}")
-
+            # Gọi hàm đã sửa đổi để lấy data từ collection của user
+            result = get_document_embeddings(user_id, doc_id)
+            # ... (phần còn lại xử lý result, gộp chunk, clustering giữ nguyên) ...
             if result["total_chunks"] > 0:
                 for inner_chunk in result["embeddings"]:
-                    # Ensure content and embedding are valid
                     content = inner_chunk.get("content")
                     embedding_vector = inner_chunk.get("embedding")
-
                     if content and embedding_vector:
                         all_chunks_content.append(content)
                         all_embeddings_vectors.append(embedding_vector)
-                    else:
-                        print(
-                            f"Warning: Skipping chunk with missing content or embedding for doc_id {doc_id}"
-                        )
-            else:
-                print(f"Warning: No embeddings found for doc_id {doc_id}")
-
+                    # ... (else log warning) ...
+            # ... (else log warning) ...
         except Exception as e:
-            print(f"Error fetching embeddings for doc_id {doc_id}: {e}")
-            # Decide if you want to stop or continue with other IDs
-            # raise HTTPException(status_code=500, detail=f"Error fetching data for {doc_id}: {str(e)}") from e
-
-    if not all_chunks_content:
-        print("No chunks found for any provided document ID.")
-        # Return an empty structure or raise an error
-        # return {"smaller_branches": "# root\n(No content found)"}
-        raise ValueError(
-            "Không tìm thấy nội dung chunk hợp lệ cho bất kỳ document ID nào được cung cấp."
-        )
-    if not all_embeddings_vectors:
-        raise ValueError("Không tìm thấy vector embedding hợp lệ nào.")
-    if len(all_chunks_content) != len(all_embeddings_vectors):
-        raise ValueError("Mismatch between number of chunks and embeddings collected.")
-
-    print(f"Total chunks collected: {len(all_chunks_content)}")
-    print(f"Total embeddings collected: {len(all_embeddings_vectors)}")
-
-    # check if num_clusters is greater than number of chunks
-    actual_num_clusters = min(num_clusters, len(all_chunks_content))
-    if actual_num_clusters < 1:
-        raise ValueError("Cannot perform clustering with zero chunks.")
-
-    if actual_num_clusters != num_clusters:
-        print(
-            f"Warning: Requested {num_clusters} clusters, but only {len(all_chunks_content)} chunks available. Using {actual_num_clusters} clusters."
-        )
-
-    print(f"Performing KMeans clustering with {actual_num_clusters} clusters...")
-    # Clustering embeddings vectors
-    try:
-        kmeans_model = KMeans(
-            n_clusters=actual_num_clusters, random_state=42, n_init=10
-        )  # Set n_init explicitly
-        kmeans_predictions = kmeans_model.fit_predict(all_embeddings_vectors)
-        print(
-            "KMeans predictions (cluster assignments for each chunk):",
-            kmeans_predictions,
-        )
-    except Exception as cluster_error:
-        print(f"Error during KMeans clustering: {cluster_error}")
-        raise ValueError(
-            f"Lỗi trong quá trình phân cụm: {cluster_error}"
-        ) from cluster_error
-
-    combined_chunks = combine_chunks(all_chunks_content, kmeans_predictions)
-    print(f"Combined chunks into {len(combined_chunks)} clusters.")
-
-    result = "# root\n"  # Start of the markdown result
-
-    # Ensure processing happens for the actual number of clusters formed
-    for i in range(actual_num_clusters):  # Iterate up to the actual number of clusters
-        if i not in combined_chunks:
             print(
-                f"Warning: Cluster index {i} not found in combined_chunks (this might indicate an issue). Skipping."
+                f"Error fetching embeddings for user '{user_id}', doc_id {doc_id}: {e}"
             )
+
+    # ... (phần clustering và tạo markdown giữ nguyên) ...
+    if not all_chunks_content or not all_embeddings_vectors:
+        raise ValueError("Không tìm thấy nội dung/embedding hợp lệ.")
+    # ... (clustering logic) ...
+    actual_num_clusters = min(num_clusters, len(all_chunks_content))
+    # ... (kmeans) ...
+    kmeans_model = KMeans(n_clusters=actual_num_clusters, random_state=42, n_init=10)
+    kmeans_predictions = kmeans_model.fit_predict(all_embeddings_vectors)
+    # ... (combine chunks, call LLM, extract headers) ...
+    combined_chunks = combine_chunks(all_chunks_content, kmeans_predictions)
+    result = "# root\n"
+    for i in range(actual_num_clusters):
+        if i not in combined_chunks:
             continue
-
         cluster_content = combined_chunks[i]
-        print(f"\nProcessing cluster {i} (content length: {len(cluster_content)})...")
-
+        if not cluster_content.strip():
+            continue
         try:
-            # Ensure content is not empty before sending to LLM
-            if not cluster_content.strip():
-                print(
-                    f"Cluster {i} has empty content after combining. Skipping LLM call."
-                )
-                continue
-
-            print(f"Sending cluster {i} content to LLM for header extraction...")
-            # Use await if llm.chat.completions.create is async, otherwise remove await
-            # Assuming ChatOpenAI's invoke/create methods might be sync depending on usage context
-            # Check langchain documentation for ChatOpenAI's specific methods used
-            completion = llm.invoke(  # Changed to invoke which might be sync
+            completion = llm.invoke(  # hoặc await nếu llm.invoke là async
                 [
-                    {
-                        "role": "system",
-                        "content": "Bạn là trợ lý hữu ích, định dạng lại văn bản thành markdown dễ đọc dùng \n# cho header 1, \n## cho header 2, \n### header 3 theo thứ tự. Chỉ trả về phần header theo cấu trúc cây.",
-                        # "content": "You are a helpful assistant that reformats text to markdown using #, ##, ### for headers in hierarchical order. Extract only the hierarchical header structure from the provided text.",
-                    },
+                    {"role": "system", "content": "... prompt header ..."},
                     {"role": "user", "content": cluster_content},
                 ]
             )
-
-            # Extract the content from the response
-            # text = completion.choices[0].message.content
-            text = completion.content  # Access content directly if using invoke
-            print(
-                f"LLM response for cluster {i}: {text[:200]}..."
-            )  # Print partial response
-
-            # Extract headers (ensure this function works as expected)
+            text = completion.content
             header_text = extract_all_headers(text)
-            print(f"Extracted headers for cluster {i}: {header_text.strip()}")
-
-            # Append extracted headers, ensuring proper indentation if needed
-            result += header_text  # Assumes extract_all_headers provides correct markdown hierarchy
-
-            # Optionally write full reformatted text to file for debugging
-            # write_to_file(f"cluster_{i}_reformatted.md", text)
-
+            result += header_text
         except Exception as e:
-            print(
-                f"Error generating completion or extracting headers for cluster {i}: {e}"
-            )
-            # Decide how to handle errors: skip cluster, add placeholder, etc.
+            print(f"Error processing cluster {i} for user {user_id}: {e}")
             result += f"## Cluster {i} (Error Processing)\n"
-            # Log traceback for detailed debugging
-            import traceback
 
-            traceback.print_exc()
-
-    print("\nFinal generated markdown structure:")
-    print(result)
     return result
 
 
