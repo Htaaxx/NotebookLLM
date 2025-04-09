@@ -14,7 +14,6 @@ import {
 import { MindMapTaskbar } from "./mindmap-taskbar"
 import "../styles/mindmap.css"
 import { MindMapNodeModal } from "./mindmap-node-modal"
-import { MindMapNodeOptions } from "./mindmap-node-options"
 
 
 // ----------------------------------------------------------------
@@ -59,6 +58,13 @@ interface MindElixirData {
   linkData?: any
 }
 
+interface MindMapNode {
+  id: string
+  topic: string
+  level: number
+  detailContent?: string
+}
+
 // ----------------------------------------------------------------
 // COMPONENT IMPLEMENTATION
 // ----------------------------------------------------------------
@@ -77,9 +83,10 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [modalOpen, setModalOpen] = useState(false)
   const [selectedNode, setSelectedNode] = useState<{ title: string; content: string } | null>(null)
 
-  const [optionsPosition, setOptionsPosition] = useState({ x: 0, y: 0 })
-  const [showOptions, setShowOptions] = useState(false)
+  const [allNodes, setAllNodes] = useState<MindMapNode[]>([]);
   const [activeNode, setActiveNode] = useState<any>(null)
+  const [mindmap_node_search, setMindmapNodeSearch] = useState<string[][]>([]);
+
 
   // Get the current theme object
   const getThemeObject = (): MindMapTheme => {
@@ -263,22 +270,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   // Generate unique ID for mind map nodes
   const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2)
 
-  // Debug function to print all nodes and their content
-  const debugNodeContent = (node: TopicNode, level = 0) => {
-    const indent = '  '.repeat(level);
-    console.group(`${indent}Node: "${node.topic}"`);
-    console.log(`${indent}ID: ${node.id}`);
-    console.log(`${indent}Detail content: ${node.detailContent ? '\n' + node.detailContent : '(none)'}`);
-    console.log(`${indent}Level: ${level}`);
-    
-    if (node.children && node.children.length > 0) {
-      console.log(`${indent}Children: ${node.children.length}`);
-      node.children.forEach(child => debugNodeContent(child, level + 1));
-    } else {
-      console.log(`${indent}Children: none`);
-    }
-    console.groupEnd();
-  };
+  
   // Convert markdown content to MindElixir data structure with styling
   const parseMarkdownToMindMap = (markdown: string): MindElixirData => {
     if (!markdown || markdown.trim() === "") {
@@ -395,14 +387,11 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
           }
         }
       })
-      console.log("=== DEBUG: ALL NODE CONTENT ===");
-      debugNodeContent(rootNode);
-      console.log("=== END DEBUG OUTPUT ===");
-      console.log("Parsed mind map structure:", JSON.stringify(rootNode, null, 2).substring(0, 200) + "...")
+      // After parsing is complete, collect all nodes
+      const allNodesInMap = collectAllNodes(rootNode);
+      setAllNodes(allNodesInMap);
       return { nodeData: rootNode as any }
     } catch (err) {
-      console.error("Error parsing markdown:", err)
-      setError("Failed to parse markdown content")
       return { nodeData: { id: "error", topic: "Error", children: [] } }
     }
   }
@@ -426,130 +415,6 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     // Customize connection lines
     customizeLines(container, theme)
   }
-
-    const handleNodeClick = (node: any) => {
-    console.log("Node click handler called with:", node)
-    
-    // Get node position to show options menu next to it
-    let nodeElement = document.querySelector(`[data-nodeid="${node.id}"]`) as HTMLElement
-    if (!nodeElement) {
-      nodeElement = document.querySelector(`[data-id="${node.id}"]`) as HTMLElement
-    }
-
-    if (!nodeElement) {
-      // Try to find by content
-      const nodes = document.querySelectorAll('.map-container .node');
-      for (const n of nodes) {
-        const topic = n.querySelector('.topic');
-        if (topic && topic.textContent === node.topic) {
-          nodeElement = n as HTMLElement;
-          break;
-        }
-      }
-    }
-
-    if (nodeElement) {
-      const rect = nodeElement.getBoundingClientRect()
-      const containerRect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 }
-      
-      // Position the options menu at the right side of the node
-      const x = rect.right - containerRect.left + 10
-      const y = rect.top - containerRect.top + (rect.height / 2) - 20
-      console.log("Setting position:", { x, y });
-      setOptionsPosition({ x, y })
-      setShowOptions(true)
-      setActiveNode(node)
-    }else{
-      console.error("Could not find node element in DOM for node:", node);
-    }
-  }
-
-  const handleDetailClick = () => {
-    console.log("Detail clicked for node:", activeNode)
-    setShowOptions(false)
-    
-    if (!activeNode) return
-    
-    // Extract the node title and content
-    const title = activeNode.topic || "Node Details"
-    
-    // First try to get content directly from the node object
-    let content = activeNode.detailContent || ""
-    
-    // If no content in the node object, try to find it in the markdown
-    if (!content && loadedContent) {
-      const lines = loadedContent.split("\n")
-      const nodeLines: string[] = []
-      let foundNode = false
-      let headingLevel = 0
-      const nodeHeadingPattern = new RegExp(`^#+\\s+${title}\\s*$`, "i")
-  
-      // Find the node in the markdown content
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]
-  
-        // Check if this line contains our node title as a heading
-        if (
-          line.match(/^#+\s/) &&
-          (line.toLowerCase().includes(title.toLowerCase()) || nodeHeadingPattern.test(line))
-        ) {
-          console.log("Found node heading at line:", i, line)
-          foundNode = true
-          headingLevel = line.trim().split(" ")[0].length
-          continue
-        }
-  
-        if (foundNode) {
-          // Stop when we reach another heading at the same or higher level
-          if (line.match(/^#+\s/) && line.trim().split(" ")[0].length <= headingLevel) {
-            break
-          }
-  
-          // Add this line to our node content
-          nodeLines.push(line)
-        }
-      }
-  
-      content = nodeLines.join("\n")
-    }
-  
-    // If no content was found, use a default message
-    if (!content || !content.trim()) {
-      content = "No detailed content available for this node."
-    }
-  
-    // Open the modal with this node's content
-    setSelectedNode({ title, content })
-    setModalOpen(true)
-  }
-
-  const handleSearchClick = () => {
-    console.log("Search clicked for node:", activeNode)
-    setShowOptions(false)
-    // This will be implemented in the future
-    alert("Search functionality will be implemented soon!")
-  }
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      const optionsElement = document.querySelector('.mindmap-node-options')
-      const wasClickInsideOptions = optionsElement && optionsElement.contains(e.target as Node)
-      
-      if (showOptions && !wasClickInsideOptions) {
-        // Check if click was on a node
-        const wasClickOnNode = (e.target as Element).closest('.node')
-        if (!wasClickOnNode) {
-          setShowOptions(false)
-        }
-      }
-    }
-    
-    document.addEventListener('mousedown', handleClickOutside)
-    
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [showOptions])
 
   // Effect to reinitialize when theme changes
   useEffect(() => {
@@ -610,12 +475,12 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         el: container,
         direction: MindElixir.SIDE, // Use side direction for better layout
         draggable: true,
-        contextMenu: false,
+        contextMenu: true,
         toolBar: true,
-        nodeMenu: false,
+        nodeMenu: true,
         keypress: true,
         allowUndo: true,
-        overflowHidden: false,
+        overflowHidden: true,
         primaryLinkStyle: {
           lineWidth: theme.lineStyle.width,
           lineColor: theme.lineStyle.color,
@@ -632,55 +497,6 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
         console.log("Initializing with data:", parsedData)
         me.init(parsedData)
-
-        // Change in the initializeMindMap function in mindmap-view.tsx
-        me.bus.addListener("node_click", (node: any, event?: MouseEvent) => {
-          console.log("Node clicked:", node);
-
-          if (event && event.stopPropagation) {
-            event.stopPropagation();
-          }
-          
-          // Get the DOM element for this node
-          setTimeout(() => {
-            let nodeElement: HTMLElement | null = null;
-            
-            // Method 1: Try to find by data-id attribute
-            nodeElement = document.querySelector(`[data-id="${node.id}"]`) as HTMLElement;
-            
-            // Method 2: Try to find by data-nodeid attribute
-            if (!nodeElement) {
-              nodeElement = document.querySelector(`[data-nodeid="${node.id}"]`) as HTMLElement;
-            }
-
-            // Method 3: Try to find by node content
-            if (!nodeElement) {
-              const nodes = document.querySelectorAll('.node');
-              for (const el of Array.from(nodes)) {
-                const topic = el.querySelector('.topic');
-                if (topic && topic.textContent === node.topic) {
-                  nodeElement = el as HTMLElement;
-                  break;
-                }
-              }
-            }
-            
-            if (nodeElement) {
-              const rect = nodeElement.getBoundingClientRect();
-              const containerRect = containerRef.current?.getBoundingClientRect() || { left: 0, top: 0 };
-              
-              // Position options menu next to the node
-              const x = rect.right - containerRect.left + 10;
-              const y = rect.top - containerRect.top;
-              
-              setOptionsPosition({ x, y });
-              setActiveNode(node);
-              setShowOptions(true);
-              
-              console.log("Options menu should appear at:", { x, y });
-            }
-          }, 10);
-        });
 
         // Apply custom styling after initialization
         setTimeout(() => {
@@ -699,6 +515,132 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       setError(`Failed to initialize mind map: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
+
+  // Function to collect all nodes recursively
+  const collectAllNodes = (node: TopicNode, level: number = 0, result: MindMapNode[] = []) => {
+    result.push({
+      id: node.id,
+      topic: node.topic,
+      level,
+      detailContent: node.detailContent
+    });
+    
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => collectAllNodes(child, level + 1, result));
+    }
+    
+    return result;
+  };
+
+  // Handle node selection from dropdown
+  const handleNodeSelect = (node: MindMapNode) => {
+    console.log("Node selected from dropdown:", node);
+    setActiveNode(node);
+    
+    // Show the modal with node details
+    setSelectedNode({
+      title: node.topic,
+      content: node.detailContent || "No detailed content for this node."
+    });
+    setModalOpen(true);
+  };
+
+  // Helper function to build a parent map
+  const buildParentMap = (
+    node: any, 
+    parent: MindMapNode | null, 
+    parentMap: Map<string, MindMapNode>
+  ) => {
+    if (parent) {
+      parentMap.set(node.id, parent);
+    }
+    
+    if (node.children && node.children.length) {
+      node.children.forEach((child: any) => {
+        buildParentMap(child, node, parentMap);
+      });
+    }
+  };
+
+  // Function to find path from root to node
+  const findNodePath = (targetNode: MindMapNode): string[] => {
+    // Start by finding the node in our flat list
+    if (!allNodes.length) return [targetNode.topic];
+    
+    // Create a map for quick parent lookup
+    const nodeMap = new Map<string, MindMapNode>();
+    const parentMap = new Map<string, MindMapNode>();
+    
+    // First, create a map of all nodes by ID
+    allNodes.forEach(node => {
+      nodeMap.set(node.id, node);
+    });
+    
+    // Build parent-child relationships
+    for (const node of allNodes) {
+      if (containerRef.current && containerRef.current._mindElixirInstance) {
+        const mindElixir = containerRef.current._mindElixirInstance;
+        if (mindElixir.nodeData && mindElixir.nodeData.children) {
+          buildParentMap(mindElixir.nodeData, null, parentMap);
+        }
+      }
+    }
+    
+    // Now trace back from target to root
+    const path: string[] = [];
+    let current: MindMapNode | undefined = targetNode;
+    
+    // Build the path from node to root (we'll reverse it later)
+    while (current) {
+      path.unshift(current.topic); // Add to the beginning
+      
+      // Get the parent from our map
+      const parentNode = parentMap.get(current.id);
+      current = parentNode;
+    }
+    
+    return path;
+  };
+
+  // Handler for when search icon is clicked
+  const handleNodeSearch = (node: MindMapNode) => {
+    console.log("Search clicked for node:", node.topic);
+    
+    // Find the path from root to this node
+    const path = findNodePath(node);
+    
+    // Add this path to our search list if not already present
+    const pathExists = mindmap_node_search.some(p => p.join(',') === path.join(','));
+    
+    if (!pathExists) {
+      // Create new paths array with the new path
+      const newPaths = [...mindmap_node_search, path];
+      setMindmapNodeSearch(newPaths);
+      
+      // Send the updated paths collection to the chat box
+      const searchEvent = new CustomEvent('mindmap_paths_updated', {
+        detail: {
+          paths: newPaths,
+          latestNode: {
+            id: node.id,
+            topic: node.topic
+          }
+        }
+      });
+      
+      // Dispatch the event
+      window.dispatchEvent(searchEvent);
+    }
+  };
+
+  // Add this function to MindMapView
+  const handleRemoveSearchPath = (index: number) => {
+    setMindmapNodeSearch(prevPaths => {
+      const newPaths = [...prevPaths];
+      newPaths.splice(index, 1);
+      return newPaths;
+    });
+  };
 
   // Initialize mind map when content changes
   useEffect(() => {
@@ -765,10 +707,13 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         onZoomOut={handleZoomOut}
         onReset={handleReset}
         containerRef={containerRef as React.RefObject<HTMLDivElement>}
+        nodes={allNodes}
+        onNodeSelect={handleNodeSelect}
+        onNodeSearch={handleNodeSearch} // Add this
+        searchPaths={mindmap_node_search} // Add this
+        onRemoveSearchPath={handleRemoveSearchPath} // Add this
       />
-  
-      {/* Remove the Test Modal button */}
-  
+
       {isLoading ? (
         <div className="p-4 text-center flex-grow flex items-center justify-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
@@ -798,14 +743,6 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
             background: getThemeObject().background,
           }}
         >
-          {/* Node options menu */}
-          <MindMapNodeOptions
-            position={optionsPosition}
-            onDetail={handleDetailClick}
-            onSearch={handleSearchClick}
-            visible={showOptions}
-            className="mindmap-node-options"
-          />
         </div>
       )}
       
