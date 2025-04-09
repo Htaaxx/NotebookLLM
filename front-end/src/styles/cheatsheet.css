@@ -261,3 +261,61 @@
   min-height: var(--a4-height);
   box-sizing: border-box;
 }
+
+/* Add these responsive styles to fix the taskbar on smaller screens */
+
+/* Responsive taskbar */
+.cheatsheet-header-bar {
+  background-color: #4caf50;
+  color: white;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Ensure proper spacing in the taskbar */
+.cheatsheet-header-bar button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Improve responsive behavior */
+@media screen and (max-width: 768px) {
+  .cheatsheet-header-bar {
+    padding: 8px;
+  }
+
+  .cheatsheet-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media screen and (min-width: 769px) and (max-width: 1024px) {
+  .cheatsheet-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Improve PDF export styling */
+.pdf-export-container {
+  font-family: "Times New Roman", Times, serif;
+  box-sizing: border-box;
+}
+
+.pdf-export-container .cheatsheet-section-header {
+  font-size: 12px;
+  padding: 4px 8px;
+}
+
+.pdf-export-container .cheatsheet-section-content {
+  font-size: 10px;
+  line-height: 1.3;
+  padding: 8px;
+}
+
+/* Ensure proper A4 sizing */
+:root {
+  --a4-width: 210mm;
+  --a4-height: 297mm;
+  --a4-margin: 10mm;
+}
