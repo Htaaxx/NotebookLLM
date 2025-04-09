@@ -3,7 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
-import { ChevronDown, ChevronUp, Send, RefreshCw, Settings, FileText, Sparkles } from "lucide-react"
+import { ChevronDown, ChevronUp, Send, RefreshCw, Settings, FileText, Sparkles, X, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/lib/language-context"
@@ -31,6 +31,56 @@ export function ChatBox() {
   const [contextWindow, setContextWindow] = useState(10)
 
   const chatEndRef = useRef<HTMLDivElement | null>(null)
+
+  const [searchPaths, setSearchPaths] = useState<string[][]>([]);
+  const [showSearchDropdown, setShowSearchDropdown] = useState(false);
+  const [latestSearchNode, setLatestSearchNode] = useState<{id: string, topic: string} | null>(null);
+
+  useEffect(() => {
+    // Handler for mind map search events
+    const handleMindMapPathsUpdated = (event: any) => {
+      const { paths, latestNode } = event.detail;
+      
+      // Update our local state with the paths
+      setSearchPaths(paths);
+      
+      // Store the latest added node for feedback
+      setLatestSearchNode(latestNode);
+      
+      // Show the dropdown
+      setShowSearchDropdown(true);
+    };
+    
+    // Add event listener
+    window.addEventListener('mindmap_paths_updated', handleMindMapPathsUpdated);
+    
+    // Clean up function
+    return () => {
+      window.removeEventListener('mindmap_paths_updated', handleMindMapPathsUpdated);
+    };
+  }, []);
+
+  // Add this function to handle selecting a search path
+  const handleSelectSearchPath = (path: string[]) => {
+    // Add the selected path to chat history
+    const pathString = path.join(' → ');
+    
+    setChatHistory(prev => [
+      ...prev, 
+      { 
+        text: `Search Mind Map Path: "${pathString}"`, 
+        isUser: true 
+      }
+    ]);
+    
+    // Hide the dropdown after selection
+    setShowSearchDropdown(false);
+  };
+
+  const handleClearSearchPaths = () => {
+    setSearchPaths([]);
+    setShowSearchDropdown(false);
+  };
 
   useEffect(() => {
     if (chatEndRef.current) {
@@ -227,127 +277,88 @@ export function ChatBox() {
       <motion.div className="border-t p-4 bg-white" variants={fadeIn("up", 0.3)} initial="hidden" animate="show">
          {/* ... (phần settings và form input giữ nguyên như cũ) ... */}
         <div className="flex items-center justify-between mb-2">
-          <motion.button
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <Settings className="w-4 h-4 mr-1" />
-            {t("chatSettings")}
-            {showSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-          </motion.button>
+        <motion.button
+          onClick={() => setShowSettings(!showSettings)}
+          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-700"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <Settings className="w-4 h-4 mr-1" />
+          {/* Change this line from t("chatSettings") to "MindMapPath" */}
+          {"MindMapPath"}
+          {showSettings ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        </motion.button>
         </div>
 
         <AnimatePresence>
-          {showSettings && (
-            <motion.div
-              className="mb-4 p-4 bg-gray-50 rounded-lg"
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {/* ... Nội dung settings ... */}
-               <div className="space-y-4">
-                <h3 className="text-sm font-medium">AI Model Settings</h3>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Model</label>
-                    <Select value={model} onValueChange={setModel}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select model" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="gpt-4o">GPT-4o</SelectItem>
-                        <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                        <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                        <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
-                        <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Max Tokens</label>
-                    <Select
-                      value={maxTokens.toString()}
-                      onValueChange={(value) => setMaxTokens(Number.parseInt(value))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Max tokens" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1000">1,000</SelectItem>
-                        <SelectItem value="2000">2,000</SelectItem>
-                        <SelectItem value="4000">4,000</SelectItem>
-                        <SelectItem value="8000">8,000</SelectItem>
-                        <SelectItem value="16000">16,000</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
+            {showSettings && (
+              <motion.div
+                className="mb-4 p-4 bg-gray-50 rounded-lg"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <div className="space-y-4">
+        
+                  
+                  {/* Search Paths Dropdown */}
+                  {searchPaths.length > 0 ? (
+                    <div className="mt-2 relative">
+                      <div className="flex items-center justify-between">
+                        <button
+                          onClick={() => setShowSearchDropdown(!showSearchDropdown)}
+                          className="flex items-center text-sm text-gray-600 hover:text-gray-900"
+                        >
+                          <Search className="w-4 h-4 mr-1" />
+                          Available Paths ({searchPaths.length})
+                          <ChevronDown className={`ml-1 w-4 h-4 transition-transform ${showSearchDropdown ? "rotate-180" : ""}`} />
+                        </button>
+                        
+                        {latestSearchNode && (
+                          <div className="text-xs text-gray-500">
+                            Added path to "{latestSearchNode.topic}"
+                          </div>
+                        )}
+                        
+                        <button
+                          onClick={handleClearSearchPaths}
+                          className="text-xs text-red-500 hover:text-red-700"
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                      
+                      {showSearchDropdown && (
+                        <div className="absolute z-50 mt-1 w-full bg-white rounded-md border border-gray-300 shadow-lg max-h-60 overflow-y-auto">
+                          <div className="p-2 text-xs font-medium text-gray-500 bg-gray-50">
+                            Click a path to add it to your message
+                          </div>
+                          
+                          {searchPaths.map((path, index) => (
+                            <button
+                              key={index}
+                              className="flex items-center justify-between w-full p-2 text-sm hover:bg-green-50 border-t border-gray-100"
+                              onClick={() => handleSelectSearchPath(path)}
+                            >
+                              <span className="truncate">
+                                {path.join(' → ')}
+                              </span>
+                              <Search className="w-4 h-4 ml-2 flex-shrink-0 text-green-500" />
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      No mind map paths selected. Click search icons in the mind map to add paths.
+                    </div>
+                  )}
                 </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <label className="text-sm font-medium">Temperature: {temperature.toFixed(1)}</label>
-                  </div>
-                  <Slider
-                    value={[temperature]}
-                    min={0}
-                    max={1}
-                    step={0.1}
-                    onValueChange={(value) => setTemperature(value[0])}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between text-xs text-gray-500">
-                    <span>Precise</span>
-                    <span>Creative</span>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <h3 className="text-sm font-medium">Knowledge Base Settings</h3>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox id="use-rag" checked={useRAG} onCheckedChange={(checked) => setUseRAG(checked === true)} />
-                  <label htmlFor="use-rag" className="text-sm font-medium cursor-pointer flex items-center">
-                    <FileText className="w-4 h-4 mr-1 text-green-600" />
-                    Use selected files as context
-                  </label>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="use-summary"
-                    checked={useSummary}
-                    onCheckedChange={(checked) => setUseSummary(checked === true)}
-                  />
-                  <label htmlFor="use-summary" className="text-sm font-medium cursor-pointer flex items-center">
-                    <Sparkles className="w-4 h-4 mr-1 text-amber-500" />
-                    Generate summaries for long documents
-                  </label>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <label className="text-sm font-medium">Context Window: {contextWindow} messages</label>
-                  </div>
-                  <Slider
-                    value={[contextWindow]}
-                    min={1}
-                    max={20}
-                    step={1}
-                    onValueChange={(value) => setContextWindow(value[0])}
-                    className="w-full"
-                  />
-                </div>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-3xl mx-auto">
             {/* ... Nội dung form ... */}
@@ -381,5 +392,5 @@ export function ChatBox() {
     </motion.div>
   );
 
-} // Đóng thẻ của component ChatBox (nếu có)
+} 
 
