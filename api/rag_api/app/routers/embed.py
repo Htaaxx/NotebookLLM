@@ -206,6 +206,9 @@ async def get_embeddings(
     try:
         # Truyền user_id từ query vào service
         embeddings_data = get_document_embeddings(user_id=user_id, doc_id=document_id)
+        print(
+            f"Đã lấy embeddings cho user {user_id}, doc_id '{document_id}': {embeddings_data}"
+        )
         # ... (response logic giữ nguyên) ...
         return DocumentEmbeddingsResponse(
             document_id=embeddings_data["doc_id"],

@@ -359,7 +359,7 @@ def get_document_embeddings(user_id: str, doc_id: str):
             "page_number",
             "content",
             "filename",
-            "total_pages",
+            # "total_pages",
         ]
         results = collection.query(
             expr=f'doc_id == "{doc_id}"',
@@ -439,15 +439,21 @@ async def get_smaller_branches_from_docs(
     combined_chunks = combine_chunks(all_chunks_content, kmeans_predictions)
     result = "# root\n"
     for i in range(actual_num_clusters):
+        print(f" combine chunks {i} for user {user_id}")
+        print(f" cluster {i} content: {combined_chunks[i]}")
         if i not in combined_chunks:
             continue
+        print("you passed")
         cluster_content = combined_chunks[i]
         if not cluster_content.strip():
             continue
         try:
             completion = llm.invoke(  # hoặc await nếu llm.invoke là async
                 [
-                    {"role": "system", "content": "... prompt header ..."},
+                    {  "role": "system",
+                        "content": "You are a helpful assistant that reformats to markdown text for better readability with \n"
+                        "# for header 1, \n ## for header 2, \n ### header 3 and the doc. \n the header must appear in order # -> ## -> ###",
+                    },
                     {"role": "user", "content": cluster_content},
                 ]
             )
@@ -493,7 +499,7 @@ def extract_all_headers(text: str) -> str:
             # level = stripped_line.count('#', 0, 3) # Count '#' at the beginning
             # indentation = "  " * (level - 1) if level > 0 else ""
             # header_text += indentation + stripped_line + "\n"
-            header_text += stripped_line + "\n"  # Keep it simple for now
+            header_text += '#' + stripped_line + "\n"  # Keep it simple for now
     return header_text
 
 
