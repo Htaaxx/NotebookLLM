@@ -20,8 +20,14 @@ import {
   StarOff,
   CheckCircle2,
   XCircle,
+  FileText,
+  Upload,
+  X,
 } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "../../components/ui/dialog"
+import { documentAPI } from "@/lib/api"
+import type { FileItem } from "@/types/app-types"
 
 interface Flashcard {
   id: string
@@ -38,6 +44,7 @@ interface Deck {
   description: string
   cardCount: number
   lastStudied: string
+  documentId?: string // Reference to the source document
 }
 
 export default function FlashcardPage() {
@@ -49,69 +56,115 @@ export default function FlashcardPage() {
   const [newFront, setNewFront] = useState("")
   const [newBack, setNewBack] = useState("")
   const [searchQuery, setSearchQuery] = useState("")
+  const [isCreateDeckDialogOpen, setIsCreateDeckDialogOpen] = useState(false)
+  const [newDeckName, setNewDeckName] = useState("")
+  const [newDeckDescription, setNewDeckDescription] = useState("")
+  const [userFiles, setUserFiles] = useState<FileItem[]>([])
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
   const { t } = useLanguage()
 
   // Sample decks
-  const [decks, setDecks] = useState<Deck[]>([
-    {
-      id: "deck1",
-      name: "Biology 101",
-      description: "Basic biology concepts and terminology",
-      cardCount: 42,
-      lastStudied: "2 days ago",
-    },
-    {
-      id: "deck2",
-      name: "Spanish Vocabulary",
-      description: "Common Spanish words and phrases",
-      cardCount: 78,
-      lastStudied: "Yesterday",
-    },
-    {
-      id: "deck3",
-      name: "Programming Concepts",
-      description: "Key programming terms and definitions",
-      cardCount: 35,
-      lastStudied: "1 week ago",
-    },
-  ])
+  const [decks, setDecks] = useState<Deck[]>([])
+
+  // Load user ID from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedUserId = localStorage.getItem("user_id")
+      if (storedUserId) {
+        setUserId(storedUserId)
+      }
+    }
+  }, [])
+
+  // Fetch user files when userId is available
+  useEffect(() => {
+    if (userId) {
+      fetchUserFiles(userId)
+    }
+  }, [userId])
+
+  // Fetch user files from API
+  const fetchUserFiles = async (userId: string) => {
+    try {
+      const documents = await documentAPI.getDocuments(userId)
+      if (documents && documents.length > 0) {
+        const files: FileItem[] = documents.map((doc: any) => ({
+          id: doc.document_id,
+          name: doc.document_name || "Untitled Document",
+          selected: false,
+          type: getFileTypeFromName(doc.document_name),
+          url: `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${doc.document_id}${getFileExtension(doc.document_name)}`,
+          size: 0,
+          cloudinaryId: doc.document_id,
+          FilePath: doc.document_path || "root",
+        }))
+        setUserFiles(files)
+      }
+    } catch (error) {
+      console.error("Error fetching user files:", error)
+    }
+  }
+
+  // Helper function to determine file type based on filename
+  const getFileTypeFromName = (filename: string): string => {
+    if (!filename) return "document"
+    const extension = filename.split(".").pop()?.toLowerCase()
+    if (!extension) return "document"
+    if (["pdf"].includes(extension)) return "application/pdf"
+    if (["jpg", "jpeg", "png", "gif", "svg"].includes(extension)) return "image/" + extension
+    if (["mp4", "webm", "mov"].includes(extension)) return "video/" + extension
+    if (["md", "markdown"].includes(extension)) return "text/markdown"
+    return "document"
+  }
+
+  // Helper function to get file extension
+  const getFileExtension = (filename: string): string => {
+    if (!filename) return ""
+    const extensionMatch = filename.match(/\.[^.]+$/)
+    return extensionMatch ? extensionMatch[0].toLowerCase() : ""
+  }
 
   // Load cards for the selected deck
   useEffect(() => {
     if (activeDeck) {
-      // In a real app, you would fetch cards for the selected deck
-      // For now, we'll use sample data
-      const sampleCards: Flashcard[] = [
-        {
-          id: "card1",
-          front: "What is photosynthesis?",
-          back: "The process by which green plants and some other organisms use sunlight to synthesize foods with the help of chlorophyll.",
-          starred: true,
-          lastReviewed: "2 days ago",
-          status: "review",
-        },
-        {
-          id: "card2",
-          front: "What is cellular respiration?",
-          back: "The process by which cells break down glucose and other molecules to generate energy in the form of ATP.",
-          starred: false,
-          lastReviewed: "1 week ago",
-          status: "learning",
-        },
-        {
-          id: "card3",
-          front: "What is mitosis?",
-          back: "A type of cell division that results in two daughter cells each having the same number and kind of chromosomes as the parent nucleus.",
-          starred: false,
-          lastReviewed: "3 days ago",
-          status: "mastered",
-        },
-      ]
-      setCards(sampleCards)
+      const selectedDeck = decks.find((deck) => deck.id === activeDeck)
+      if (selectedDeck?.documentId) {
+        fetchFlashcardsForDocument(selectedDeck.documentId)
+      } else {
+        // If no document ID, just set empty cards array
+        setCards([])
+      }
       setCurrentCard(0)
       setIsFlipped(false)
     }
-  }, [activeDeck])
+  }, [activeDeck, decks])
+
+  // Fetch flashcards for a document (placeholder for backend API call)
+  const fetchFlashcardsForDocument = async (documentId: string) => {
+    setIsLoading(true)
+    try {
+      // This is a placeholder - the user will implement the actual backend API call later
+      console.log(`Fetching flashcards for document: ${documentId}`)
+
+      // Simulate API call with timeout
+      setTimeout(() => {
+        // For now, just set empty cards array
+        setCards([])
+        setIsLoading(false)
+      }, 1000)
+
+      // The actual API call would look something like this:
+      // const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/flashcards/${documentId}`)
+      // const data = await response.json()
+      // setCards(data.flashcards)
+    } catch (error) {
+      console.error("Error fetching flashcards:", error)
+      setCards([])
+      setIsLoading(false)
+    }
+  }
 
   const filteredDecks = searchQuery
     ? decks.filter(
@@ -121,8 +174,43 @@ export default function FlashcardPage() {
       )
     : decks
 
+  const createDeck = () => {
+    if (!newDeckName.trim()) return
+
+    setIsLoading(true)
+
+    try {
+      // Create a new deck with reference to the selected document
+      const newDeck: Deck = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: newDeckName,
+        description: newDeckDescription || `Flashcards deck`,
+        cardCount: 0, // Will be updated when cards are fetched
+        lastStudied: "Never",
+        documentId: selectedFile?.id,
+      }
+
+      setDecks([...decks, newDeck])
+
+      // Reset form
+      setNewDeckName("")
+      setNewDeckDescription("")
+      setSelectedFile(null)
+      setIsCreateDeckDialogOpen(false)
+
+      // Fetch flashcards for the new deck if document is selected
+      if (selectedFile?.id) {
+        console.log(`Created new deck with document ID: ${selectedFile.id}`)
+      }
+    } catch (error) {
+      console.error("Error creating deck:", error)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   const addCard = () => {
-    if (!newFront.trim() || !newBack.trim()) return
+    if (!newFront.trim() || !newBack.trim() || !activeDeck) return
 
     const newCard: Flashcard = {
       id: Math.random().toString(36).substr(2, 9),
@@ -132,7 +220,12 @@ export default function FlashcardPage() {
       lastReviewed: "Never",
       status: "new",
     }
+
     setCards([...cards, newCard])
+
+    // Update card count in the deck
+    setDecks(decks.map((deck) => (deck.id === activeDeck ? { ...deck, cardCount: deck.cardCount + 1 } : deck)))
+
     setNewFront("")
     setNewBack("")
   }
@@ -173,8 +266,22 @@ export default function FlashcardPage() {
 
   const deleteCard = (cardId: string) => {
     setCards(cards.filter((card) => card.id !== cardId))
+
+    // Update card count in the deck
+    if (activeDeck) {
+      setDecks(decks.map((deck) => (deck.id === activeDeck ? { ...deck, cardCount: deck.cardCount - 1 } : deck)))
+    }
+
     if (currentCard >= cards.length - 1) {
       setCurrentCard(Math.max(0, cards.length - 2))
+    }
+  }
+
+  const deleteDeck = (deckId: string) => {
+    setDecks(decks.filter((deck) => deck.id !== deckId))
+    if (activeDeck === deckId) {
+      setActiveDeck(null)
+      setCards([])
     }
   }
 
@@ -191,6 +298,10 @@ export default function FlashcardPage() {
       default:
         return "bg-gray-100 text-gray-800"
     }
+  }
+
+  const handleFileSelect = (file: FileItem) => {
+    setSelectedFile(file)
   }
 
   return (
@@ -234,7 +345,20 @@ export default function FlashcardPage() {
                   >
                     <div className="h-2 bg-green-600"></div>
                     <CardContent className="p-6">
-                      <h3 className="text-xl font-bold mb-2">{deck.name}</h3>
+                      <div className="flex justify-between items-start">
+                        <h3 className="text-xl font-bold mb-2">{deck.name}</h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 -mt-1 -mr-1"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            deleteDeck(deck.id)
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
                       <p className="text-gray-500 mb-4 line-clamp-2">{deck.description}</p>
                       <div className="flex justify-between text-sm text-gray-500">
                         <span className="flex items-center gap-1">
@@ -251,13 +375,143 @@ export default function FlashcardPage() {
                 ))}
 
                 {/* Add New Deck Card */}
-                <Card className="border-2 border-dashed flex items-center justify-center h-[180px] cursor-pointer hover:border-green-600 transition-colors">
-                  <div className="text-center">
-                    <Plus className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                    <p className="font-medium">Create New Deck</p>
-                  </div>
-                </Card>
+                <Dialog open={isCreateDeckDialogOpen} onOpenChange={setIsCreateDeckDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Card className="border-2 border-dashed flex items-center justify-center h-[180px] cursor-pointer hover:border-green-600 transition-colors">
+                      <div className="text-center">
+                        <Plus className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                        <p className="font-medium">Create New Deck</p>
+                      </div>
+                    </Card>
+                  </DialogTrigger>
+                  <DialogContent className="bg-white">
+                    <DialogHeader>
+                      <DialogTitle>Create New Flashcard Deck</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 mt-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Deck Name</label>
+                        <Input
+                          value={newDeckName}
+                          onChange={(e) => setNewDeckName(e.target.value)}
+                          placeholder="Enter deck name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Description (Optional)</label>
+                        <Input
+                          value={newDeckDescription}
+                          onChange={(e) => setNewDeckDescription(e.target.value)}
+                          placeholder="Enter deck description"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">Select a Document</label>
+                        <p className="text-sm text-gray-500 mb-2">Choose a document to generate flashcards from</p>
+
+                        {/* Selected file display */}
+                        {selectedFile && (
+                          <div className="flex items-center p-2 bg-gray-50 rounded-md mb-2">
+                            <FileText className="h-5 w-5 text-gray-500 mr-2" />
+                            <span className="text-sm flex-grow truncate">{selectedFile.name}</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-6 w-6 p-0"
+                              onClick={() => setSelectedFile(null)}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+
+                        {/* File selection area */}
+                        <div className="border rounded-md p-2 max-h-[200px] overflow-y-auto bg-white">
+                          {userFiles.length > 0 ? (
+                            <div className="space-y-1">
+                              {userFiles.map((file) => (
+                                <div
+                                  key={file.id}
+                                  className={`flex items-center p-2 rounded-md cursor-pointer ${
+                                    selectedFile?.id === file.id ? "bg-green-50" : "hover:bg-gray-50"
+                                  }`}
+                                  onClick={() => handleFileSelect(file)}
+                                >
+                                  <FileText className="h-4 w-4 text-gray-400 mr-2" />
+                                  <span className="text-sm truncate">{file.name}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <div className="text-center py-4 text-gray-500">
+                              <p>No files found</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Upload new file option */}
+                        <div className="mt-2">
+                          <label
+                            htmlFor="file-upload"
+                            className="flex items-center justify-center p-2 border border-dashed rounded-md cursor-pointer hover:bg-gray-50"
+                          >
+                            <Upload className="h-4 w-4 mr-2 text-gray-500" />
+                            <span className="text-sm">Upload a new document</span>
+                            <input
+                              id="file-upload"
+                              type="file"
+                              className="hidden"
+                              onChange={(e) => {
+                                // This would be implemented by the user later
+                                console.log("File upload:", e.target.files)
+                                alert("File upload functionality will be implemented later")
+                              }}
+                            />
+                          </label>
+                        </div>
+                      </div>
+
+                      <DialogFooter className="flex justify-end gap-2 pt-4">
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setIsCreateDeckDialogOpen(false)
+                            setSelectedFile(null)
+                            setNewDeckName("")
+                            setNewDeckDescription("")
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          onClick={createDeck}
+                          disabled={!newDeckName.trim() || isLoading}
+                          className="bg-green-600 hover:bg-green-700"
+                        >
+                          {isLoading ? "Creating..." : "Create Deck"}
+                        </Button>
+                      </DialogFooter>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
+
+              {decks.length === 0 && !searchQuery && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500 mb-4">You don't have any flashcard decks yet</p>
+                  <Button onClick={() => setIsCreateDeckDialogOpen(true)} className="bg-green-600 hover:bg-green-700">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Your First Deck
+                  </Button>
+                </div>
+              )}
+
+              {decks.length > 0 && filteredDecks.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">No decks found matching "{searchQuery}"</p>
+                </div>
+              )}
             </TabsContent>
 
             {/* Study Tab */}
@@ -273,7 +527,11 @@ export default function FlashcardPage() {
                     </Button>
                   </div>
 
-                  {cards.length > 0 ? (
+                  {isLoading ? (
+                    <div className="text-center py-12">
+                      <p className="text-gray-500">Loading flashcards...</p>
+                    </div>
+                  ) : cards.length > 0 ? (
                     <div className="space-y-6">
                       {/* Card Navigation */}
                       <div className="flex justify-between items-center">
@@ -435,7 +693,7 @@ export default function FlashcardPage() {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <p className="text-gray-500 mb-4">{t("noFlashcards")}</p>
+                      <p className="text-gray-500 mb-4">No flashcards found for this deck</p>
                       <Button onClick={() => setActiveTab("create")} className="bg-green-600 hover:bg-green-700">
                         <Plus className="h-4 w-4 mr-2" />
                         Create Your First Card
@@ -460,52 +718,61 @@ export default function FlashcardPage() {
                   {newFront || newBack ? "Edit Card" : "Create New Flashcard"}
                 </h2>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="space-y-6">
-                      <div className="space-y-2">
-                        <label className="font-medium">Front Side</label>
-                        <Input
-                          placeholder="Enter question or term"
-                          value={newFront}
-                          onChange={(e) => setNewFront(e.target.value)}
-                          className="text-lg"
-                        />
-                      </div>
+                {activeDeck ? (
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="space-y-6">
+                        <div className="space-y-2">
+                          <label className="font-medium">Front Side</label>
+                          <Input
+                            placeholder="Enter question or term"
+                            value={newFront}
+                            onChange={(e) => setNewFront(e.target.value)}
+                            className="text-lg"
+                          />
+                        </div>
 
-                      <div className="space-y-2">
-                        <label className="font-medium">Back Side</label>
-                        <Input
-                          placeholder="Enter answer or definition"
-                          value={newBack}
-                          onChange={(e) => setNewBack(e.target.value)}
-                          className="text-lg"
-                        />
-                      </div>
+                        <div className="space-y-2">
+                          <label className="font-medium">Back Side</label>
+                          <Input
+                            placeholder="Enter answer or definition"
+                            value={newBack}
+                            onChange={(e) => setNewBack(e.target.value)}
+                            className="text-lg"
+                          />
+                        </div>
 
-                      <div className="flex justify-end gap-3">
-                        <Button
-                          variant="outline"
-                          onClick={() => {
-                            setNewFront("")
-                            setNewBack("")
-                            setActiveTab("study")
-                          }}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={addCard}
-                          disabled={!newFront.trim() || !newBack.trim()}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          <Plus className="w-4 h-4 mr-2" />
-                          {newFront || newBack ? "Update Card" : "Add Card"}
-                        </Button>
+                        <div className="flex justify-end gap-3">
+                          <Button
+                            variant="outline"
+                            onClick={() => {
+                              setNewFront("")
+                              setNewBack("")
+                              setActiveTab("study")
+                            }}
+                          >
+                            Cancel
+                          </Button>
+                          <Button
+                            onClick={addCard}
+                            disabled={!newFront.trim() || !newBack.trim()}
+                            className="bg-green-600 hover:bg-green-700"
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            {newFront || newBack ? "Update Card" : "Add Card"}
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500 mb-4">Please select a deck first</p>
+                    <Button onClick={() => setActiveTab("decks")} className="bg-green-600 hover:bg-green-700">
+                      View All Decks
+                    </Button>
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>
@@ -514,4 +781,3 @@ export default function FlashcardPage() {
     </div>
   )
 }
-

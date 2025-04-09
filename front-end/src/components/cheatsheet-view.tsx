@@ -267,6 +267,13 @@ Mode: Most frequent element in a dataset.`,
         format: "a4",
       })
 
+      // Define A4 dimensions in mm
+      const a4Width = 210
+      const a4Height = 297
+      const margin = 10 // 10mm margin
+      const contentWidth = a4Width - margin * 2
+      const contentHeight = a4Height - margin * 2
+
       // For each page in the cheatsheet
       for (let i = 0; i < pages.length; i++) {
         // If not the first page, add a new page to the PDF
@@ -277,15 +284,16 @@ Mode: Most frequent element in a dataset.`,
         // Create a temporary container for this page
         const tempContainer = document.createElement("div")
         tempContainer.className = "pdf-export-container"
-        tempContainer.style.width = "210mm"
-        tempContainer.style.height = "297mm"
-        tempContainer.style.padding = "10mm"
+        tempContainer.style.width = `${a4Width}mm`
+        tempContainer.style.height = `${a4Height}mm`
+        tempContainer.style.padding = `${margin}mm`
         tempContainer.style.backgroundColor = "white"
         tempContainer.style.position = "absolute"
         tempContainer.style.left = "-9999px"
         tempContainer.style.top = "0"
         tempContainer.style.zIndex = "-1"
         tempContainer.style.overflow = "hidden"
+        tempContainer.style.boxSizing = "border-box"
 
         // Create the page content
         const pageContent = document.createElement("div")
@@ -301,24 +309,24 @@ Mode: Most frequent element in a dataset.`,
           const headerDiv = document.createElement("div")
           headerDiv.className = "cheatsheet-header"
           headerDiv.style.textAlign = "center"
-          headerDiv.style.marginBottom = "20px"
+          headerDiv.style.marginBottom = "15px"
 
           const titleEl = document.createElement("h1")
           titleEl.className = "cheatsheet-title"
-          titleEl.style.fontSize = "24px"
+          titleEl.style.fontSize = "20px"
           titleEl.style.fontWeight = "bold"
           titleEl.style.margin = "0 0 5px 0"
           titleEl.textContent = title
 
           const subtitleEl = document.createElement("p")
           subtitleEl.className = "cheatsheet-subtitle"
-          subtitleEl.style.fontSize = "14px"
-          subtitleEl.style.margin = "0 0 5px 0"
+          subtitleEl.style.fontSize = "12px"
+          subtitleEl.style.margin = "0 0 3px 0"
           subtitleEl.textContent = subtitle
 
           const dateEl = document.createElement("p")
           dateEl.className = "cheatsheet-date"
-          dateEl.style.fontSize = "14px"
+          dateEl.style.fontSize = "10px"
           dateEl.style.fontStyle = "italic"
           dateEl.style.margin = "0"
           dateEl.textContent = `Last Updated ${lastUpdated}`
@@ -334,7 +342,7 @@ Mode: Most frequent element in a dataset.`,
         gridDiv.className = "cheatsheet-grid"
         gridDiv.style.display = "grid"
         gridDiv.style.gridTemplateColumns = "repeat(3, 1fr)"
-        gridDiv.style.gap = "10px"
+        gridDiv.style.gap = "8px"
         gridDiv.style.width = "100%"
 
         // Add columns for this page
@@ -343,14 +351,14 @@ Mode: Most frequent element in a dataset.`,
           columnDiv.className = "cheatsheet-column"
           columnDiv.style.display = "flex"
           columnDiv.style.flexDirection = "column"
-          columnDiv.style.gap = "10px"
+          columnDiv.style.gap = "8px"
           columnDiv.style.width = "100%"
 
           // Add sections for this column
           column.sections.forEach((section) => {
             const sectionDiv = document.createElement("div")
             sectionDiv.className = "cheatsheet-section"
-            sectionDiv.style.marginBottom = "10px"
+            sectionDiv.style.marginBottom = "8px"
             sectionDiv.style.borderRadius = "0"
             sectionDiv.style.border = "1px solid #000"
             sectionDiv.style.overflow = "hidden"
@@ -363,21 +371,24 @@ Mode: Most frequent element in a dataset.`,
             headerDiv.className = "cheatsheet-section-header"
             headerDiv.style.backgroundColor = "#000"
             headerDiv.style.color = "#fff"
-            headerDiv.style.padding = "5px 10px"
+            headerDiv.style.padding = "4px 8px"
             headerDiv.style.fontWeight = "bold"
             headerDiv.style.width = "100%"
             headerDiv.style.boxSizing = "border-box"
+            headerDiv.style.fontSize = "12px"
             headerDiv.textContent = section.title
             sectionDiv.appendChild(headerDiv)
 
             // Add content
             const contentDiv = document.createElement("div")
             contentDiv.className = "cheatsheet-section-content"
-            contentDiv.style.padding = "10px"
+            contentDiv.style.padding = "8px"
             contentDiv.style.width = "100%"
             contentDiv.style.boxSizing = "border-box"
             contentDiv.style.wordWrap = "break-word"
             contentDiv.style.overflowWrap = "break-word"
+            contentDiv.style.fontSize = "10px"
+            contentDiv.style.lineHeight = "1.3"
             contentDiv.innerHTML = formatContent(section.content)
             sectionDiv.appendChild(contentDiv)
 
@@ -392,21 +403,19 @@ Mode: Most frequent element in a dataset.`,
         document.body.appendChild(tempContainer)
 
         // Wait for any images to load
-        await new Promise((resolve) => setTimeout(resolve, 300))
+        await new Promise((resolve) => setTimeout(resolve, 500))
 
         // Capture the content
         const canvas = await html2canvas(tempContainer, {
           scale: 2,
           useCORS: true,
           logging: false,
-          windowWidth: 595, // A4 width in pixels at 72 dpi
-          windowHeight: 842, // A4 height in pixels at 72 dpi
           backgroundColor: "#ffffff",
         })
 
-        // Add to PDF
+        // Add to PDF - properly scaled to fit A4
         const imgData = canvas.toDataURL("image/jpeg", 1.0)
-        pdf.addImage(imgData, "JPEG", 0, 0, 210, 297) // A4 dimensions in mm
+        pdf.addImage(imgData, "JPEG", 0, 0, a4Width, a4Height)
 
         // Clean up
         document.body.removeChild(tempContainer)
@@ -445,60 +454,61 @@ Mode: Most frequent element in a dataset.`,
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex items-center justify-between p-4 bg-green-600 text-white cheatsheet-header-bar">
-        <div className="flex items-center">
-          {editingTitle ? (
-            <div className="flex items-center">
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                className="mr-2 bg-white text-black"
-                autoFocus
-              />
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-white hover:bg-green-700"
-                onClick={() => setEditingTitle(false)}
-              >
-                <Save className="h-4 w-4" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex items-center">
-              <h2 className="text-xl font-bold">Academic Cheatsheet</h2>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="ml-2 text-white hover:bg-green-700"
-                onClick={() => setEditingTitle(true)}
-              >
-                <Edit2 className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
-        </div>
+      <div className="bg-green-600 text-white">
+        {/* Responsive taskbar with better layout */}
+        <div className="flex flex-wrap items-center p-2 gap-2">
+          {/* Left section - Title and edit */}
+          <div className="flex items-center mr-auto">
+            {editingTitle ? (
+              <div className="flex items-center">
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="mr-2 bg-white text-black w-40 h-8"
+                  autoFocus
+                />
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-white hover:bg-green-700 h-8 w-8 p-0"
+                  onClick={() => setEditingTitle(false)}
+                >
+                  <Save className="h-4 w-4" />
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center">
+                <h2 className="text-lg font-bold whitespace-nowrap">Academic Cheatsheet</h2>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-1 text-white hover:bg-green-700 h-8 w-8 p-0"
+                  onClick={() => setEditingTitle(true)}
+                >
+                  <Edit2 className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+          </div>
 
-        <div className="flex items-center">
-          <div className="flex items-center mr-4 text-center">
+          {/* Center section - Page navigation */}
+          <div className="flex items-center">
             <Button
               size="sm"
               variant="ghost"
-              className="text-white hover:bg-green-700"
+              className="text-white hover:bg-green-700 h-8 w-8 p-0"
               onClick={prevPage}
               disabled={currentPageIndex === 0}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <div className="mx-2">
-              <span className="font-bold">
-                Page {currentPageIndex + 1} of {pages.length}
-              </span>
-            </div>
+            <span className="mx-2 text-sm whitespace-nowrap">
+              Page {currentPageIndex + 1} of {pages.length}
+            </span>
             <Button
               size="sm"
               variant="ghost"
-              className="text-white hover:bg-green-700"
+              className="text-white hover:bg-green-700 h-8 w-8 p-0"
               onClick={nextPage}
               disabled={currentPageIndex === pages.length - 1}
             >
@@ -506,37 +516,34 @@ Mode: Most frequent element in a dataset.`,
             </Button>
           </div>
 
-          <div className="flex items-center mr-4">
-            <span className="text-white mr-2">Font Size:</span>
+          {/* Font size control */}
+          <div className="flex items-center">
+            <span className="text-sm mr-1 whitespace-nowrap">Font:</span>
             <Input
               type="number"
               min="8"
               max="24"
               value={fontSize}
               onChange={(e) => setFontSize(Number.parseInt(e.target.value) || 14)}
-              className="w-16 h-8 text-black bg-white"
+              className="w-12 h-8 text-black bg-white text-center p-0"
             />
           </div>
 
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white text-green-600 hover:bg-gray-100 mr-2"
-            onClick={addSection}
-          >
-            <Plus className="h-4 w-4 mr-1" /> Add Section
-          </Button>
-
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white text-green-600 hover:bg-gray-100"
-            onClick={exportToPdf}
-            disabled={isExporting}
-          >
-            <Download className="h-4 w-4 mr-1" />
-            Export PDF
-          </Button>
+          {/* Right section - Action buttons */}
+          <div className="flex items-center gap-2">
+            <Button size="sm" className="bg-white text-green-600 hover:bg-gray-100 h-8" onClick={addSection}>
+              <Plus className="h-3.5 w-3.5 mr-1" /> Add Section
+            </Button>
+            <Button
+              size="sm"
+              className="bg-white text-green-600 hover:bg-gray-100 h-8"
+              onClick={exportToPdf}
+              disabled={isExporting}
+            >
+              <Download className="h-3.5 w-3.5 mr-1" />
+              {isExporting ? "Exporting..." : "Export PDF"}
+            </Button>
+          </div>
         </div>
       </div>
 
