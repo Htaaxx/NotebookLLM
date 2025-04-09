@@ -48,24 +48,33 @@ export function ChatBox() {
     setIsLoading(true);
 
     try {
-      const queryApiUrl = "http://localhost:8000/query/";
+      // --- THÊM BƯỚC NÀY ---
+      // Lấy user_id từ localStorage (cung cấp giá trị mặc định nếu không tìm thấy)
+      const currentUserId = localStorage.getItem("user_id") || "default_user";
+      // --------------------
+
+      const queryApiUrl = "http://localhost:8000/query/"; // Đảm bảo URL đúng
+
+      // --- ĐIỀU CHỈNH REQUEST BODY ---
       const requestBody = {
+        user_id: currentUserId, // Thêm user_id vào đây
         question: userMessage,
       };
+      // -----------------------------
 
       console.log("Sending request to:", queryApiUrl);
-      console.log("Request body:", JSON.stringify(requestBody));
+      console.log("Request body:", JSON.stringify(requestBody)); // Log body đã cập nhật
 
       const response = await fetch(queryApiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify(requestBody), // Gửi body đã cập nhật
       });
 
       if (!response.ok) {
-        // ... (error handling như cũ) ...
+        // ... (phần xử lý lỗi giữ nguyên như cũ) ...
         let errorDetails = `API error: ${response.status}`;
         try {
             const errorData = await response.json();
@@ -79,24 +88,18 @@ export function ChatBox() {
         throw new Error(errorDetails);
       }
 
-      // --- THAY ĐỔI Ở ĐÂY ---
-      // Parse response dưới dạng JSON
       const data = await response.json();
 
-      // Kiểm tra xem có thuộc tính 'answer' không
       if (data && typeof data.answer === 'string') {
         console.log("Received response data:", data);
-        // Thêm nội dung từ data.answer vào lịch sử chat
         setChatHistory((prev) => [...prev, { text: data.answer, isUser: false }]);
       } else {
         console.error("Invalid response format. 'answer' field missing or not a string:", data);
-        // Có thể thêm một tin nhắn lỗi vào chat nếu muốn
         setChatHistory((prev) => [
           ...prev,
           { text: "Sorry, received an invalid response from the server.", isUser: false },
         ]);
       }
-      // --- KẾT THÚC THAY ĐỔI ---
 
     } catch (error) {
       console.error("Failed to send message to /query/ API", error);
@@ -107,7 +110,7 @@ export function ChatBox() {
     } finally {
       setIsLoading(false);
     }
-  };  
+  };
 
   // Also update the regenerateLastResponse function:
   const regenerateLastResponse = async () => {
