@@ -75,16 +75,6 @@ connections.connect(alias="default", uri=ZILLIZ_CLOUD_URI, token=ZILLIZ_CLOUD_TO
 # Define collection name
 COLLECTION_NAME = "rag_collection"
 
-# # Initialize Zilliz vector store (LangChain wrapper)
-# vector_store = Zilliz(
-#     embedding_function=embeddings,
-#     connection_args={"uri": ZILLIZ_CLOUD_URI, "token": ZILLIZ_CLOUD_TOKEN},
-#     collection_name=COLLECTION_NAME,
-#     auto_id=True,
-#     vector_field="embedding",  # Name of your vector field
-#     text_field="content",  # Name of your text field
-# )
-
 # Set up LLM
 llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API_KEY)
 
@@ -132,13 +122,6 @@ def get_user_collection_name(user_id: str) -> str:
 def get_user_vector_store(user_id: str) -> Zilliz:
     """Lấy (hoặc tạo nếu chưa có) vector store cho user cụ thể."""
     collection_name = get_user_collection_name(user_id)
-    # print(f"Accessing vector store for user: {user_id}, collection: {collection_name}") # Debug
-    # Zilliz wrapper thường tự tạo collection nếu chưa có khi dùng lần đầu
-    # Tuy nhiên, bạn có thể kiểm tra và tạo rõ ràng nếu muốn kiểm soát schema chặt chẽ hơn
-    # if not utility.has_collection(collection_name):
-    #     print(f"Collection {collection_name} not found, it will be created.")
-    # Define schema if needed before initializing Zilliz
-    # ... (code tạo schema) ...
 
     vector_store_instance = Zilliz(
         embedding_function=embeddings,

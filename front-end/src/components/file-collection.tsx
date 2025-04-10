@@ -655,7 +655,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       if (folder) {
         const updateFilesRecursively = async (folder: FolderType) => {
           // Update status for all files in this folder
-          const newStatus = isCurrentlySelected ? "1" : "0"
+          const newStatus = isCurrentlySelected ? '1' : '0'
 
           // Update direct files in this folder
           const updatePromises = folder.files.map((file) =>
