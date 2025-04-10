@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useRef, useState } from "react"
 import MindElixir from "mind-elixir"
 import {
@@ -11,40 +13,8 @@ import {
 } from "../lib/mind-elixir-themes"
 import { MindMapTaskbar } from "./mindmap-taskbar"
 import "../styles/mindmap.css"
+import { MindMapNodeModal } from "./mindmap-node-modal"
 
-const DEFAULT_MARKDOWN = `# Machine Learning Concepts
-
-## Supervised Learning
-### Classification
-#### Decision Trees
-#### Support Vector Machines
-#### Neural Networks
-### Regression
-#### Linear Regression
-#### Polynomial Regression
-
-## Unsupervised Learning
-### Clustering
-#### K-Means
-#### Hierarchical Clustering
-### Dimensionality Reduction
-#### PCA
-#### t-SNE
-
-## Reinforcement Learning
-### Q-Learning
-### Deep Q Networks
-
-## Deep Learning
-### Neural Networks
-#### Feed Forward Networks
-#### Convolutional Neural Networks
-#### Recurrent Neural Networks
-### Training Techniques
-#### Backpropagation
-#### Gradient Descent
-#### Regularization
-`
 
 // ----------------------------------------------------------------
 // TYPE DEFINITIONS
@@ -67,6 +37,7 @@ type TopicNode = {
   topic: string
   id: string
   children?: TopicNode[]
+  detailContent?: string
   style?: {
     background?: string
     color?: string
@@ -87,6 +58,13 @@ interface MindElixirData {
   linkData?: any
 }
 
+interface MindMapNode {
+  id: string
+  topic: string
+  level: number
+  detailContent?: string
+}
+
 // ----------------------------------------------------------------
 // COMPONENT IMPLEMENTATION
 // ----------------------------------------------------------------
@@ -102,6 +80,13 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [currentTheme, setCurrentTheme] = useState("original")
   const [needsReinitialize, setNeedsReinitialize] = useState(false)
   const [scale, setScale] = useState(1)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [selectedNode, setSelectedNode] = useState<{ title: string; content: string } | null>(null)
+
+  const [allNodes, setAllNodes] = useState<MindMapNode[]>([]);
+  const [activeNode, setActiveNode] = useState<any>(null)
+  const [mindmap_node_search, setMindmapNodeSearch] = useState<string[][]>([]);
+
 
   // Get the current theme object
   const getThemeObject = (): MindMapTheme => {
@@ -285,6 +270,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   // Generate unique ID for mind map nodes
   const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2)
 
+  
   // Convert markdown content to MindElixir data structure with styling
   const parseMarkdownToMindMap = (markdown: string): MindElixirData => {
     if (!markdown || markdown.trim() === "") {
@@ -295,10 +281,13 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       const theme = getThemeObject()
       const lines = markdown.split("\n")
       const rootTopic = lines.find((line) => line.trim().startsWith("# "))?.replace("# ", "") || "Mind Map"
+      
+      // Create root node
       const rootNode: TopicNode = {
         id: "root",
         topic: rootTopic,
         children: [],
+        detailContent: "", // Add property to store detail content
         style: {
           background: theme.nodeColors?.root || theme.nodeStyles.root.background,
           color: theme.nodeStyles.root.color || theme.color,
@@ -308,72 +297,101 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       }
 
       let currentLevel = 0
+      let currentNode: TopicNode | null = null
       const currentParentStack: TopicNode[] = [rootNode]
       let nodeIndex = 0
+      let collectingDetails = false
 
       lines.forEach((line) => {
         const trimmedLine = line.trim()
-        if (!trimmedLine || trimmedLine.startsWith("# ")) return
-        const match = trimmedLine.match(/^(#{2,6})\s+(.+)$/)
-        if (match) {
-          const level = match[1].length - 1
-          const topic = match[2]
+        
+        // Skip empty lines and the root heading
+        if (!trimmedLine || trimmedLine === `# ${rootTopic}`) return
+        
+        // If line starts with heading marker (#), it's a new node
+        if (trimmedLine.startsWith("#")) {
+          collectingDetails = false;
+          const match = trimmedLine.match(/^(#{2,6})\s+(.+)$/)
+          
+          if (match) {
+            const level = match[1].length - 1
+            const topic = match[2]
 
-          // Adjust the parent stack based on the heading level
-          while (currentLevel >= level && currentParentStack.length > 1) {
-            currentParentStack.pop()
-            currentLevel--
+            // Adjust the parent stack based on the heading level
+            while (currentLevel >= level && currentParentStack.length > 1) {
+              currentParentStack.pop()
+              currentLevel--
+            }
+
+            // Get style based on level
+            const styleObj = level === 1 ? theme.nodeStyles.primary : theme.nodeStyles.secondary
+
+            // Get color based on level and index
+            const colorIndex =
+              nodeIndex %
+              (level === 1 && theme.nodeColors?.level1
+                ? theme.nodeColors.level1.length
+                : level === 2 && theme.nodeColors?.level2
+                  ? theme.nodeColors.level2.length
+                  : 1)
+
+            const background =
+              level === 1 && theme.nodeColors?.level1
+                ? theme.nodeColors.level1[colorIndex]
+                : level === 2 && theme.nodeColors?.level2
+                  ? theme.nodeColors.level2[colorIndex]
+                  : styleObj.background
+
+            const newNode: TopicNode = {
+              id: generateId(),
+              topic,
+              children: [],
+              detailContent: "", // Initialize empty detail content
+              style: {
+                background,
+                color: styleObj.color || theme.color,
+                fontSize: styleObj.fontSize,
+                fontWeight: styleObj.fontWeight,
+              },
+            }
+
+            const currentParent = currentParentStack[currentParentStack.length - 1]
+
+            if (!currentParent.children) {
+              currentParent.children = []
+            }
+
+            currentParent.children.push(newNode)
+            currentParentStack.push(newNode)
+            currentLevel = level
+            nodeIndex++
+            currentNode = newNode
+            collectingDetails = true; // Start collecting details for this node
           }
-
-          // Get style based on level
-          const styleObj = level === 1 ? theme.nodeStyles.primary : theme.nodeStyles.secondary
-
-          // Get color based on level and index
-          const colorIndex =
-            nodeIndex %
-            (level === 1 && theme.nodeColors?.level1
-              ? theme.nodeColors.level1.length
-              : level === 2 && theme.nodeColors?.level2
-                ? theme.nodeColors.level2.length
-                : 1)
-
-          const background =
-            level === 1 && theme.nodeColors?.level1
-              ? theme.nodeColors.level1[colorIndex]
-              : level === 2 && theme.nodeColors?.level2
-                ? theme.nodeColors.level2[colorIndex]
-                : styleObj.background
-
-          const newNode: TopicNode = {
-            id: generateId(),
-            topic,
-            children: [],
-            style: {
-              background,
-              color: styleObj.color || theme.color,
-              fontSize: styleObj.fontSize,
-              fontWeight: styleObj.fontWeight,
-            },
+        } 
+        // If line starts with "-", it's detail content for the current node
+        else if (trimmedLine.startsWith("-") && collectingDetails && currentNode) {
+          // Accumulate detail content
+          if (currentNode.detailContent) {
+            currentNode.detailContent += "\n" + line;
+          } else {
+            currentNode.detailContent = line;
           }
-
-          const currentParent = currentParentStack[currentParentStack.length - 1]
-
-          if (!currentParent.children) {
-            currentParent.children = []
+        }
+        // Other content under a heading is also considered detail content
+        else if (collectingDetails && currentNode) {
+          if (currentNode.detailContent) {
+            currentNode.detailContent += "\n" + line;
+          } else {
+            currentNode.detailContent = line;
           }
-
-          currentParent.children.push(newNode)
-          currentParentStack.push(newNode)
-          currentLevel = level
-          nodeIndex++
         }
       })
-
-      console.log("Parsed mind map structure:", JSON.stringify(rootNode, null, 2).substring(0, 200) + "...")
+      // After parsing is complete, collect all nodes
+      const allNodesInMap = collectAllNodes(rootNode);
+      setAllNodes(allNodesInMap);
       return { nodeData: rootNode as any }
     } catch (err) {
-      console.error("Error parsing markdown:", err)
-      setError("Failed to parse markdown content")
       return { nodeData: { id: "error", topic: "Error", children: [] } }
     }
   }
@@ -462,7 +480,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         nodeMenu: true,
         keypress: true,
         allowUndo: true,
-        overflowHidden: false,
+        overflowHidden: true,
         primaryLinkStyle: {
           lineWidth: theme.lineStyle.width,
           lineColor: theme.lineStyle.color,
@@ -497,6 +515,132 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       setError(`Failed to initialize mind map: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
+
+  // Function to collect all nodes recursively
+  const collectAllNodes = (node: TopicNode, level: number = 0, result: MindMapNode[] = []) => {
+    result.push({
+      id: node.id,
+      topic: node.topic,
+      level,
+      detailContent: node.detailContent
+    });
+    
+    if (node.children && node.children.length > 0) {
+      node.children.forEach(child => collectAllNodes(child, level + 1, result));
+    }
+    
+    return result;
+  };
+
+  // Handle node selection from dropdown
+  const handleNodeSelect = (node: MindMapNode) => {
+    console.log("Node selected from dropdown:", node);
+    setActiveNode(node);
+    
+    // Show the modal with node details
+    setSelectedNode({
+      title: node.topic,
+      content: node.detailContent || "No detailed content for this node."
+    });
+    setModalOpen(true);
+  };
+
+  // Helper function to build a parent map
+  const buildParentMap = (
+    node: any, 
+    parent: MindMapNode | null, 
+    parentMap: Map<string, MindMapNode>
+  ) => {
+    if (parent) {
+      parentMap.set(node.id, parent);
+    }
+    
+    if (node.children && node.children.length) {
+      node.children.forEach((child: any) => {
+        buildParentMap(child, node, parentMap);
+      });
+    }
+  };
+
+  // Function to find path from root to node
+  const findNodePath = (targetNode: MindMapNode): string[] => {
+    // Start by finding the node in our flat list
+    if (!allNodes.length) return [targetNode.topic];
+    
+    // Create a map for quick parent lookup
+    const nodeMap = new Map<string, MindMapNode>();
+    const parentMap = new Map<string, MindMapNode>();
+    
+    // First, create a map of all nodes by ID
+    allNodes.forEach(node => {
+      nodeMap.set(node.id, node);
+    });
+    
+    // Build parent-child relationships
+    for (const node of allNodes) {
+      if (containerRef.current && containerRef.current._mindElixirInstance) {
+        const mindElixir = containerRef.current._mindElixirInstance;
+        if (mindElixir.nodeData && mindElixir.nodeData.children) {
+          buildParentMap(mindElixir.nodeData, null, parentMap);
+        }
+      }
+    }
+    
+    // Now trace back from target to root
+    const path: string[] = [];
+    let current: MindMapNode | undefined = targetNode;
+    
+    // Build the path from node to root (we'll reverse it later)
+    while (current) {
+      path.unshift(current.topic); // Add to the beginning
+      
+      // Get the parent from our map
+      const parentNode = parentMap.get(current.id);
+      current = parentNode;
+    }
+    
+    return path;
+  };
+
+  // Handler for when search icon is clicked
+  const handleNodeSearch = (node: MindMapNode) => {
+    console.log("Search clicked for node:", node.topic);
+    
+    // Find the path from root to this node
+    const path = findNodePath(node);
+    
+    // Add this path to our search list if not already present
+    const pathExists = mindmap_node_search.some(p => p.join(',') === path.join(','));
+    
+    if (!pathExists) {
+      // Create new paths array with the new path
+      const newPaths = [...mindmap_node_search, path];
+      setMindmapNodeSearch(newPaths);
+      
+      // Send the updated paths collection to the chat box
+      const searchEvent = new CustomEvent('mindmap_paths_updated', {
+        detail: {
+          paths: newPaths,
+          latestNode: {
+            id: node.id,
+            topic: node.topic
+          }
+        }
+      });
+      
+      // Dispatch the event
+      window.dispatchEvent(searchEvent);
+    }
+  };
+
+  // Add this function to MindMapView
+  const handleRemoveSearchPath = (index: number) => {
+    setMindmapNodeSearch(prevPaths => {
+      const newPaths = [...prevPaths];
+      newPaths.splice(index, 1);
+      return newPaths;
+    });
+  };
 
   // Initialize mind map when content changes
   useEffect(() => {
@@ -539,6 +683,20 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     }
   }, [])
 
+  // Test function to manually open the modal
+  const testOpenModal = () => {
+    setSelectedNode({
+      title: "Test Node",
+      content: `- This is a test bullet point
+- Another bullet point
+## Test Subheading
+- Nested content
+- More nested content`,
+    })
+    setModalOpen(true)
+    console.log("Test modal opened")
+  }
+
   // Render component
   return (
     <div className={`w-full h-full flex flex-col ${className || ""}`}>
@@ -549,6 +707,11 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         onZoomOut={handleZoomOut}
         onReset={handleReset}
         containerRef={containerRef as React.RefObject<HTMLDivElement>}
+        nodes={allNodes}
+        onNodeSelect={handleNodeSelect}
+        onNodeSearch={handleNodeSearch} // Add this
+        searchPaths={mindmap_node_search} // Add this
+        onRemoveSearchPath={handleRemoveSearchPath} // Add this
       />
 
       {isLoading ? (
@@ -579,8 +742,16 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
             minHeight: "400px",
             background: getThemeObject().background,
           }}
-        ></div>
+        >
+        </div>
       )}
+      
+      <MindMapNodeModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        title={selectedNode?.title || ""}
+        content={selectedNode?.content || ""}
+      />
     </div>
   )
 }

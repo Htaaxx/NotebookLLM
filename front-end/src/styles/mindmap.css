@@ -117,3 +117,81 @@
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.1) !important;
 }
 
+/* Modal styles */
+.mind-node-modal {
+  z-index: 1000;
+}
+
+.mind-node-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+  z-index: 999;
+}
+
+.mind-node-modal-content {
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Bullet point styling */
+.bullet-point {
+  display: flex;
+  align-items: flex-start;
+  margin-bottom: 0.5rem;
+}
+
+.bullet-marker {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: #10b981;
+  margin-top: 0.5rem;
+  margin-right: 0.75rem;
+  flex-shrink: 0;
+}
+
+/* Heading styles */
+.node-heading-2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: #111827;
+}
+
+.node-heading-3 {
+  font-size: 1.125rem;
+  font-weight: 500;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  color: #1f2937;
+}
+
+.node-heading-4 {
+  font-size: 1rem;
+  font-weight: 500;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: #374151;
+}
+
+.search-paths-dropdown {
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+.search-path-item {
+  transition: background-color 0.2s;
+}
+
+.search-path-item:hover {
+  background-color: rgba(34, 197, 94, 0.1);
+}

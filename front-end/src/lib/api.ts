@@ -160,14 +160,14 @@ export const documentAPI = {
     return response.data;
   },
 
-  updateDocumentStatus: async (documentId: string, status: string) => {
+  updateDocumentStatus: async (documentId: string, status: '0' | '1') => {
     const response = await api.post('/updateDocumentStatus', {
       document_id: documentId,
-      new_status: status
+      status: status
     });
     return response.data;
   }
-
+  
 };
 
 export default api;

@@ -16,6 +16,11 @@ from tqdm import tqdm
 from langchain_core.prompts import ChatPromptTemplate
 from sklearn.cluster import KMeans
 from typing import Tuple, List, Dict, Any, Optional  # Thêm Dict, Any, Optional
+
+import pymongo # <--- THÊM IMPORT PYMONGO
+from pymongo.collection import Collection as MongoCollection # <--- Để tránh trùng tên với pymilvus
+
+
 import re
 
 load_dotenv()
@@ -24,6 +29,39 @@ load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ZILLIZ_CLOUD_URI = os.getenv("ZILLIZ_CLOUD_URI")
 ZILLIZ_CLOUD_TOKEN = os.getenv("ZILLIZ_CLOUD_TOKEN")
+
+MONGO_URI = os.getenv("MONGO_URI") # <--- Lấy URI MongoDB
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME") # <--- Lấy tên DB
+MONGO_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_NAME") # <--- Lấy tên Collection
+
+mongo_client = None
+if MONGO_URI:
+    try:
+        mongo_client = pymongo.MongoClient(MONGO_URI)
+        print("Kết nối MongoDB thành công!")
+    except pymongo.errors.ConfigurationError as e:
+        print(f"Lỗi cấu hình MongoDB URI: {e}")
+        mongo_client = None
+    except Exception as e:
+        print(f"Lỗi kết nối MongoDB khác: {e}")
+        mongo_client = None
+else:
+    print("Cảnh báo: MONGO_URI chưa được cấu hình trong .env. Không thể kết nối MongoDB.")
+
+def get_mongo_collection() -> Optional[MongoCollection]:
+    """Lấy đối tượng collection MongoDB."""
+    if not mongo_client or not MONGO_DB_NAME or not MONGO_COLLECTION_NAME:
+        print("Lỗi: Kết nối MongoDB hoặc tên DB/Collection chưa được cấu hình.")
+        return None
+    try:
+        db = mongo_client[MONGO_DB_NAME]
+        collection = db[MONGO_COLLECTION_NAME]
+        # Kiểm tra kết nối nhanh (tùy chọn)
+        # collection.count_documents({})
+        return collection
+    except Exception as e:
+        print(f"Lỗi khi lấy MongoDB collection: {e}")
+        return None
 
 # Set up embedding
 embeddings = HuggingFaceEmbeddings(
@@ -53,22 +91,32 @@ llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API
 # Prompt from LangChain hub
 prompt = ChatPromptTemplate.from_template(
     """
-Bạn là chuyên gia phân tích tài liệu. Hãy trả lời câu hỏi với các yêu cầu:
+Bạn là chuyên gia phân tích tài liệu. Nhiệm vụ của bạn là trả lời câu hỏi của người dùng.
 
-1. Sử dụng chú thích vuông [number] khi dùng thông tin từ tài liệu
-2. Mỗi fact/claim phải có ít nhất 1 citation
-3. Giữ nguyên số citation trong cả response
+**QUAN TRỌNG:** Trước tiên, hãy đánh giá câu hỏi của người dùng ({question}).
+1.  **Nếu câu hỏi không rõ ràng, quá ngắn, không có ngữ nghĩa cụ thể để tìm kiếm thông tin (ví dụ: 'hello', '?', 'abc', 'bạn khỏe không?'), hoặc chỉ là lời chào hỏi đơn thuần:**
+    * **BỎ QUA HOÀN TOÀN** phần TÀI LIỆU THAM KHẢO dưới đây.
+    * **CHỈ trả lời MỘT TRONG CÁC CÂU SAU:** "Yêu cầu không có ngữ nghĩa." hoặc "Chưa xác định rõ yêu cầu của bạn, vui lòng cung cấp câu hỏi cụ thể hơn." (Chọn một câu phù hợp).
+    * **KHÔNG** thêm bất kỳ thông tin nào khác, không giải thích, không thêm citation.
+
+2.  **Nếu câu hỏi có vẻ hợp lệ và có thể trả lời được dựa trên tài liệu:**
+    * Hãy sử dụng các TÀI LIỆU THAM KHẢO ({context}) để trả lời chi tiết cho câu hỏi ({question}).
+    * **TUÂN THỦ NGHIÊM NGẶT CÁC YÊU CẦU SAU:**
+        * Sử dụng chú thích vuông [number] NGAY SAU thông tin được lấy từ tài liệu tham khảo. Ví dụ: Fact A [1], Claim B [2].
+        * Mỗi fact/claim trong câu trả lời PHẢI CÓ ít nhất một citation [number] tương ứng.
+        * Giữ nguyên số citation [number] đã được đánh dấu trong phần TÀI LIỆU THAM KHẢO khi bạn trích dẫn chúng.
+        * Câu trả lời phải chi tiết, mạch lạc.
+        * Cuối cùng, thêm phần `REFERENCES:` liệt kê đầy đủ các tài liệu đã được trích dẫn trong câu trả lời, theo đúng format:
+            [1] File: "tên file", Trang: X, Nội dung: "trích đoạn ngắn gọn từ context"
+            [2] File: ... (tương tự)
+            (Chỉ liệt kê những citation [number] bạn đã thực sự dùng trong câu trả lời).
 
 CÂU HỎI: {question}
 
-TÀI LIỆU THAM KHẢO:
+TÀI LIỆU THAM KHẢO (Chỉ dùng nếu câu hỏi hợp lệ):
 {context}
 
-YÊU CẦU FORMAT:
-- Câu trả lời chi tiết với citations [1][2]...
-- Phần REFERENCES cuối cùng liệt kê đầy đủ:
-[1] File: "tên file", Trang: X, Nội dung: "trích đoạn"
-[2] File: ... (tương tự)
+CÂU TRẢ LỜI CỦA BẠN:
 """
 )
 
@@ -102,6 +150,33 @@ def get_user_vector_store(user_id: str) -> Zilliz:
     )
     return vector_store_instance
 
+# --- HÀM MỚI: LẤY DOC ID ĐÃ CHỌN TỪ MONGODB (TASK 3) ---
+def get_selected_document_ids(user_id: str, mongo_coll: Optional[MongoCollection]) -> List[str]:
+    """
+    Truy vấn MongoDB để lấy danh sách các document_id được đánh dấu là 'selected' ('1')
+    cho user_id cụ thể.
+    """
+    if not mongo_coll:
+        print("Lỗi: Không thể truy vấn MongoDB do kết nối không hợp lệ.")
+        return [] # Trả về rỗng nếu không có kết nối DB
+
+    selected_ids = []
+    try:
+        # Tìm các document có user_id và selected_status là '1'
+        # Chỉ lấy trường 'document_id'
+        cursor = mongo_coll.find(
+            {"user_id": user_id, "selected_status": "1"}, # Giả sử bạn lưu status là string '1'
+            {"document_id": 1, "_id": 0} # Projection: chỉ lấy document_id, bỏ _id
+        )
+        selected_ids = [doc.get("document_id") for doc in cursor if doc.get("document_id")]
+        print(f"Tìm thấy {len(selected_ids)} document đã chọn cho user {user_id} từ MongoDB.")
+    except Exception as e:
+        print(f"Lỗi khi truy vấn MongoDB lấy doc_id đã chọn: {e}")
+        # Có thể log lỗi chi tiết hơn
+        return [] # Trả về rỗng nếu có lỗi
+
+    return selected_ids
+
 
 def get_user_milvus_collection(user_id: str) -> Collection:
     """Lấy đối tượng Collection của pymilvus cho user."""
@@ -119,30 +194,76 @@ def get_user_milvus_collection(user_id: str) -> Collection:
     return Collection(collection_name)
 
 
-# --- SỬA ĐỔI CÁC HÀM SERVICE ---
-
-
-# Ví dụ sửa đổi hàm ask_question
 def ask_question(user_id: str, question: str) -> str:
-    """Trả lời câu hỏi dựa trên collection của user."""
+    """Trả lời câu hỏi DỰA TRÊN CÁC DOCUMENT ĐÃ CHỌN của user."""
     vector_store = get_user_vector_store(user_id)
-    retrieved_docs = vector_store.similarity_search(
-        question, k=8, params={"metric_type": "IP", "params": {"nprobe": 64}}
-    )
-    # ... (phần còn lại của hàm giữ nguyên logic format, gọi LLM) ...
+
+    # --- TASK 3: Kết nối MongoDB và lấy Doc ID đã chọn ---
+    mongo_collection = get_mongo_collection()
+    selected_ids = get_selected_document_ids(user_id, mongo_collection)
+    # -----------------------------------------------------
+
+    search_filter_expr = None # Khởi tạo filter là None
+    if not selected_ids:
+        # Nếu không có doc nào được chọn, trả lời luôn hoặc bỏ filter tùy ý
+        # Option 1: Trả lời luôn
+        print(f"Không có document nào được chọn cho user {user_id}. Không thực hiện tìm kiếm.")
+        return "Vui lòng chọn ít nhất một tài liệu để thực hiện tìm kiếm trong đó."
+        # Option 2: Bỏ qua filter, tìm trên tất cả (search_filter_expr sẽ là None)
+        # print(f"Không có document nào được chọn cho user {user_id}. Tìm kiếm trên toàn bộ tài liệu.")
+    else:
+        # --- TASK 4: Tạo Filter Expression cho Milvus ---
+        # Đảm bảo định dạng đúng: 'doc_id in ["id1", "id2"]'
+        search_filter_expr = f'doc_id in {selected_ids}'
+        print(f"Thực hiện tìm kiếm với Milvus filter: {search_filter_expr}")
+        # ---------------------------------------------
+
+    # --- TASK 5 (Phần 1): Thực hiện similarity search VỚI filter (nếu có) ---
+    try:
+        search_kwargs = {}
+        if search_filter_expr:
+            search_kwargs['expr'] = search_filter_expr # Đặt filter vào search_kwargs
+
+        retrieved_docs = vector_store.similarity_search(
+            query=question,
+            k=8,
+            search_kwargs=search_kwargs # Truyền search_kwargs (có thể rỗng nếu không filter)
+        )
+        # -----------------------------------------------------------------------
+    except Exception as e:
+         print(f"Lỗi trong quá trình similarity search (có thể do filter): {e}")
+         return f"Đã xảy ra lỗi trong quá trình tìm kiếm tài liệu: {e}"
+
+    # Xử lý trường hợp không tìm thấy tài liệu liên quan (kể cả khi có filter hoặc không)
+    if not retrieved_docs:
+        if selected_ids: # Nếu có lọc mà không thấy
+             return "Không tìm thấy thông tin liên quan trong các tài liệu bạn đã chọn."
+        else: # Nếu không lọc mà cũng không thấy
+             return "Không tìm thấy thông tin liên quan trong bất kỳ tài liệu nào của bạn."
+
+    # --- TASK 5 (Phần 2): Thực hiện query LLM trên tập vector tìm được ---
+    # Phần này giữ nguyên logic cũ: format context, gọi LLM, validate citations...
     citations = format_citations(retrieved_docs)
     context_parts = []
     for idx, doc in enumerate(retrieved_docs, 1):
+        filename = doc.metadata.get('filename', 'N/A')
+        page_number = doc.metadata.get('page_number', 'N/A')
         context_parts.append(
-            f"[DOCUMENT {idx}]\nFile: {doc.metadata.get('filename')}\nPage: {doc.metadata.get('page_number')}\nContent: {doc.page_content[:300]}..."
+            f"[DOCUMENT {idx}]\nFile: {filename}\nPage: {page_number}\nContent: {doc.page_content[:300]}..."
         )
+
+    # Gọi LLM với context đã lọc (hoặc không lọc nếu selected_ids rỗng và bạn chọn tìm tất cả)
+    # Sử dụng prompt đã được sửa đổi để xử lý câu hỏi vô nghĩa
     messages = prompt.invoke(
         {"question": question, "context": "\n\n".join(context_parts)}
     )
     response = llm.invoke(messages)
-    final_response = validate_citations(response.content, citations)
-    return final_response
+    final_response = validate_citations(response.content, citations) # Giả sử validate_citations tồn tại
 
+    # Thêm REFERENCES nếu cần
+    # ...
+
+    return final_response
 
 """
 CITATION FORMATTING
@@ -359,7 +480,7 @@ def get_document_embeddings(user_id: str, doc_id: str):
             "page_number",
             "content",
             "filename",
-            "total_pages",
+            # "total_pages",
         ]
         results = collection.query(
             expr=f'doc_id == "{doc_id}"',
@@ -439,15 +560,21 @@ async def get_smaller_branches_from_docs(
     combined_chunks = combine_chunks(all_chunks_content, kmeans_predictions)
     result = "# root\n"
     for i in range(actual_num_clusters):
+        print(f" combine chunks {i} for user {user_id}")
+        print(f" cluster {i} content: {combined_chunks[i]}")
         if i not in combined_chunks:
             continue
+        print("you passed")
         cluster_content = combined_chunks[i]
         if not cluster_content.strip():
             continue
         try:
             completion = llm.invoke(  # hoặc await nếu llm.invoke là async
                 [
-                    {"role": "system", "content": "... prompt header ..."},
+                    {  "role": "system",
+                        "content": "You are a helpful assistant that reformats to markdown text for better readability with \n"
+                        "# for header 1, \n ## for header 2, \n ### header 3 and the doc. \n the header must appear in order # -> ## -> ###",
+                    },
                     {"role": "user", "content": cluster_content},
                 ]
             )
@@ -493,7 +620,7 @@ def extract_all_headers(text: str) -> str:
             # level = stripped_line.count('#', 0, 3) # Count '#' at the beginning
             # indentation = "  " * (level - 1) if level > 0 else ""
             # header_text += indentation + stripped_line + "\n"
-            header_text += stripped_line + "\n"  # Keep it simple for now
+            header_text += '#' + stripped_line + "\n"  # Keep it simple for now
     return header_text
 
 

@@ -65,37 +65,53 @@ export async function POST(request: Request) {
 }
 
 // Default markdown to use when API fails
-const DEFAULT_MARKDOWN = `# Machine Learning Concepts
+const DEFAULT_MARKDOWN = `# Thông tin cá nhân
+**Họ và tên:** Nguyễn Quốc Thắng  
+**MSSV:** 22127385  
 
-## Supervised Learning
-### Classification
-#### Decision Trees
-#### Support Vector Machines
-#### Neural Networks
-### Regression
-#### Linear Regression
-#### Polynomial Regression
+# Classification Encoding
+Biến đổi dữ liệu thành dạng số để máy học hiểu.
 
-## Unsupervised Learning
-### Clustering
-#### K-Means
-#### Hierarchical Clustering
-### Dimensionality Reduction
-#### PCA
-#### t-SNE
+## Các phương pháp mã hóa
+### Integer Encoding
+Mỗi lớp là một số nguyên.
 
-## Reinforcement Learning
-### Q-Learning
-### Deep Q Networks
+### One-Hot Encoding
+Mỗi lớp là một vector nhị phân.
 
-## Deep Learning
-### Neural Networks
-#### Feed Forward Networks
-#### Convolutional Neural Networks
-#### Recurrent Neural Networks
-### Training Techniques
-#### Backpropagation
-#### Gradient Descent
-#### Regularization
+### Embedding
+Biểu diễn lớp bằng vector số thực (hay dùng trong NLP).
+
+# Logistic Regression
+## Binary Classification
+Phân loại dữ liệu thành 2 nhóm.
+
+### Hàm Sigmoid
+Chuyển đổi giá trị thành xác suất.
+
+### Likelihood & Log Likelihood
+- Xác suất mô hình dự đoán đúng.
+- Lấy log để dễ tính toán.
+
+### Cập nhật trọng số
+Dùng Gradient Descent để tối ưu mô hình.
+
+# Evaluation
+## ROC Curve & AUC
+Đánh giá mô hình theo các ngưỡng khác nhau.
+- **AUC ~1:** Mô hình tốt.
+- **AUC ~0.5:** Mô hình đoán ngẫu nhiên.
+
+## Loss function cho hồi quy
+- **MSE:** Sai số bình phương trung bình.
+- **MAE:** Sai số trung bình tuyệt đối.
+
+# Multi-class Classification
+## One-vs-All (OvA)
+Dùng nhiều mô hình nhị phân, chọn lớp có xác suất cao nhất.
+
+## One-vs-One (OvO)
+So sánh từng cặp lớp, lớp nào có nhiều phiếu bầu nhất thì chọn.
+- OvO công bằng hơn OvA nhưng tốn tài nguyên hơn.
 `
 
