@@ -25,9 +25,16 @@ const userSchema = new mongoose.Schema({
 // Document Collection Schema
 const documentSchema = new mongoose.Schema({
   document_id: { type: String, unique: true, default: function () { return new mongoose.Types.ObjectId().toString(); } },
-  user_id: { type: String, ref: "User", required: true }, 
+  user_id: { type: String, ref: "User", required: true },
   document_name: { type: String, required: false },
   document_path: { type: String, required: true },
+  // --- Cập nhật dòng này ---
+  status: {
+    type: Number, // Thay đổi từ String thành Number
+    enum: [0, 1], // Các giá trị số nguyên có thể có (0: inactive, 1: active)
+    default: 0    // Trạng thái mặc định là 0 (inactive)
+  }
+  // --- Hết phần cập nhật ---
 });
 
 // Models
@@ -326,37 +333,44 @@ exports.changePassword = async (req, res) => {
 };
 
 
-const redis = require("redis");
+// Trong file src/controllers/controller.js
 
-// Create Redis client
-const redisClient = redis.createClient({
-  url: process.env.REDIS_URL || "redis://localhost:6379",
-});
-redisClient.connect().catch(console.error);
+exports.setDocumentStatus = async (req, res) => {
+  const { document_id, status } = req.body;
 
-exports.updateDocumentStatus = async (req, res) => {
-  const { document_id, new_status } = req.body;
+  // --- Cập nhật Validation ---
+  // Chuyển đổi status thành số nguyên để đảm bảo type checking chính xác
+  const numericStatus = parseInt(status, 10); // Thêm bước parse để đảm bảo là số
 
-  // Validate inputs
-  if (!document_id || new_status === undefined) {
-    return res.status(400).json({ message: "Document ID and new status are required" });
+  if (!document_id || status === undefined || isNaN(numericStatus)) { // Kiểm tra cả status có phải là số không
+    return res.status(400).json({ message: "Document ID and a numeric status (0 or 1) are required" });
   }
 
-  try { 
-    // Get all keys matching "chunk:*"
-    const keys = await redisClient.keys("chunk:*");
+  // Validate status value
+  if (![0, 1].includes(numericStatus)) { // Kiểm tra với giá trị số
+    return res.status(400).json({ message: "Invalid status value. Must be 0 or 1." });
+  }
+  // --- Hết phần cập nhật Validation ---
 
-    // Update the `is_active` field for all chunks with the matching `doc_id`
-    for (const key of keys) {
-      const doc_id = await redisClient.hGet(key, "doc_id");
-      if (doc_id === document_id) {
-        await redisClient.hSet(key, "is_active", new_status);
-      }
+  try {
+    const updatedDocument = await Document.findOneAndUpdate(
+      { document_id: document_id },
+      { $set: { status: numericStatus } }, // Sử dụng giá trị số đã validate
+      { new: true }
+    );
+
+    if (!updatedDocument) {
+      return res.status(404).json({ message: "Document not found" });
     }
 
-    res.json({ message: `Updated all chunks with document_id: ${document_id} to status: ${new_status}` });
+    res.json({
+      // Cập nhật message nếu muốn, ví dụ:
+      message: `Document status updated successfully to ${numericStatus === 1 ? 'active (1)' : 'inactive (0)'}`,
+      document: updatedDocument
+    });
+
   } catch (error) {
-    console.error("Error updating document status:", error);
-    res.status(500).json({ message: "Error updating document status", error: error.message });
+    console.error("Error setting document status:", error);
+    res.status(500).json({ message: "Error setting document status", error: error.message });
   }
 };
