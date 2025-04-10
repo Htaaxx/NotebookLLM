@@ -133,11 +133,13 @@ def get_user_milvus_collection(user_id: str) -> Collection:
 
 
 # Ví dụ sửa đổi hàm ask_question
-def ask_question(user_id: str, question: str) -> str:
+def ask_question(user_id: str, question: str, headers: List[str] = []) -> str:
     """Trả lời câu hỏi dựa trên collection của user."""
+
     vector_store = get_user_vector_store(user_id)
+    content_to_search = question + "\n" + "\n".join(headers)
     retrieved_docs = vector_store.similarity_search(
-        question, k=8, params={"metric_type": "IP", "params": {"nprobe": 64}}
+        content_to_search, k=8, params={"metric_type": "IP", "params": {"nprobe": 64}}
     )
     # ... (phần còn lại của hàm giữ nguyên logic format, gọi LLM) ...
     citations = format_citations(retrieved_docs)
@@ -151,6 +153,7 @@ def ask_question(user_id: str, question: str) -> str:
     )
     response = llm.invoke(messages)
     final_response = validate_citations(response.content, citations)
+
     return final_response
 
 
@@ -505,11 +508,7 @@ def extract_all_headers(text: str) -> str:
     for line in lines:
         stripped_line = line.strip()
         if stripped_line.startswith("#"):
-            # Potentially add indentation based on header level for visual structure if needed
-            # level = stripped_line.count('#', 0, 3) # Count '#' at the beginning
-            # indentation = "  " * (level - 1) if level > 0 else ""
-            # header_text += indentation + stripped_line + "\n"
-            header_text += '#' + stripped_line + "\n"  # Keep it simple for now
+            header_text += '#' + stripped_line + "\n" 
     return header_text
 
 
