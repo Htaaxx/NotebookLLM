@@ -14,6 +14,7 @@ import {
 import { MindMapTaskbar } from "./mindmap-taskbar"
 import "../styles/mindmap.css"
 import { MindMapNodeModal } from "./mindmap-node-modal"
+import { documentAPI } from "@/lib/api";
 
 
 // ----------------------------------------------------------------
@@ -86,7 +87,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [allNodes, setAllNodes] = useState<MindMapNode[]>([]);
   const [activeNode, setActiveNode] = useState<any>(null)
   const [mindmap_node_search, setMindmapNodeSearch] = useState<string[][]>([]);
-
+  const [userID, setUserID] = useState("");
 
   // Get the current theme object
   const getThemeObject = (): MindMapTheme => {
@@ -170,6 +171,26 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
     try {
       const documentIds = selectedFiles.map((file) => file.id)
+      let userIdToUse = userID;
+      
+      if (!userIdToUse && documentIds.length > 0) {
+        try {
+          userIdToUse = await documentAPI.getUserWithDocument(documentIds[0]);
+          console.log("Retrieved user ID from API:", userIdToUse);
+          // Update state for future use
+          setUserID(userIdToUse);
+        } catch (err) {
+          console.error("Failed to get user ID from API:", err);
+          // Fall back to localStorage as a backup
+          if (typeof window !== "undefined") {
+            const storedUserId = localStorage.getItem("user_id");
+            if (storedUserId) {
+              userIdToUse = storedUserId;
+              setUserID(storedUserId);
+            }
+          }
+        }
+      }
 
       // Fixed: Send document_ids as a property in the request body
       const response = await fetch("/api/drawMindMap", {
@@ -177,7 +198,10 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ document_ids: documentIds }),
+        body: JSON.stringify({ 
+          document_ids: documentIds,
+          user_id: userIdToUse 
+        }),
       })
 
       if (!response.ok) {

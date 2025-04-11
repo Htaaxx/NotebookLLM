@@ -13,7 +13,7 @@ router.post("/createDocument", authController.createDocument);
 router.post("/getDocumentWithUser", authController.getDocumentWithUser);
 router.post("/deleteDocument", authController.deleteDocument);
 router.post('/updateDocument', authController.updateDocument);
-
+router.post("/getUserWithDocument", authController.getUserWithDocument);
 router.post("/updateDocumentStatus", authController.setDocumentStatus);
 
 router.get("/dashboard", verifyToken, authController.dashboard);

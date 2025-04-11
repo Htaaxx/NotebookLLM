@@ -166,7 +166,12 @@ export const documentAPI = {
       status: status
     });
     return response.data;
-  }
+  },
+
+  getUserWithDocument: async (documentId: string) => {
+    const response = await api.post('/getUserWithDocument', { document_id: documentId });
+    return response.data.user_id; 
+  },
   
 };
 

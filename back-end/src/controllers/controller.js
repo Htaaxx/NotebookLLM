@@ -374,3 +374,27 @@ exports.setDocumentStatus = async (req, res) => {
     res.status(500).json({ message: "Error setting document status", error: error.message });
   }
 };
+
+// Add this to controller.js file
+exports.getUserWithDocument = async (req, res) => {
+  try {
+    const { document_id } = req.body;
+    
+    if (!document_id) {
+      return res.status(400).json({ message: "Document ID is required" });
+    }
+    
+    // Find the document by its ID
+    const document = await Document.findOne({ document_id });
+    
+    if (!document) {
+      return res.status(404).json({ message: "Document not found" });
+    }
+    
+    // Return the user_id associated with this document
+    return res.json({ user_id: document.user_id });
+  } catch (error) {
+    console.error("Error getting user with document:", error);
+    res.status(500).json({ message: "Error retrieving user ID", error: error.message });
+  }
+};

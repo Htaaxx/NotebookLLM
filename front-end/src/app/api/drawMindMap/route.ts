@@ -11,20 +11,27 @@ export async function POST(request: Request) {
       return new Response("Missing document_ids in request body", { status: 400 })
     }
 
-    console.log("Received request body:", body.document_ids)
     const num_clusters = 5
+    const url = API_URL + `/embed/get_smaller_branches_from_docs?num_clusters=${num_clusters}`
+    const user_id = body.user_id ;
 
-    const url = API_URL + `/get_smaller_branches_from_docs?num_clusters=${num_clusters}`
+    console.log("Received request body:", body.document_ids);
+    console.log("Using user_id:", user_id);
+
+    const requestBody = {
+      user_id: String(user_id), 
+      documentIDs: body.document_ids
+    };
 
     // Make the request to the backend API with properly formatted JSON
     const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Accept-Charset": "UTF-8", // Explicitly request UTF-8 encoding
+        "Accept-Charset": "UTF-8", 
       },
       // Send just the array of document IDs
-      body: JSON.stringify(body.document_ids),
+      body: JSON.stringify(requestBody),
     })
 
     if (!response.ok) {
@@ -65,10 +72,7 @@ export async function POST(request: Request) {
 }
 
 // Default markdown to use when API fails
-const DEFAULT_MARKDOWN = `# Thông tin cá nhân
-**Họ và tên:** Nguyễn Quốc Thắng  
-**MSSV:** 22127385  
-
+const DEFAULT_MARKDOWN = `# Machine Learning
 # Classification Encoding
 Biến đổi dữ liệu thành dạng số để máy học hiểu.
 
