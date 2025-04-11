@@ -1,8 +1,7 @@
 const express = require("express");
+const router = express.Router();
 const { generateFlashcards } = require("../controllers/flashcardController");
 
-const router = express.Router();
+router.post("/generate", generateFlashcards);
 
-router.post("/flashcards", generateFlashcards);
-
-module.exports = router;
+module.exports = router
