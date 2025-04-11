@@ -104,8 +104,8 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   }, [selectedFiles])
 
   useEffect(() => {
-    if (activePanel === "mindmap") {
-      console.log("MindMap panel active, triggering refresh if needed")
+    if (activePanel === "mindmap" || activePanel === "cheatsheet") {
+      console.log(`${activePanel} panel active, triggering refresh if needed`)
 
       // Reset error state
       setError(null)
@@ -183,7 +183,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
 
   if (!activePanel) return null
 
-  if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap")) {
+  if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap" && activePanel !== "cheatsheet")) {
     return (
       <motion.div
         className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-white text-black"
@@ -351,7 +351,10 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <CheatsheetView initialMarkdown={selectedMarkdownFile ? markdownContent : undefined} />
+            <CheatsheetView
+              initialMarkdown={selectedMarkdownFile ? markdownContent : undefined}
+              selectedFiles={selectedFiles}
+            />
           </motion.div>
         )}
       </AnimatePresence>

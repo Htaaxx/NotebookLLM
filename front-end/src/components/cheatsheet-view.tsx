@@ -1,264 +1,821 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import type React from "react"
+
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, Download, Edit2, Save, X, ChevronLeft, ChevronRight } from "lucide-react"
-import { motion } from "framer-motion"
-import { fadeIn } from "@/lib/motion-utils"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
+import {
+  Download,
+  ZoomIn,
+  ZoomOut,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Maximize2,
+  MinusCircle,
+  PlusCircle,
+} from "lucide-react"
+import { Input } from "@/components/ui/input"
 import "../styles/cheatsheet.css"
+
+interface CheatsheetViewProps {
+  initialMarkdown?: string
+  selectedFiles?: any[]
+}
+
+interface CheatsheetTable {
+  headers: string[]
+  rows: string[][]
+}
+
+interface CheatsheetSubsection {
+  id: string
+  title: string
+  content: string
+  bulletPoints: string[]
+  tables: CheatsheetTable[]
+  isEditing?: boolean
+  size?: number // Add size estimation for subsections
+}
 
 interface CheatsheetSection {
   id: string
   title: string
   content: string
-  height?: number
-}
-
-interface CheatsheetColumn {
-  id: string
-  sections: CheatsheetSection[]
+  tables: CheatsheetTable[]
+  bulletPoints: string[]
+  subsections: CheatsheetSubsection[]
+  isEditing?: boolean
+  size?: number // Estimated size for layout
+  columnIndex?: number // Track which column this section belongs to
+  pageIndex?: number // Track which page this section belongs to
+  isSplit?: boolean // Flag to indicate if this section is a split part
+  originalId?: string // Reference to the original section ID if this is a split part
 }
 
 interface CheatsheetPage {
   id: string
-  columns: CheatsheetColumn[]
+  title: string
+  sections: CheatsheetSection[]
+  isEditing?: boolean
+  processedColumnSections?: CheatsheetSection[][]
 }
 
-interface CheatsheetViewProps {
-  initialMarkdown?: string
-}
+// Constants for layout calculations
+const COLUMNS_PER_PAGE = 3
+const MAX_COLUMN_HEIGHT = 230 // Maximum reasonable height for a column in mm
+const SECTION_MARGIN = 15 // Space between sections in mm
+const SECTION_HEADER_HEIGHT = 30 // Height of section header in mm
+const BULLET_POINT_HEIGHT = 20 // Height of a bullet point in mm
+const SUBSECTION_HEADER_HEIGHT = 25 // Height of subsection header in mm
+const TABLE_ROW_HEIGHT = 25 // Height of a table row in mm
+const CONTENT_LINE_HEIGHT = 20 // Height of a line of content in mm
 
-export function CheatsheetView({ initialMarkdown }: CheatsheetViewProps) {
-  const [title, setTitle] = useState("Data Science Cheatsheet")
-  const [subtitle, setSubtitle] = useState("Compiled by NoteUS")
-  const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleDateString())
-  const [editingTitle, setEditingTitle] = useState(false)
-  const [editingSubtitle, setEditingSubtitle] = useState(false)
-  const [pages, setPages] = useState<CheatsheetPage[]>([
-    {
-      id: "page1",
-      columns: [
-        {
-          id: "col1",
-          sections: [
-            {
-              id: "sec1",
-              title: "What is Data Science?",
-              content: `Multi-disciplinary field that brings together concepts from computer science, statistics/machine learning, and data analysis to understand and extract insights from the ever-increasing amounts of data.
-
-Two paradigms of data research.
-1. **Hypothesis-Driven:** Given a problem, what kind of data do we need to help solve it?
-2. **Data-Driven:** Given some data, what interesting problems can be solved with it?
-
-The heart of data science is to always ask questions. Always be curious about the world.
-1. What can we learn from this data?
-2. What actions can we take once we find whatever it is we are looking for?`,
-            },
-          ],
-        },
-        {
-          id: "col2",
-          sections: [
-            {
-              id: "sec2",
-              title: "Probability Overview",
-              content: `Probability theory provides a framework for reasoning about likelihood of events.
-
-**Terminology**
-Experiment: procedure that yields one of a possible set of outcomes e.g. repeatedly tossing a die or coin
-Sample Space S: set of possible outcomes of an experiment e.g. if tossing a die, S = {1,2,3,4,5,6}
-Event E: set of outcomes of an experiment e.g. event that a roll is 5, or the event that sum of 2 rolls is 7
-Probability of an Outcome s or P(s): number that satisfies 2 properties
-1. for each outcome s, 0 ≤ P(s) ≤ 1
-2. ∑ p(s) = 1`,
-            },
-          ],
-        },
-        {
-          id: "col3",
-          sections: [
-            {
-              id: "sec3",
-              title: "Descriptive Statistics",
-              content: `Provides a way of capturing a given data set or sample. There are two main types: centrality and variability measures.
-
-**Centrality**
-Arithmetic Mean: Useful to characterize symmetric distributions without outliers μX = 1/n ∑ xi
-Geometric Mean: Useful for averaging ratios. Always less than arithmetic mean = √(a1a2...a3)
-Median: Exact middle value among a dataset. Useful for skewed distribution or data with outliers.
-Mode: Most frequent element in a dataset.`,
-            },
-          ],
-        },
-      ],
-    },
-  ])
+export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetViewProps) {
+  const [title, setTitle] = useState("root")
+  const [subtitle, setSubtitle] = useState("Generated from selected documents")
+  const [pages, setPages] = useState<CheatsheetPage[]>([])
   const [currentPageIndex, setCurrentPageIndex] = useState(0)
-  const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
-  const [tempSectionContent, setTempSectionContent] = useState("")
-  const [tempSectionTitle, setTempSectionTitle] = useState("")
-  const [isExporting, setIsExporting] = useState(false)
+  const [scale, setScale] = useState(1)
   const [fontSize, setFontSize] = useState(14)
-
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [userID, setUserID] = useState("")
+  const [lastSelectedFileIds, setLastSelectedFileIds] = useState<string[]>([])
+  const [isMobileView, setIsMobileView] = useState(false)
+  const [editingTitle, setEditingTitle] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
   const cheatsheetRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const columnRefs = useRef<Record<string, HTMLDivElement | null>>({})
+  const pagesRef = useRef<(HTMLDivElement | null)[]>([])
+  const containerRef = useRef<HTMLDivElement>(null)
 
-  // Initialize with provided markdown if available
+  // Check for mobile view
   useEffect(() => {
-    if (initialMarkdown) {
-      setPages([
-        {
-          id: "page1",
-          columns: [
-            {
-              id: "col1",
-              sections: [
-                {
-                  id: "sec1",
-                  title: "Generated Content",
-                  content: initialMarkdown,
-                },
-              ],
-            },
-            { id: "col2", sections: [] },
-            { id: "col3", sections: [] },
-          ],
-        },
-      ])
-    }
-  }, [initialMarkdown])
-
-  // Add a new section to the cheatsheet
-  const addSection = () => {
-    const newSection: CheatsheetSection = {
-      id: `sec${Date.now()}`,
-      title: "New Section",
-      content: "Add your content here",
+    const checkMobileView = () => {
+      setIsMobileView(window.innerWidth < 768)
     }
 
-    // Create a copy of the current pages
-    const updatedPages = [...pages]
-    const currentPage = updatedPages[currentPageIndex]
+    checkMobileView()
+    window.addEventListener("resize", checkMobileView)
 
-    // If we don't have a current page, create one with the new section in the first column
-    if (!currentPage) {
-      const newPage = {
-        id: `page${Date.now()}`,
-        columns: [
-          { id: `col${Date.now()}`, sections: [newSection] },
-          { id: `col${Date.now() + 1}`, sections: [] },
-          { id: `col${Date.now() + 2}`, sections: [] },
-        ],
+    return () => {
+      window.removeEventListener("resize", checkMobileView)
+    }
+  }, [])
+
+  // Load user ID from localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedUserId = localStorage.getItem("user_id")
+      if (storedUserId) {
+        setUserID(storedUserId)
       }
-      updatedPages.push(newPage)
-      setPages(updatedPages)
-      setCurrentPageIndex(updatedPages.length - 1)
-      return
+    }
+  }, [])
+
+  // Handle fullscreen mode
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement)
     }
 
-    // Define maximum sections per column for A4 sizing
-    // This is a more conservative number to ensure proper A4 printing
-    const MAX_SECTIONS_PER_COLUMN = 4
+    document.addEventListener("fullscreenchange", handleFullscreenChange)
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange)
+    }
+  }, [])
 
-    // Get the number of sections in each column
-    const sectionCounts = currentPage.columns.map((col) => col.sections.length)
-
-    // Find the column with the fewest sections
-    const targetColumnIndex = sectionCounts.indexOf(Math.min(...sectionCounts))
-
-    // Check if the target column has reached the maximum
-    if (sectionCounts[targetColumnIndex] >= MAX_SECTIONS_PER_COLUMN) {
-      // All columns on this page are full, create a new page
-      const newPage = {
-        id: `page${Date.now()}`,
-        columns: [
-          { id: `col${Date.now()}`, sections: [newSection] },
-          { id: `col${Date.now() + 1}`, sections: [] },
-          { id: `col${Date.now() + 2}`, sections: [] },
-        ],
+  const toggleFullscreen = () => {
+    if (!isFullscreen) {
+      if (containerRef.current?.requestFullscreen) {
+        containerRef.current.requestFullscreen()
       }
-      updatedPages.push(newPage)
-      setPages(updatedPages)
-      setCurrentPageIndex(updatedPages.length - 1)
     } else {
-      // Add the new section to the column with the fewest sections
-      currentPage.columns[targetColumnIndex].sections.push(newSection)
-      setPages(updatedPages)
+      if (document.exitFullscreen) {
+        document.exitFullscreen()
+      }
     }
   }
 
-  const deleteSection = (columnId: string, sectionId: string) => {
-    setPages(
-      pages.map((page) => ({
-        ...page,
-        columns: page.columns.map((col) => {
-          if (col.id === columnId) {
-            return {
-              ...col,
-              sections: col.sections.filter((sec) => sec.id !== sectionId),
-            }
-          }
-          return col
+  // Fetch cheatsheet data from API based on selected files
+  const fetchCheatsheetFromAPI = async (selectedFiles: any[]) => {
+    if (!selectedFiles || selectedFiles.length === 0) {
+      console.log("No files selected for cheatsheet generation")
+      return null
+    }
+
+    const documentIds = selectedFiles.map((file) => file.id)
+
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      let userIdToUse = userID
+
+      if (!userIdToUse && typeof window !== "undefined") {
+        const storedUserId = localStorage.getItem("user_id")
+        if (storedUserId) {
+          userIdToUse = storedUserId
+          setUserID(storedUserId)
+        }
+      }
+
+      // Use the same API endpoint as drawMindMap
+      const response = await fetch("/api/drawMindMap", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          document_ids: documentIds,
+          user_id: userIdToUse,
         }),
-      })),
+      })
+
+      if (!response.ok) {
+        console.error(`API error: ${response.status} ${response.statusText}`)
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      const data = await response.text()
+      console.log("Received cheatsheet data:", data.substring(0, 100) + "...")
+
+      // Store the document IDs for future reference
+      setLastSelectedFileIds(documentIds)
+
+      // Process the response
+      let processedData: string
+
+      // Check if the response is JSON
+      try {
+        const jsonData = JSON.parse(data)
+        // If it's JSON and has a smaller_branches property, extract it
+        if (jsonData.smaller_branches) {
+          console.log("Extracted markdown from JSON response")
+          processedData = jsonData.smaller_branches
+        } else {
+          // Otherwise, stringify the JSON for display
+          processedData = JSON.stringify(jsonData, null, 2)
+        }
+      } catch (e) {
+        // Not JSON, use as is
+        if (!data || data.trim() === "") {
+          console.warn("Empty markdown received from API")
+          return null
+        } else {
+          processedData = data
+        }
+      }
+
+      return processedData
+    } catch (error) {
+      console.error("Error fetching cheatsheet from API:", error)
+      setError(`Failed to fetch cheatsheet: ${error instanceof Error ? error.message : String(error)}`)
+      return null
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Parse table content from markdown
+  const parseTable = (tableLines: string[]): CheatsheetTable => {
+    const headers: string[] = []
+    const rows: string[][] = []
+
+    // Process header row
+    if (tableLines.length > 0) {
+      const headerLine = tableLines[0].trim()
+      const headerCells = headerLine
+        .split("|")
+        .map((cell) => cell.trim())
+        .filter((cell) => cell)
+      headers.push(...headerCells)
+    }
+
+    // Skip separator row (line with dashes)
+
+    // Process data rows
+    for (let i = 2; i < tableLines.length; i++) {
+      const rowLine = tableLines[i].trim()
+      if (!rowLine || !rowLine.includes("|")) continue
+
+      const rowCells = rowLine
+        .split("|")
+        .map((cell) => cell.trim())
+        .filter((cell) => cell)
+      rows.push(rowCells)
+    }
+
+    return { headers, rows }
+  }
+
+  // Calculate size for a subsection
+  const estimateSubsectionSize = (subsection: CheatsheetSubsection): number => {
+    let size = SUBSECTION_HEADER_HEIGHT // Base size for subsection header
+
+    // Add size for content (estimate lines)
+    if (subsection.content) {
+      const contentLines = Math.ceil(subsection.content.length / 50) // Rough estimate of characters per line
+      size += contentLines * CONTENT_LINE_HEIGHT
+    }
+
+    // Add size for bullet points
+    size += subsection.bulletPoints.length * BULLET_POINT_HEIGHT
+
+    // Add size for tables
+    subsection.tables.forEach((table) => {
+      size += 30 // Table header
+      size += table.rows.length * TABLE_ROW_HEIGHT
+    })
+
+    return size
+  }
+
+  // Improved size estimation for sections
+  const estimateSectionSize = (section: CheatsheetSection): number => {
+    // Use a much simpler calculation to avoid performance issues
+    let size = 30 // Base size
+    size += section.content ? Math.min(section.content.length / 10, 100) : 0
+    size += section.bulletPoints.length * 15
+    size += section.tables.length * 50
+    size += section.subsections.length * 40
+    return size
+  }
+
+  // Split a section at a logical point (between subsections)
+  const splitSectionAtSubsection = (
+    section: CheatsheetSection,
+    maxHeight: number,
+  ): { firstPart: CheatsheetSection; secondPart: CheatsheetSection } => {
+    // Create copies for the split parts with a simpler approach
+    const firstPart: CheatsheetSection = {
+      ...section,
+      id: `${section.id}-part1`,
+      title: `${section.title} (Part 1)`,
+      subsections: [],
+      isSplit: true,
+      originalId: section.id,
+    }
+
+    const secondPart: CheatsheetSection = {
+      ...section,
+      id: `${section.id}-part2`,
+      title: `${section.title} (Part 2)`,
+      subsections: [],
+      isSplit: true,
+      originalId: section.id,
+    }
+
+    // Simple split - half the subsections to each part
+    const midpoint = Math.ceil(section.subsections.length / 2)
+    firstPart.subsections = section.subsections.slice(0, midpoint)
+    secondPart.subsections = section.subsections.slice(midpoint)
+
+    // Content goes to first part
+    firstPart.content = section.content
+    secondPart.content = ""
+
+    // Bullet points go to first part
+    firstPart.bulletPoints = section.bulletPoints
+    secondPart.bulletPoints = []
+
+    // Tables go to first part
+    firstPart.tables = section.tables
+    secondPart.tables = []
+
+    // Simple size calculation
+    firstPart.size = 30 + firstPart.subsections.length * 40
+    secondPart.size = 30 + secondPart.subsections.length * 40
+
+    return { firstPart, secondPart }
+  }
+
+  // New advanced content distribution algorithm
+  const distributeContentAcrossPages = (title: string, sections: CheatsheetSection[]): CheatsheetPage[] => {
+    const pages: CheatsheetPage[] = []
+
+    // First, calculate sizes for all sections but with a simpler approach
+    sections.forEach((section) => {
+      // Simplified size calculation to avoid excessive computation
+      let size = SECTION_HEADER_HEIGHT
+      size += section.content ? Math.min(section.content.length / 10, 100) : 0
+      size += section.bulletPoints.length * 15
+      size += section.tables.length * 50
+      size += section.subsections.length * 40
+      section.size = size
+    })
+
+    // Create the first page
+    let currentPage: CheatsheetPage = {
+      id: `page-0`,
+      title: title,
+      sections: [],
+    }
+    pages.push(currentPage)
+
+    // Track column heights for the current page
+    let columnHeights = Array(COLUMNS_PER_PAGE).fill(0)
+    let currentPageIndex = 0
+
+    // Use a simpler approach to distribute sections
+    for (let i = 0; i < sections.length; i++) {
+      const section = sections[i]
+      const sectionHeight = section.size || 50 // Default size if not calculated
+
+      // Find the column with the least content
+      let targetColumn = 0
+      for (let col = 1; col < COLUMNS_PER_PAGE; col++) {
+        if (columnHeights[col] < columnHeights[targetColumn]) {
+          targetColumn = col
+        }
+      }
+
+      // Check if we need a new page (all columns exceed reasonable height)
+      if (columnHeights.every((height) => height > 200)) {
+        // Create a new page
+        currentPageIndex++
+        currentPage = {
+          id: `page-${currentPageIndex}`,
+          title: title,
+          sections: [],
+        }
+        pages.push(currentPage)
+        columnHeights = Array(COLUMNS_PER_PAGE).fill(0)
+        targetColumn = 0
+      }
+
+      // Add section to the target column
+      section.columnIndex = targetColumn
+      section.pageIndex = currentPageIndex
+      currentPage.sections.push(section)
+
+      // Update the height for this column
+      columnHeights[targetColumn] += sectionHeight + 10
+    }
+
+    return pages
+  }
+
+  // Format text with bold markers
+  const formatText = (text: string): React.ReactNode => {
+    if (!text) return null
+
+    // Split by bold markers
+    const parts = text.split(/(\*\*[^*]+\*\*)/)
+
+    return parts.map((part, index) => {
+      // Check if this part is bold (surrounded by **)
+      if (part.startsWith("**") && part.endsWith("**")) {
+        // Remove the ** markers and return bold text
+        return <strong key={index}>{part.slice(2, -2)}</strong>
+      }
+      // Regular text
+      return <span key={index}>{part}</span>
+    })
+  }
+
+  // Render a table
+  const renderTable = (table: CheatsheetTable) => {
+    return (
+      <table className="cheatsheet-table">
+        <thead>
+          <tr>
+            {table.headers.map((header, index) => (
+              <th key={index}>{header}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {table.rows.map((row, rowIndex) => (
+            <tr key={rowIndex}>
+              {row.map((cell, cellIndex) => (
+                <td key={cellIndex}>{cell}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     )
   }
 
-  const startEditingSection = (section: CheatsheetSection) => {
-    setEditingSectionId(section.id)
-    setTempSectionContent(section.content)
-    setTempSectionTitle(section.title)
-  }
+  // Parse markdown content to cheatsheet pages and sections
+  const parseMarkdownToCheatsheet = (markdown: string) => {
+    if (!markdown || markdown.trim() === "") {
+      return {
+        title: "root",
+        subtitle: "Generated from selected documents",
+        pages: [],
+      }
+    }
 
-  const saveEditingSection = (columnId: string, sectionId: string) => {
-    setPages(
-      pages.map((page) => ({
-        ...page,
-        columns: page.columns.map((col) => {
-          if (col.id === columnId) {
-            return {
-              ...col,
-              sections: col.sections.map((sec) => {
-                if (sec.id === sectionId) {
-                  return {
-                    ...sec,
-                    title: tempSectionTitle,
-                    content: tempSectionContent,
-                  }
-                }
-                return sec
-              }),
+    try {
+      // Normalize line endings
+      markdown = markdown.replace(/\\n/g, "\n").replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+
+      // Limit the markdown size to prevent browser freezing
+      const MAX_MARKDOWN_LENGTH = 50000
+      if (markdown.length > MAX_MARKDOWN_LENGTH) {
+        console.log(`Limiting markdown from ${markdown.length} to ${MAX_MARKDOWN_LENGTH} characters for performance`)
+        markdown = markdown.substring(0, MAX_MARKDOWN_LENGTH) + "\n\n... (content truncated for performance)"
+      }
+
+      const lines = markdown.split("\n")
+
+      let cheatsheetTitle = "root"
+      const cheatsheetSubtitle = "Generated from selected documents"
+      const parsedSections: CheatsheetSection[] = []
+
+      let currentSection: CheatsheetSection | null = null
+      let currentSubsection: CheatsheetSubsection | null = null
+      let sectionIndex = 0
+      let subsectionIndex = 0
+      let inTable = false
+      let tableLines: string[] = []
+
+      // Process each line with a more efficient approach
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim()
+
+        // Skip empty lines
+        if (!line) {
+          // If we were in a table, process it now
+          if (inTable && tableLines.length > 0) {
+            const table = parseTable(tableLines)
+
+            if (currentSubsection) {
+              currentSubsection.tables.push(table)
+            } else if (currentSection) {
+              currentSection.tables.push(table)
+            }
+
+            inTable = false
+            tableLines = []
+          }
+          continue
+        }
+
+        // Check for title (# heading)
+        if (line.startsWith("# ")) {
+          cheatsheetTitle = line.substring(2).trim()
+          continue
+        }
+
+        // Check for section (## heading)
+        if (line.startsWith("## ")) {
+          // If we were in a table, process it now
+          if (inTable && tableLines.length > 0) {
+            const table = parseTable(tableLines)
+
+            if (currentSubsection) {
+              currentSubsection.tables.push(table)
+            } else if (currentSection) {
+              currentSection.tables.push(table)
+            }
+
+            inTable = false
+            tableLines = []
+          }
+
+          // Start a new section
+          const sectionTitle = line.substring(3).trim()
+          currentSection = {
+            id: `section-${sectionIndex++}`,
+            title: sectionTitle,
+            content: "",
+            tables: [],
+            bulletPoints: [],
+            subsections: [],
+          }
+
+          parsedSections.push(currentSection)
+          currentSubsection = null
+
+          // Limit the number of sections to prevent browser freezing
+          if (sectionIndex > 30) {
+            console.log("Limiting sections to 30 for performance")
+            break
+          }
+
+          continue
+        }
+
+        // Check for subsection (### heading)
+        if (line.startsWith("### ") && currentSection) {
+          // If we were in a table, process it now
+          if (inTable && tableLines.length > 0) {
+            const table = parseTable(tableLines)
+
+            if (currentSubsection) {
+              currentSubsection.tables.push(table)
+            } else if (currentSection) {
+              currentSection.tables.push(table)
+            }
+
+            inTable = false
+            tableLines = []
+          }
+
+          const subsectionTitle = line.substring(4).trim()
+          currentSubsection = {
+            id: `subsection-${subsectionIndex++}`,
+            title: subsectionTitle,
+            content: "",
+            bulletPoints: [],
+            tables: [],
+          }
+
+          currentSection.subsections.push(currentSubsection)
+          continue
+        }
+
+        // Check for table start
+        if (line.startsWith("|") && line.endsWith("|")) {
+          if (!inTable) {
+            inTable = true
+            tableLines = []
+          }
+
+          tableLines.push(line)
+          continue
+        }
+
+        // Check for bullet points (- or * or #### and beyond)
+        if ((line.startsWith("-") || line.startsWith("*") || line.startsWith("####")) && currentSection) {
+          // If we were in a table, process it now
+          if (inTable && tableLines.length > 0) {
+            const table = parseTable(tableLines)
+
+            if (currentSubsection) {
+              currentSubsection.tables.push(table)
+            } else if (currentSection) {
+              currentSection.tables.push(table)
+            }
+
+            inTable = false
+            tableLines = []
+          }
+
+          const bulletContent = line.replace(/^[-*]|^####*\s+/, "").trim()
+
+          if (currentSubsection) {
+            currentSubsection.bulletPoints.push(bulletContent)
+          } else {
+            currentSection.bulletPoints.push(bulletContent)
+          }
+          continue
+        }
+
+        // Regular content
+        if (currentSection) {
+          if (!inTable) {
+            if (currentSubsection) {
+              if (currentSubsection.content) {
+                currentSubsection.content += "\n" + line
+              } else {
+                currentSubsection.content = line
+              }
+            } else {
+              if (currentSection.content) {
+                currentSection.content += "\n" + line
+              } else {
+                currentSection.content = line
+              }
             }
           }
-          return col
-        }),
-      })),
-    )
-    setEditingSectionId(null)
+        }
+      }
+
+      // Process any remaining table
+      if (inTable && tableLines.length > 0) {
+        const table = parseTable(tableLines)
+
+        if (currentSubsection) {
+          currentSubsection.tables.push(table)
+        } else if (currentSection) {
+          currentSection.tables.push(table)
+        }
+      }
+
+      // Ensure each section has at least one subsection
+      parsedSections.forEach((section) => {
+        if (section.subsections.length === 0 && (section.content || section.bulletPoints.length > 0)) {
+          section.subsections.push({
+            id: `subsection-auto-${subsectionIndex++}`,
+            title: "Overview",
+            content: section.content,
+            bulletPoints: section.bulletPoints.slice(),
+            tables: section.tables.slice(),
+          })
+          // Move content to the subsection
+          section.content = ""
+          section.bulletPoints = []
+          section.tables = []
+        }
+      })
+
+      // Calculate sizes for all sections and subsections
+      parsedSections.forEach((section) => {
+        section.subsections.forEach((subsection) => {
+          subsection.size = estimateSubsectionSize(subsection)
+        })
+        section.size = estimateSectionSize(section)
+      })
+
+      // Limit the number of sections processed at once
+      const MAX_SECTIONS_PER_PAGE = 15
+      if (parsedSections.length > MAX_SECTIONS_PER_PAGE) {
+        console.log(`Limiting sections from ${parsedSections.length} to ${MAX_SECTIONS_PER_PAGE} for performance`)
+        parsedSections.length = MAX_SECTIONS_PER_PAGE
+      }
+
+      // Distribute sections across pages
+      const distributedPages = distributeContentAcrossPages(cheatsheetTitle, parsedSections)
+
+      return {
+        title: cheatsheetTitle,
+        subtitle: cheatsheetSubtitle,
+        pages: distributedPages,
+      }
+    } catch (err) {
+      console.error("Error parsing markdown to cheatsheet:", err)
+      return {
+        title: "root",
+        subtitle: "Error parsing content",
+        pages: [],
+      }
+    }
   }
 
+  // Load cheatsheet content when selected files change
+  useEffect(() => {
+    if (selectedFiles && selectedFiles.length > 0) {
+      fetchCheatsheetFromAPI(selectedFiles)
+        .then((content) => {
+          if (content) {
+            const { title: newTitle, subtitle: newSubtitle, pages: newPages } = parseMarkdownToCheatsheet(content)
+            setTitle(newTitle)
+            setSubtitle(newSubtitle)
+            setPages(newPages)
+            setCurrentPageIndex(0)
+          }
+        })
+        .catch((err) => {
+          console.error("Error fetching cheatsheet:", err)
+          setError(`Failed to fetch cheatsheet: ${err instanceof Error ? err.message : String(err)}`)
+        })
+    } else if (initialMarkdown) {
+      const { title: newTitle, subtitle: newSubtitle, pages: newPages } = parseMarkdownToCheatsheet(initialMarkdown)
+      setTitle(newTitle)
+      setSubtitle(newSubtitle)
+      setPages(newPages)
+      setCurrentPageIndex(0)
+    }
+  }, [initialMarkdown, selectedFiles])
+
+  // Add this useEffect to break up the heavy computation into smaller chunks
+  // Add this right after the useEffect that loads cheatsheet content
+  useEffect(() => {
+    if (isLoading) return
+
+    // Use requestAnimationFrame to avoid blocking the main thread
+    const processChunks = () => {
+      if (pages.length === 0) return
+
+      // Process one page at a time to avoid freezing the browser
+      const pageToProcess = pages[currentPageIndex]
+      if (!pageToProcess) return
+
+      // Group sections by column
+      const columnSections: CheatsheetSection[][] = [[], [], []]
+      pageToProcess.sections.forEach((section) => {
+        const columnIndex = section.columnIndex || 0
+        if (columnIndex >= 0 && columnIndex < 3) {
+          columnSections[columnIndex].push(section)
+        }
+      })
+
+      // Update the page with processed sections
+      const updatedPages = [...pages]
+      updatedPages[currentPageIndex] = {
+        ...pageToProcess,
+        processedColumnSections: columnSections,
+      }
+      setPages(updatedPages)
+    }
+
+    // Use requestIdleCallback if available, otherwise use setTimeout
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      ;(window as any).requestIdleCallback(processChunks)
+    } else {
+      setTimeout(processChunks, 0)
+    }
+  }, [currentPageIndex, pages, isLoading])
+
+  // Handle zoom in
+  const handleZoomIn = () => {
+    setScale((prev) => Math.min(prev + 0.1, 2))
+  }
+
+  // Handle zoom out
+  const handleZoomOut = () => {
+    setScale((prev) => Math.max(prev - 0.1, 0.5))
+  }
+
+  // Handle font size increase
+  const handleFontSizeIncrease = () => {
+    setFontSize((prev) => Math.min(prev + 1, 24))
+  }
+
+  // Handle font size decrease
+  const handleFontSizeDecrease = () => {
+    setFontSize((prev) => Math.max(prev - 1, 10))
+  }
+
+  // Navigate to next page
   const nextPage = () => {
     if (currentPageIndex < pages.length - 1) {
       setCurrentPageIndex(currentPageIndex + 1)
     }
   }
 
+  // Navigate to previous page
   const prevPage = () => {
     if (currentPageIndex > 0) {
       setCurrentPageIndex(currentPageIndex - 1)
     }
   }
 
-  const exportToPdf = async () => {
-    if (!contentRef.current) return
+  // Add a new page
+  const addPage = () => {
+    const newPage: CheatsheetPage = {
+      id: `page-${pages.length}`,
+      title: title,
+      sections: [],
+    }
+
+    setPages([...pages, newPage])
+    setCurrentPageIndex(pages.length)
+  }
+
+  // Update title across all pages
+  useEffect(() => {
+    if (pages.length > 0) {
+      const updatedPages = pages.map((page) => ({
+        ...page,
+        title: title,
+      }))
+      setPages(updatedPages)
+    }
+  }, [title])
+
+  // Update the PDF export function to handle the new column-based layout
+  const handleExportPDF = async () => {
+    if (pages.length === 0) return
 
     try {
-      setIsExporting(true)
+      setIsLoading(true)
 
       // Create a PDF with A4 portrait dimensions
       const pdf = new jsPDF({
@@ -271,151 +828,69 @@ Mode: Most frequent element in a dataset.`,
       const a4Width = 210
       const a4Height = 297
       const margin = 10 // 10mm margin
-      const contentWidth = a4Width - margin * 2
-      const contentHeight = a4Height - margin * 2
 
-      // For each page in the cheatsheet
+      // Process each page
       for (let i = 0; i < pages.length; i++) {
         // If not the first page, add a new page to the PDF
         if (i > 0) {
           pdf.addPage()
         }
 
-        // Create a temporary container for this page
+        // Create a temporary container for rendering the page
         const tempContainer = document.createElement("div")
-        tempContainer.className = "pdf-export-container"
-        tempContainer.style.width = `${a4Width}mm`
-        tempContainer.style.height = `${a4Height}mm`
-        tempContainer.style.padding = `${margin}mm`
-        tempContainer.style.backgroundColor = "white"
         tempContainer.style.position = "absolute"
         tempContainer.style.left = "-9999px"
-        tempContainer.style.top = "0"
-        tempContainer.style.zIndex = "-1"
+        tempContainer.style.width = `${a4Width}mm`
+        tempContainer.style.height = `${a4Height}mm`
         tempContainer.style.overflow = "hidden"
-        tempContainer.style.boxSizing = "border-box"
-
-        // Create the page content
-        const pageContent = document.createElement("div")
-        pageContent.className = "cheatsheet-container"
-        pageContent.style.width = "100%"
-        pageContent.style.height = "100%"
-        pageContent.style.padding = "0"
-        pageContent.style.margin = "0"
-        pageContent.style.boxSizing = "border-box"
-
-        // Add header only to the first page
-        if (i === 0) {
-          const headerDiv = document.createElement("div")
-          headerDiv.className = "cheatsheet-header"
-          headerDiv.style.textAlign = "center"
-          headerDiv.style.marginBottom = "15px"
-
-          const titleEl = document.createElement("h1")
-          titleEl.className = "cheatsheet-title"
-          titleEl.style.fontSize = "20px"
-          titleEl.style.fontWeight = "bold"
-          titleEl.style.margin = "0 0 5px 0"
-          titleEl.textContent = title
-
-          const subtitleEl = document.createElement("p")
-          subtitleEl.className = "cheatsheet-subtitle"
-          subtitleEl.style.fontSize = "12px"
-          subtitleEl.style.margin = "0 0 3px 0"
-          subtitleEl.textContent = subtitle
-
-          const dateEl = document.createElement("p")
-          dateEl.className = "cheatsheet-date"
-          dateEl.style.fontSize = "10px"
-          dateEl.style.fontStyle = "italic"
-          dateEl.style.margin = "0"
-          dateEl.textContent = `Last Updated ${lastUpdated}`
-
-          headerDiv.appendChild(titleEl)
-          headerDiv.appendChild(subtitleEl)
-          headerDiv.appendChild(dateEl)
-          pageContent.appendChild(headerDiv)
-        }
-
-        // Create grid for this page
-        const gridDiv = document.createElement("div")
-        gridDiv.className = "cheatsheet-grid"
-        gridDiv.style.display = "grid"
-        gridDiv.style.gridTemplateColumns = "repeat(3, 1fr)"
-        gridDiv.style.gap = "8px"
-        gridDiv.style.width = "100%"
-
-        // Add columns for this page
-        pages[i].columns.forEach((column) => {
-          const columnDiv = document.createElement("div")
-          columnDiv.className = "cheatsheet-column"
-          columnDiv.style.display = "flex"
-          columnDiv.style.flexDirection = "column"
-          columnDiv.style.gap = "8px"
-          columnDiv.style.width = "100%"
-
-          // Add sections for this column
-          column.sections.forEach((section) => {
-            const sectionDiv = document.createElement("div")
-            sectionDiv.className = "cheatsheet-section"
-            sectionDiv.style.marginBottom = "8px"
-            sectionDiv.style.borderRadius = "0"
-            sectionDiv.style.border = "1px solid #000"
-            sectionDiv.style.overflow = "hidden"
-            sectionDiv.style.width = "100%"
-            sectionDiv.style.breakInside = "avoid"
-            sectionDiv.style.pageBreakInside = "avoid"
-
-            // Add header
-            const headerDiv = document.createElement("div")
-            headerDiv.className = "cheatsheet-section-header"
-            headerDiv.style.backgroundColor = "#000"
-            headerDiv.style.color = "#fff"
-            headerDiv.style.padding = "4px 8px"
-            headerDiv.style.fontWeight = "bold"
-            headerDiv.style.width = "100%"
-            headerDiv.style.boxSizing = "border-box"
-            headerDiv.style.fontSize = "12px"
-            headerDiv.textContent = section.title
-            sectionDiv.appendChild(headerDiv)
-
-            // Add content
-            const contentDiv = document.createElement("div")
-            contentDiv.className = "cheatsheet-section-content"
-            contentDiv.style.padding = "8px"
-            contentDiv.style.width = "100%"
-            contentDiv.style.boxSizing = "border-box"
-            contentDiv.style.wordWrap = "break-word"
-            contentDiv.style.overflowWrap = "break-word"
-            contentDiv.style.fontSize = "10px"
-            contentDiv.style.lineHeight = "1.3"
-            contentDiv.innerHTML = formatContent(section.content)
-            sectionDiv.appendChild(contentDiv)
-
-            columnDiv.appendChild(sectionDiv)
-          })
-
-          gridDiv.appendChild(columnDiv)
-        })
-
-        pageContent.appendChild(gridDiv)
-        tempContainer.appendChild(pageContent)
+        tempContainer.style.backgroundColor = "white"
         document.body.appendChild(tempContainer)
 
-        // Wait for any images to load
-        await new Promise((resolve) => setTimeout(resolve, 500))
+        // Clone the page element
+        const pageElement = pagesRef.current[i]
+        if (!pageElement) {
+          document.body.removeChild(tempContainer)
+          continue
+        }
 
-        // Capture the content
-        const canvas = await html2canvas(tempContainer, {
-          scale: 2,
+        // Clone the page for rendering
+        const clone = pageElement.cloneNode(true) as HTMLElement
+        clone.style.transform = "scale(1)"
+        clone.style.width = `${a4Width}mm`
+        clone.style.height = `${a4Height}mm`
+        clone.style.position = "relative"
+        clone.style.overflow = "hidden"
+        clone.style.backgroundColor = "white"
+        clone.style.display = "block" // Make sure it's visible for rendering
+
+        // Update the title in the clone to ensure consistency
+        const titleElement = clone.querySelector(".cheatsheet-title")
+        if (titleElement && i === 0) {
+          titleElement.textContent = title
+        }
+
+        // Remove any fixed position elements
+        const fixedElements = clone.querySelectorAll(
+          '.fixed, .sticky, [style*="position: fixed"], [style*="position: sticky"]',
+        )
+        fixedElements.forEach((el) => el.parentNode?.removeChild(el))
+
+        // Add the clone to the temporary container
+        tempContainer.appendChild(clone)
+
+        // Use html2canvas to capture the page
+        const canvas = await html2canvas(clone, {
+          scale: 2, // Higher scale for better quality
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
+          width: a4Width * 3.78, // Convert mm to pixels at 96 DPI
+          height: a4Height * 3.78,
         })
 
         // Add to PDF - properly scaled to fit A4
         const imgData = canvas.toDataURL("image/jpeg", 1.0)
-        pdf.addImage(imgData, "JPEG", 0, 0, a4Width, a4Height)
+        pdf.addImage(imgData, "JPEG", margin, margin, a4Width - margin * 2, a4Height - margin * 2)
 
         // Clean up
         document.body.removeChild(tempContainer)
@@ -423,273 +898,273 @@ Mode: Most frequent element in a dataset.`,
 
       // Save the PDF
       pdf.save(`${title.replace(/\s+/g, "_")}.pdf`)
-      setIsExporting(false)
     } catch (error) {
       console.error("Error exporting PDF:", error)
       alert("Failed to export PDF. Please try again.")
-      setIsExporting(false)
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // Format content with basic markdown-like syntax
-  const formatContent = (content: string) => {
-    if (!content) return ""
+  // Modify the renderPage function to use pre-processed sections when available
+  const renderPage = (page: CheatsheetPage, pageIndex: number) => {
+    // Use pre-processed sections if available
+    const columnSections = page.processedColumnSections || [[], [], []]
 
-    // Replace line breaks with <br> tags
-    let formatted = content.replace(/\n/g, "<br>")
+    // If not pre-processed, group sections by column
+    if (!page.processedColumnSections) {
+      page.sections.forEach((section) => {
+        const columnIndex = section.columnIndex || 0
+        if (columnIndex >= 0 && columnIndex < 3) {
+          columnSections[columnIndex].push(section)
+        }
+      })
+    }
 
-    // Bold text
-    formatted = formatted.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-    formatted = formatted.replace(/__(.*?)__/g, "<strong>$1</strong>")
+    return (
+      <div
+        key={page.id}
+        className={`cheatsheet-page ${pageIndex === currentPageIndex ? "block" : "hidden"}`}
+        ref={(el) => {
+          pagesRef.current[pageIndex] = el
+        }}
+      >
+        {/* Only show header on the first page */}
+        {pageIndex === 0 && (
+          <div className="cheatsheet-header">
+            <div className="cheatsheet-title">{title}</div>
+            <div className="cheatsheet-subtitle">{subtitle}</div>
+            <div className="cheatsheet-date">{new Date().toLocaleDateString()}</div>
+          </div>
+        )}
 
-    // Italic text
-    formatted = formatted.replace(/\*(.*?)\*/g, "<em>$1</em>")
-    formatted = formatted.replace(/_(.*?)_/g, "<em>$1</em>")
+        <div className="cheatsheet-grid" style={{ fontSize: `${fontSize}px` }}>
+          {/* Render each column */}
+          {columnSections.map((sections, colIndex) => (
+            <div key={`col-${colIndex}`} className="cheatsheet-column">
+              {sections.map((section) => renderSection(section, pageIndex))}
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  }
 
-    // Highlight terms (e.g., "Term:" at the beginning of a line)
-    formatted = formatted.replace(/(^|<br>)([A-Za-z\s]+):/g, '$1<span class="term">$2:</span>')
+  // Render a section with its content and subsections
+  const renderSection = (section: CheatsheetSection, pageIndex: number) => {
+    if (!section) return null
 
-    return formatted
+    return (
+      <div key={section.id} className="cheatsheet-section-wrapper">
+        <div className="cheatsheet-section">
+          <div className="cheatsheet-section-header">
+            <div
+              className="flex justify-between items-center w-full"
+              onDoubleClick={() => {
+                const updatedPages = [...pages]
+                const sectionIndex = updatedPages[pageIndex].sections.findIndex((s) => s.id === section.id)
+                if (sectionIndex !== -1) {
+                  updatedPages[pageIndex].sections[sectionIndex].isEditing = true
+                  setPages(updatedPages)
+                }
+              }}
+            >
+              <span>{section.title}</span>
+            </div>
+          </div>
+          <div className="cheatsheet-section-content">
+            {section.content && <p>{formatText(section.content)}</p>}
+
+            {/* Render bullet points */}
+            {section.bulletPoints && section.bulletPoints.length > 0 && (
+              <ul className="cheatsheet-bullet-list">
+                {section.bulletPoints.map((point, index) => (
+                  <li key={index}>{formatText(point)}</li>
+                ))}
+              </ul>
+            )}
+
+            {/* Render tables */}
+            {section.tables && section.tables.map((table, index) => <div key={index}>{renderTable(table)}</div>)}
+
+            {/* Render subsections */}
+            {section.subsections &&
+              section.subsections.map((subsection, subsectionIndex) => (
+                <div key={subsection.id} className="cheatsheet-subsection">
+                  <h3 className="cheatsheet-subsection-title">
+                    <span>{subsection.title}</span>
+                  </h3>
+
+                  {subsection.content && <p>{formatText(subsection.content)}</p>}
+
+                  {/* Render subsection bullet points */}
+                  {subsection.bulletPoints && subsection.bulletPoints.length > 0 && (
+                    <ul className="cheatsheet-bullet-list">
+                      {subsection.bulletPoints.map((point, pointIndex) => (
+                        <li key={pointIndex}>{formatText(point)}</li>
+                      ))}
+                    </ul>
+                  )}
+
+                  {/* Render subsection tables */}
+                  {subsection.tables &&
+                    subsection.tables.map((table, tableIndex) => <div key={tableIndex}>{renderTable(table)}</div>)}
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Add this function to debounce the layout calculation
+  const useDebounce = (value: any, delay: number) => {
+    const [debouncedValue, setDebouncedValue] = useState(value)
+
+    useEffect(() => {
+      const handler = setTimeout(() => {
+        setDebouncedValue(value)
+      }, delay)
+
+      return () => {
+        clearTimeout(handler)
+      }
+    }, [value, delay])
+
+    return debouncedValue
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="bg-green-600 text-white">
-        {/* Responsive taskbar with better layout */}
-        <div className="flex flex-wrap items-center p-2 gap-2">
-          {/* Left section - Title and edit */}
-          <div className="flex items-center mr-auto">
+    <div className="flex flex-col h-full" ref={containerRef}>
+      {/* Simplified Taskbar */}
+      <div className="cheatsheet-header-bar sticky top-0 z-10">
+        <div className="flex items-center">
+          <div className="text-lg font-medium cursor-pointer" onDoubleClick={() => setEditingTitle(true)}>
             {editingTitle ? (
               <div className="flex items-center">
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="mr-2 bg-white text-black w-40 h-8"
+                  className="h-8 text-black bg-white mr-2"
                   autoFocus
+                  onBlur={() => setEditingTitle(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") setEditingTitle(false)
+                  }}
                 />
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-white hover:bg-green-700 h-8 w-8 p-0"
-                  onClick={() => setEditingTitle(false)}
-                >
-                  <Save className="h-4 w-4" />
-                </Button>
               </div>
             ) : (
-              <div className="flex items-center">
-                <h2 className="text-lg font-bold whitespace-nowrap">Academic Cheatsheet</h2>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="ml-1 text-white hover:bg-green-700 h-8 w-8 p-0"
-                  onClick={() => setEditingTitle(true)}
-                >
-                  <Edit2 className="h-4 w-4" />
-                </Button>
-              </div>
+              title
             )}
           </div>
+        </div>
 
-          {/* Center section - Page navigation */}
+        <div className="flex items-center space-x-2">
+          {/* Page navigation */}
           <div className="flex items-center">
             <Button
-              size="sm"
               variant="ghost"
-              className="text-white hover:bg-green-700 h-8 w-8 p-0"
+              size="sm"
               onClick={prevPage}
               disabled={currentPageIndex === 0}
+              className="text-white"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="mx-2 text-sm whitespace-nowrap">
+            <span className="text-sm mx-2 whitespace-nowrap">
               Page {currentPageIndex + 1} of {pages.length}
             </span>
             <Button
-              size="sm"
               variant="ghost"
-              className="text-white hover:bg-green-700 h-8 w-8 p-0"
+              size="sm"
               onClick={nextPage}
               disabled={currentPageIndex === pages.length - 1}
+              className="text-white"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
+            <Button variant="ghost" size="sm" onClick={addPage} className="text-white ml-2">
+              <Plus className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Font size control */}
+          {/* Font size controls */}
           <div className="flex items-center">
-            <span className="text-sm mr-1 whitespace-nowrap">Font:</span>
-            <Input
-              type="number"
-              min="8"
-              max="24"
-              value={fontSize}
-              onChange={(e) => setFontSize(Number.parseInt(e.target.value) || 14)}
-              className="w-12 h-8 text-black bg-white text-center p-0"
-            />
+            <span className="text-sm text-white whitespace-nowrap">Font:</span>
+            <Button variant="ghost" size="sm" onClick={handleFontSizeDecrease} className="text-white">
+              <MinusCircle className="h-4 w-4" />
+            </Button>
+            <span className="text-sm text-white">{fontSize}px</span>
+            <Button variant="ghost" size="sm" onClick={handleFontSizeIncrease} className="text-white">
+              <PlusCircle className="h-4 w-4" />
+            </Button>
           </div>
 
-          {/* Right section - Action buttons */}
-          <div className="flex items-center gap-2">
-            <Button size="sm" className="bg-white text-green-600 hover:bg-gray-100 h-8" onClick={addSection}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Add Section
-            </Button>
-            <Button
-              size="sm"
-              className="bg-white text-green-600 hover:bg-gray-100 h-8"
-              onClick={exportToPdf}
-              disabled={isExporting}
-            >
-              <Download className="h-3.5 w-3.5 mr-1" />
-              {isExporting ? "Exporting..." : "Export PDF"}
-            </Button>
-          </div>
+          {/* Export button only */}
+          <Button variant="ghost" size="sm" onClick={handleExportPDF} className="text-white" disabled={isLoading}>
+            {isLoading ? (
+              <>Loading...</>
+            ) : (
+              <>
+                <Download className="h-4 w-4 mr-1" />
+                <span>Export</span>
+              </>
+            )}
+          </Button>
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto p-4 bg-white" style={{ fontSize: `${fontSize}px` }}>
-        <div ref={cheatsheetRef} className="h-full">
-          <div ref={contentRef} className="cheatsheet-container">
-            <div className="cheatsheet-header">
-              <h1 className="cheatsheet-title">{title}</h1>
-              {editingSubtitle ? (
-                <div className="flex items-center justify-center mb-2">
-                  <Input
-                    value={subtitle}
-                    onChange={(e) => setSubtitle(e.target.value)}
-                    className="w-64 mr-2"
-                    autoFocus
-                  />
-                  <Button size="sm" variant="ghost" onClick={() => setEditingSubtitle(false)}>
-                    <Save className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <p className="cheatsheet-subtitle">
-                  {subtitle}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="ml-2 h-6 w-6 p-0"
-                    onClick={() => setEditingSubtitle(true)}
-                  >
-                    <Edit2 className="h-3 w-3" />
-                  </Button>
-                </p>
-              )}
-              <p className="cheatsheet-date">Last Updated {lastUpdated}</p>
-            </div>
+      {/* Control Panel - Fixed position, not affected by scaling */}
+      <div className="bg-gray-100 p-2 flex justify-between items-center">
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" onClick={handleZoomOut} className="h-8 w-8 p-0">
+            <ZoomOut className="h-4 w-4" />
+          </Button>
+          <span className="text-sm">{Math.round(scale * 100)}%</span>
+          <Button variant="outline" size="sm" onClick={handleZoomIn} className="h-8 w-8 p-0">
+            <ZoomIn className="h-4 w-4" />
+          </Button>
+        </div>
+        <Button variant="outline" size="sm" onClick={toggleFullscreen} className="h-8">
+          <Maximize2 className="h-4 w-4 mr-1" />
+          <span>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</span>
+        </Button>
+      </div>
 
-            <div className="cheatsheet-grid">
-              {pages[currentPageIndex]?.columns.map((column, columnIndex) => (
-                <div
-                  key={column.id}
-                  className="cheatsheet-column"
-                  ref={(el) => {
-                    columnRefs.current[column.id] = el
-                  }}
-                >
-                  {column.sections.map((section, sectionIndex) => (
-                    <motion.div
-                      key={section.id}
-                      className="cheatsheet-section"
-                      variants={fadeIn("up", 0.2)}
-                      initial="hidden"
-                      animate="show"
-                      exit={{ opacity: 0, y: 20 }}
-                    >
-                      <div className="cheatsheet-section-header">
-                        {editingSectionId === section.id ? (
-                          <div className="flex items-center w-full">
-                            <Input
-                              value={tempSectionTitle}
-                              onChange={(e) => setTempSectionTitle(e.target.value)}
-                              className="mr-2 bg-white text-black"
-                              autoFocus
-                            />
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="text-white"
-                              onClick={() => saveEditingSection(column.id, section.id)}
-                            >
-                              <Save className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ) : (
-                          <>
-                            <div>{section.title}</div>
-                            <div className="flex space-x-1 edit-buttons">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 text-white"
-                                onClick={() => startEditingSection(section)}
-                              >
-                                <Edit2 className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 text-white"
-                                onClick={() => deleteSection(column.id, section.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                      <div className="cheatsheet-section-content">
-                        {editingSectionId === section.id ? (
-                          <div className="p-2">
-                            <Textarea
-                              value={tempSectionContent}
-                              onChange={(e) => setTempSectionContent(e.target.value)}
-                              className="min-h-[200px] font-serif text-sm"
-                              placeholder="Content"
-                            />
-                            <div className="flex justify-end mt-2 space-x-2">
-                              <Button size="sm" variant="outline" onClick={() => setEditingSectionId(null)}>
-                                <X className="h-4 w-4 mr-1" /> Cancel
-                              </Button>
-                              <Button size="sm" onClick={() => saveEditingSection(column.id, section.id)}>
-                                <Save className="h-4 w-4 mr-1" /> Save
-                              </Button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="relative group">
-                            <div className="absolute right-0 top-0 hidden group-hover:flex space-x-1 bg-white/80 rounded p-1 shadow-sm z-10 edit-buttons">
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0"
-                                onClick={() => startEditingSection(section)}
-                              >
-                                <Edit2 className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-6 w-6 p-0 text-red-500"
-                                onClick={() => deleteSection(column.id, section.id)}
-                              >
-                                <Trash2 className="h-3 w-3" />
-                              </Button>
-                            </div>
-                            <div dangerouslySetInnerHTML={{ __html: formatContent(section.content) }} />
-                          </div>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              ))}
-            </div>
+      {/* Cheatsheet Content - Only this part should scale */}
+      {isLoading ? (
+        <div className="flex-grow flex items-center justify-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
+          <p className="ml-3">Generating cheatsheet...</p>
+        </div>
+      ) : error ? (
+        <div className="flex-grow flex items-center justify-center text-red-500">
+          <p>{error}</p>
+        </div>
+      ) : pages.length === 0 ? (
+        <div className="flex-grow flex flex-col items-center justify-center text-gray-500">
+          <p className="mb-4">No content available. Please select files to generate a cheatsheet.</p>
+          <Button onClick={addPage} className="bg-green-600 hover:bg-green-700">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Empty Page
+          </Button>
+        </div>
+      ) : (
+        <div className="flex-grow overflow-auto p-4 cheatsheet-content-wrapper">
+          <div
+            className="cheatsheet-container"
+            ref={cheatsheetRef}
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+              transition: "transform 0.2s ease",
+            }}
+          >
+            {/* Render pages */}
+            {pages.map((page, pageIndex) => renderPage(page, pageIndex))}
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

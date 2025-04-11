@@ -3,10 +3,21 @@
   font-family: "Times New Roman", Times, serif;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
   background-color: white;
   color: black;
   box-sizing: border-box;
+  transform-origin: top left;
+}
+
+.cheatsheet-page {
+  width: 210mm;
+  min-height: 297mm;
+  padding: 15mm;
+  margin: 0 auto;
+  background-color: white;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
+  position: relative;
 }
 
 .cheatsheet-header {
@@ -30,24 +41,33 @@
   font-style: italic;
 }
 
-/* Fixed width grid layout */
+/* Update the grid layout to use columns more efficiently */
 .cheatsheet-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  display: flex;
   width: 100%;
+  gap: 15px;
+  min-height: calc(297mm - 80px); /* A4 height minus header */
 }
 
-/* Column styling with fixed width */
+/* Add column styling to ensure proper content flow */
 .cheatsheet-column {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  overflow: visible;
+  gap: 0; /* Remove gap to avoid wasted space between sections */
+  min-width: 0; /* Ensure columns can shrink if needed */
 }
 
-/* Update the section styling to ensure proper A4 sizing */
+/* Make section wrappers take only the space they need */
+.cheatsheet-section-wrapper {
+  margin-bottom: 5px; /* Reduce margin to minimize gaps */
+  height: auto;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* Update the section styling to ensure proper sizing */
 .cheatsheet-section {
   border: 1px solid #000;
   border-radius: 0;
@@ -57,9 +77,8 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  margin-bottom: 15px;
   box-sizing: border-box;
-  min-height: 100px; /* Ensure sections have a minimum height */
+  height: auto; /* Allow height to be determined by content */
 }
 
 /* Section header styling */
@@ -95,84 +114,67 @@
   overflow-wrap: break-word;
 }
 
-.cheatsheet-section-content ol,
-.cheatsheet-section-content ul {
-  padding-left: 20px;
-  margin-bottom: 10px;
-  margin-top: 5px;
-}
-
-.cheatsheet-section-content li {
-  margin-bottom: 5px;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-}
-
-.cheatsheet-section-content h3 {
-  font-weight: bold;
+/* Subsection styling */
+.cheatsheet-subsection {
   margin-top: 10px;
-  margin-bottom: 5px;
+  margin-bottom: 10px; /* Reduce margin to minimize gaps */
 }
 
-.cheatsheet-section-content h4 {
+.cheatsheet-subsection-title {
   font-weight: bold;
-  font-style: italic;
-  margin-top: 8px;
+  font-size: 14px;
   margin-bottom: 5px;
-}
-
-.cheatsheet-section-content .term {
-  font-weight: bold;
-}
-
-.cheatsheet-section-content .definition {
-  margin-left: 15px;
-}
-
-/* Math formatting */
-.cheatsheet-section-content .math {
-  font-family: "Cambria Math", Cambria, serif;
-}
-
-/* Notes */
-.cheatsheet-section-content .note {
-  font-style: italic;
-  margin-top: 10px;
-}
-
-/* Remove the add-subsection-button styles since we're removing that feature */
-.add-subsection-button {
-  display: none;
-}
-
-/* Update the PDF export container to ensure A4 dimensions */
-.pdf-export-container {
-  width: 210mm;
-  height: 297mm;
-  padding: 15mm 10mm; /* Increase top/bottom padding for better margins */
-  background-color: white;
-  position: relative;
-  box-sizing: border-box;
-  overflow: hidden;
-}
-
-/* Update the page navigation in the green header */
-.page-navigation {
+  border-bottom: 1px solid #eee;
+  padding-bottom: 3px;
   display: flex;
-  flex-direction: column;
+  justify-content: space-between;
   align-items: center;
-  background-color: #4caf50;
-  color: white;
-  padding: 5px 10px;
-  border-radius: 4px;
 }
 
-/* Remove the footer styling since we don't want it */
-.cheatsheet-footer {
-  display: none;
+/* Bullet list styling */
+.cheatsheet-bullet-list {
+  list-style-type: disc;
+  padding-left: 20px;
+  margin: 5px 0; /* Reduce margin to minimize gaps */
 }
 
-/* Update the green header to match the image */
+.cheatsheet-bullet-list li {
+  margin-bottom: 3px; /* Reduce margin to minimize gaps */
+}
+
+/* Table styling */
+.cheatsheet-table-container {
+  margin: 5px 0; /* Reduce margin to minimize gaps */
+  overflow-x: auto;
+}
+
+.cheatsheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+
+.cheatsheet-table th,
+.cheatsheet-table td {
+  border: 1px solid #ddd;
+  padding: 4px 6px; /* Reduce padding to save space */
+  text-align: left;
+}
+
+.cheatsheet-table th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
+
+.cheatsheet-table tr:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.cheatsheet-table tr:hover {
+  background-color: #f5f5f5;
+}
+
+/* Simplify the header bar */
 .cheatsheet-header-bar {
   background-color: #4caf50;
   color: white;
@@ -183,37 +185,75 @@
   border-radius: 0;
 }
 
-/* For A4 portrait layout */
-@media screen and (min-width: 768px) {
-  .cheatsheet-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-/* Ensure proper column sizing for A4 paper */
-@media print {
-  .cheatsheet-container {
-    padding: 15mm 10mm;
-    width: 210mm; /* A4 width */
-    height: 297mm; /* A4 height */
-    margin: 0;
-  }
-
-  .cheatsheet-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10mm; /* Increase gap for better spacing when printed */
+/* Responsive styles */
+@media (max-width: 768px) {
+  .cheatsheet-section-wrapper {
     width: 100%;
   }
 
-  .cheatsheet-section {
-    margin-bottom: 10mm; /* Increase margin for better spacing when printed */
-    min-height: 80px; /* Ensure sections have a minimum height */
+  .cheatsheet-page {
+    width: 100%;
+    padding: 10px;
   }
 
-  /* Ensure proper section content height */
-  .cheatsheet-section-content {
-    min-height: 60px;
+  .cheatsheet-header-bar {
+    padding: 8px;
+  }
+}
+
+/* Medium screens */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .cheatsheet-section-wrapper {
+    width: calc(50% - 7.5px);
+  }
+}
+
+/* Adjust print styles to handle page breaks better */
+@media print {
+  .cheatsheet-grid {
+    display: flex;
+    width: 100%;
+  }
+
+  .cheatsheet-column {
+    flex: 1;
+    break-inside: avoid;
+  }
+
+  .cheatsheet-section-wrapper {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+  }
+
+  .cheatsheet-container {
+    width: 210mm;
+    height: auto;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+    transform: none !important;
+  }
+
+  .cheatsheet-page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 15mm;
+    margin: 0;
+    box-shadow: none;
+    page-break-after: always;
+  }
+
+  .cheatsheet-page:last-child {
+    page-break-after: avoid;
+  }
+
+  .cheatsheet-header-bar {
+    display: none;
   }
 
   .cheatsheet-section-header {
@@ -221,101 +261,97 @@
     color: #fff !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-    width: 100%;
-    box-sizing: border-box;
   }
 
-  .cheatsheet-section-content {
-    width: 100%;
-    box-sizing: border-box;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  .edit-buttons,
-  .add-section-button,
-  .add-subsection-button {
-    display: none !important;
-  }
-
-  .cheatsheet-footer {
-    display: none;
+  .cheatsheet-table th {
+    background-color: #f2f2f2 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }
 
-/* Add these styles to ensure proper A4 sizing and overflow handling */
-
-/* A4 dimensions */
-:root {
-  --a4-width: 210mm;
-  --a4-height: 297mm;
+/* Fullscreen styles */
+:fullscreen {
+  background-color: #f5f5f5 !important;
 }
 
-.cheatsheet-container {
-  font-family: "Times New Roman", Times, serif;
-  max-width: var(--a4-width);
-  margin: 0 auto;
-  padding: 20px;
-  background-color: white;
-  color: black;
-  min-height: var(--a4-height);
-  box-sizing: border-box;
+:-webkit-full-screen {
+  background-color: #f5f5f5 !important;
 }
 
-/* Add these responsive styles to fix the taskbar on smaller screens */
+:-ms-fullscreen {
+  background-color: #f5f5f5 !important;
+}
 
-/* Responsive taskbar */
-.cheatsheet-header-bar {
-  background-color: #4caf50;
-  color: white;
+/* Ensure the control panel stays fixed */
+.bg-gray-100 {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  transform: none !important;
+}
+
+/* Content wrapper to ensure proper scaling */
+.cheatsheet-content-wrapper {
+  background-color: #f5f5f5;
   width: 100%;
-  box-sizing: border-box;
+  height: 100%;
+  overflow: auto;
 }
 
-/* Ensure proper spacing in the taskbar */
-.cheatsheet-header-bar button {
+/* ADDED: Fullscreen layout improvements */
+:fullscreen .cheatsheet-container,
+:-webkit-full-screen .cheatsheet-container,
+:-ms-fullscreen .cheatsheet-container {
+  max-width: 100%;
+  width: 100%;
+  height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
 }
 
-/* Improve responsive behavior */
-@media screen and (max-width: 768px) {
-  .cheatsheet-header-bar {
-    padding: 8px;
-  }
-
-  .cheatsheet-grid {
-    grid-template-columns: 1fr;
-  }
+:fullscreen .cheatsheet-page,
+:-webkit-full-screen .cheatsheet-page,
+:-ms-fullscreen .cheatsheet-page {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
 }
 
-@media screen and (min-width: 769px) and (max-width: 1024px) {
-  .cheatsheet-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
+/* ADDED: Ensure sections fill available space */
+:fullscreen .cheatsheet-grid,
+:-webkit-full-screen .cheatsheet-grid,
+:-ms-fullscreen .cheatsheet-grid {
+  width: 100%;
+  height: auto;
+  min-height: auto;
 }
 
-/* Improve PDF export styling */
-.pdf-export-container {
-  font-family: "Times New Roman", Times, serif;
-  box-sizing: border-box;
+/* Ensure sections don't waste space */
+:fullscreen .cheatsheet-column,
+:-webkit-full-screen .cheatsheet-column,
+:-ms-fullscreen .cheatsheet-column {
+  height: auto;
 }
 
-.pdf-export-container .cheatsheet-section-header {
-  font-size: 12px;
-  padding: 4px 8px;
+/* ADDED: Ensure sections don't waste space */
+:fullscreen .cheatsheet-section-wrapper,
+:-webkit-full-screen .cheatsheet-section-wrapper,
+:-ms-fullscreen .cheatsheet-section-wrapper {
+  height: auto;
 }
 
-.pdf-export-container .cheatsheet-section-content {
-  font-size: 10px;
-  line-height: 1.3;
-  padding: 8px;
+:fullscreen .cheatsheet-section,
+:-webkit-full-screen .cheatsheet-section,
+:-ms-fullscreen .cheatsheet-section {
+  height: auto;
 }
 
-/* Ensure proper A4 sizing */
-:root {
-  --a4-width: 210mm;
-  --a4-height: 297mm;
-  --a4-margin: 10mm;
+/* ADDED: Ensure content fills available width */
+:fullscreen .cheatsheet-section-content,
+:-webkit-full-screen .cheatsheet-section-content,
+:-ms-fullscreen .cheatsheet-section-content {
+  width: 100%;
+  height: auto;
 }
