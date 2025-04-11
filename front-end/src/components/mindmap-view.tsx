@@ -14,6 +14,8 @@ import {
 import { MindMapTaskbar } from "./mindmap-taskbar"
 import "../styles/mindmap.css"
 import { MindMapNodeModal } from "./mindmap-node-modal"
+import { documentAPI } from "@/lib/api"
+import mindMapCache from "@/lib/mindmap-cache"
 
 // ----------------------------------------------------------------
 // TYPE DEFINITIONS
@@ -90,6 +92,8 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [allNodes, setAllNodes] = useState<MindMapNode[]>([])
   const [activeNode, setActiveNode] = useState<any>(null)
   const [mindmap_node_search, setMindmapNodeSearch] = useState<string[][]>([])
+  const [userID, setUserID] = useState("")
+  const [lastSelectedFileIds, setLastSelectedFileIds] = useState<string[]>([])
 
   // Get the current theme object
   const getThemeObject = (): MindMapTheme => {
@@ -98,33 +102,71 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
   // Handle theme change
   const handleThemeChange = (themeName: string) => {
-    // First, safely destroy the current instance if it exists
-    if (containerRef.current && containerRef.current._mindElixirInstance) {
-      try {
-        const instance = containerRef.current._mindElixirInstance
-        if (typeof instance.destroy === "function") {
-          instance.destroy()
-        }
-        delete containerRef.current._mindElixirInstance
+    // Update the current theme state
+    setCurrentTheme(themeName)
 
-        // Clear the container safely
-        containerRef.current.innerHTML = ""
-      } catch (e) {
-        console.error("Error cleaning up before theme change:", e)
+    // If there's no mindmap instance yet, we'll need to set a flag to initialize with the new theme
+    if (!containerRef.current || !containerRef.current._mindElixirInstance) {
+      // If no custom content is loaded, use the theme's template
+      if (!markdownContent && !markdownFilePath && (!selectedFiles || selectedFiles.length === 0)) {
+        setLoadedContent(themeTemplates[themeName as keyof typeof themeTemplates] || themeTemplates.original)
+      }
+
+      // Set flag to initialize with new theme
+      setNeedsReinitialize(true)
+      return
+    }
+
+    // Apply the new theme to the existing mindmap without reloading
+    const theme = allThemes.find((theme) => theme.name === themeName) || allThemes[0]
+
+    // Apply the theme to the existing nodes
+    if (containerRef.current) {
+      applyThemeToExistingMindmap(containerRef.current, theme)
+    }
+  }
+
+  // Add this new function to apply theme to existing mindmap
+  const applyThemeToExistingMindmap = (container: HTMLElement, theme: MindMapTheme) => {
+    if (!container) return
+
+    // Get all nodes
+    const nodes = container.querySelectorAll(".map-container .node")
+
+    // Apply custom styles to each node
+    nodes.forEach((node, index) => {
+      const nodeElement = node as HTMLElement
+      const level = Number.parseInt(nodeElement.getAttribute("data-level") || "0")
+      applyThemeToNode(nodeElement, theme, level, index)
+    })
+
+    // Customize connection lines
+    customizeLines(container, theme)
+
+    // Update the background color of the container
+    if (container.classList.contains("map-container")) {
+      container.style.background = theme.background
+    } else {
+      const mapContainer = container.querySelector(".map-container")
+      if (mapContainer) {
+        ;(mapContainer as HTMLElement).style.background = theme.background
       }
     }
 
-    setCurrentTheme(themeName)
-
-    // If no custom content is loaded, use the theme's template
-    if (!markdownContent && !markdownFilePath && (!selectedFiles || selectedFiles.length === 0)) {
-      setLoadedContent(themeTemplates[themeName as keyof typeof themeTemplates] || themeTemplates.original)
+    // If the container has a mind elixir instance, update its link style
+    if ((container as HTMLDivElement)._mindElixirInstance) {
+      const me = (container as HTMLDivElement)._mindElixirInstance
+      if (me.linkController && typeof me.linkController.updateLinkStyle === "function") {
+        try {
+          me.linkController.updateLinkStyle({
+            lineWidth: theme.lineStyle.width,
+            lineColor: theme.lineStyle.color,
+          })
+        } catch (e) {
+          console.error("Error updating link style:", e)
+        }
+      }
     }
-
-    // Use a timeout to ensure React has time to update the state before reinitializing
-    setTimeout(() => {
-      setNeedsReinitialize(true)
-    }, 50)
   }
 
   // Handle zoom in
@@ -168,11 +210,39 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
     }
 
+    const documentIds = selectedFiles.map((file) => file.id)
+
+    // Check if we have this data in cache
+    const cachedData = mindMapCache.get(documentIds)
+    if (cachedData) {
+      console.log("Using cached mindmap data")
+      return cachedData
+    }
+
     setIsLoading(true)
     setError(null)
 
     try {
-      const documentIds = selectedFiles.map((file) => file.id)
+      let userIdToUse = userID
+
+      if (!userIdToUse && documentIds.length > 0) {
+        try {
+          userIdToUse = await documentAPI.getUserWithDocument(documentIds[0])
+          console.log("Retrieved user ID from API:", userIdToUse)
+          // Update state for future use
+          setUserID(userIdToUse)
+        } catch (err) {
+          console.error("Failed to get user ID from API:", err)
+          // Fall back to localStorage as a backup
+          if (typeof window !== "undefined") {
+            const storedUserId = localStorage.getItem("user_id")
+            if (storedUserId) {
+              userIdToUse = storedUserId
+              setUserID(storedUserId)
+            }
+          }
+        }
+      }
 
       // Fixed: Send document_ids as a property in the request body
       const response = await fetch("/api/drawMindMap", {
@@ -180,7 +250,10 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ document_ids: documentIds }),
+        body: JSON.stringify({
+          document_ids: documentIds,
+          user_id: userIdToUse,
+        }),
       })
 
       if (!response.ok) {
@@ -191,12 +264,37 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       const data = await response.text()
       console.log("Received mindmap data:", data.substring(0, 100) + "...")
 
-      if (!data || data.trim() === "") {
-        console.warn("Empty markdown received from API, using default")
-        return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
+      // Store the document IDs for future reference
+      setLastSelectedFileIds(documentIds)
+
+      // Process the response
+      let processedData: string
+
+      // Check if the response is JSON
+      try {
+        const jsonData = JSON.parse(data)
+        // If it's JSON and has a smaller_branches property, extract it
+        if (jsonData.smaller_branches) {
+          console.log("Extracted markdown from JSON response")
+          processedData = jsonData.smaller_branches
+        } else {
+          // Otherwise, stringify the JSON for display
+          processedData = JSON.stringify(jsonData, null, 2)
+        }
+      } catch (e) {
+        // Not JSON, use as is
+        if (!data || data.trim() === "") {
+          console.warn("Empty markdown received from API, using default")
+          processedData = themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
+        } else {
+          processedData = data
+        }
       }
 
-      return data
+      // Cache the processed data
+      mindMapCache.set(documentIds, processedData)
+
+      return processedData
     } catch (error) {
       console.error("Error fetching mindmap from API:", error)
       setError(`Failed to fetch mindmap: ${error instanceof Error ? error.message : String(error)}`)
@@ -232,20 +330,39 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       })
   }
 
+  // Check if selected files have changed
+  const haveSelectedFilesChanged = (newFiles: any[], oldFileIds: string[]) => {
+    if (!newFiles || newFiles.length === 0) return oldFileIds.length > 0
+    if (newFiles.length !== oldFileIds.length) return true
+
+    const newFileIds = newFiles.map((file) => file.id).sort()
+    const sortedOldFileIds = [...oldFileIds].sort()
+
+    return newFileIds.some((id, index) => id !== sortedOldFileIds[index])
+  }
+
   // Load markdown content from API when selected files change
   useEffect(() => {
+    // Only fetch new data if the selected files have actually changed
+    const filesChanged = haveSelectedFilesChanged(selectedFiles || [], lastSelectedFileIds)
+
     if (selectedFiles && selectedFiles.length > 0) {
-      fetchMindMapFromAPI(selectedFiles)
-        .then((content) => {
-          setMarkdown(content)
-          setLoadedContent(content)
-        })
-        .catch((err) => {
-          console.error("Error fetching mindmap:", err)
-          setError(`Failed to fetch mindmap: ${err instanceof Error ? err.message : String(err)}`)
-          setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
-          setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
-        })
+      if (filesChanged) {
+        console.log("Selected files changed, fetching new mindmap data")
+        fetchMindMapFromAPI(selectedFiles)
+          .then((content) => {
+            setMarkdown(content)
+            setLoadedContent(content)
+          })
+          .catch((err) => {
+            console.error("Error fetching mindmap:", err)
+            setError(`Failed to fetch mindmap: ${err instanceof Error ? err.message : String(err)}`)
+            setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+            setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+          })
+      } else {
+        console.log("Selected files unchanged, using existing mindmap data")
+      }
     } else if (markdownFilePath) {
       // If no selected files but a file path is provided, load from public folder
       getMarkdownFromPublic(markdownFilePath)
@@ -268,7 +385,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
       setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
     }
-  }, [markdownContent, markdownFilePath, selectedFiles, currentTheme])
+  }, [markdownContent, markdownFilePath, selectedFiles]) // Removed currentTheme from dependencies
 
   // Generate unique ID for mind map nodes
   const generateId = () => Date.now().toString(36) + Math.random().toString(36).substring(2)
@@ -281,8 +398,21 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
     try {
       const theme = getThemeObject()
+
+      // Normalize line endings and handle escaped newlines
+      markdown = markdown.replace(/\\n/g, "\n").replace(/\r\n/g, "\n").replace(/\r/g, "\n")
+
       const lines = markdown.split("\n")
-      const rootTopic = lines.find((line) => line.trim().startsWith("# "))?.replace("# ", "") || "Mind Map"
+
+      // Find the root topic - either the first # line or use "Mind Map" as default
+      let rootTopic = "Mind Map"
+      for (const line of lines) {
+        const trimmedLine = line.trim()
+        if (trimmedLine.startsWith("# ")) {
+          rootTopic = trimmedLine.substring(2).trim()
+          break
+        }
+      }
 
       // Create root node
       const rootNode: TopicNode = {
@@ -304,72 +434,84 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       let nodeIndex = 0
       let collectingDetails = false
 
-      lines.forEach((line) => {
+      // Process each line
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
         const trimmedLine = line.trim()
 
-        // Skip empty lines and the root heading
-        if (!trimmedLine || trimmedLine === `# ${rootTopic}`) return
+        // Skip empty lines and the root heading if it matches
+        if (!trimmedLine || trimmedLine === `# ${rootTopic}`) continue
 
         // If line starts with heading marker (#), it's a new node
         if (trimmedLine.startsWith("#")) {
           collectingDetails = false
-          const match = trimmedLine.match(/^(#{2,6})\s+(.+)$/)
 
-          if (match) {
-            const level = match[1].length - 1
-            const topic = match[2]
-
-            // Adjust the parent stack based on the heading level
-            while (currentLevel >= level && currentParentStack.length > 1) {
-              currentParentStack.pop()
-              currentLevel--
-            }
-
-            // Get style based on level
-            const styleObj = level === 1 ? theme.nodeStyles.primary : theme.nodeStyles.secondary
-
-            // Get color based on level and index
-            const colorIndex =
-              nodeIndex %
-              (level === 1 && theme.nodeColors?.level1
-                ? theme.nodeColors.level1.length
-                : level === 2 && theme.nodeColors?.level2
-                  ? theme.nodeColors.level2.length
-                  : 1)
-
-            const background =
-              level === 1 && theme.nodeColors?.level1
-                ? theme.nodeColors.level1[colorIndex]
-                : level === 2 && theme.nodeColors?.level2
-                  ? theme.nodeColors.level2[colorIndex]
-                  : styleObj.background
-
-            const newNode: TopicNode = {
-              id: generateId(),
-              topic,
-              children: [],
-              detailContent: "", // Initialize empty detail content
-              style: {
-                background,
-                color: styleObj.color || theme.color,
-                fontSize: styleObj.fontSize,
-                fontWeight: styleObj.fontWeight,
-              },
-            }
-
-            const currentParent = currentParentStack[currentParentStack.length - 1]
-
-            if (!currentParent.children) {
-              currentParent.children = []
-            }
-
-            currentParent.children.push(newNode)
-            currentParentStack.push(newNode)
-            currentLevel = level
-            nodeIndex++
-            currentNode = newNode
-            collectingDetails = true // Start collecting details for this node
+          // Count the number of # to determine the level
+          let hashCount = 0
+          for (let j = 0; j < trimmedLine.length; j++) {
+            if (trimmedLine[j] === "#") hashCount++
+            else break
           }
+
+          // Extract the topic text
+          const topic = trimmedLine.substring(hashCount).trim()
+
+          // Skip if topic is empty
+          if (!topic) continue
+
+          // Determine the level (1-based)
+          const level = hashCount - 1
+
+          // Adjust the parent stack based on the heading level
+          while (currentLevel >= level && currentParentStack.length > 1) {
+            currentParentStack.pop()
+            currentLevel--
+          }
+
+          // Get style based on level
+          const styleObj = level === 1 ? theme.nodeStyles.primary : theme.nodeStyles.secondary
+
+          // Get color based on level and index
+          const colorIndex =
+            nodeIndex %
+            (level === 1 && theme.nodeColors?.level1
+              ? theme.nodeColors.level1.length
+              : level === 2 && theme.nodeColors?.level2
+                ? theme.nodeColors.level2.length
+                : 1)
+
+          const background =
+            level === 1 && theme.nodeColors?.level1
+              ? theme.nodeColors.level1[colorIndex]
+              : level === 2 && theme.nodeColors?.level2
+                ? theme.nodeColors.level2[colorIndex]
+                : styleObj.background
+
+          const newNode: TopicNode = {
+            id: generateId(),
+            topic,
+            children: [],
+            detailContent: "", // Initialize empty detail content
+            style: {
+              background,
+              color: styleObj.color || theme.color,
+              fontSize: styleObj.fontSize,
+              fontWeight: styleObj.fontWeight,
+            },
+          }
+
+          const currentParent = currentParentStack[currentParentStack.length - 1]
+
+          if (!currentParent.children) {
+            currentParent.children = []
+          }
+
+          currentParent.children.push(newNode)
+          currentParentStack.push(newNode)
+          currentLevel = level
+          nodeIndex++
+          currentNode = newNode
+          collectingDetails = true // Start collecting details for this node
         }
         // If line starts with "-", it's detail content for the current node
         else if (trimmedLine.startsWith("-") && collectingDetails && currentNode) {
@@ -388,12 +530,15 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
             currentNode.detailContent = line
           }
         }
-      })
+      }
+
       // After parsing is complete, collect all nodes
       const allNodesInMap = collectAllNodes(rootNode)
       setAllNodes(allNodesInMap)
+
       return { nodeData: rootNode as any }
     } catch (err) {
+      console.error("Error parsing markdown to mind map:", err)
       return { nodeData: { id: "error", topic: "Error", children: [] } }
     }
   }
@@ -429,7 +574,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
       return () => clearTimeout(timer)
     }
-  }, [needsReinitialize, mindElixirLoaded, currentTheme]) // Add currentTheme to dependencies
+  }, [needsReinitialize, mindElixirLoaded]) // Removed currentTheme from dependencies
 
   // Initialize MindElixir
   const initializeMindMap = () => {
@@ -739,19 +884,25 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     }
   }, [])
 
-  // Test function to manually open the modal
-  const testOpenModal = () => {
-    setSelectedNode({
-      title: "Test Node",
-      content: `- This is a test bullet point
-- Another bullet point
-## Test Subheading
-- Nested content
-- More nested content`,
-    })
-    setModalOpen(true)
-    console.log("Test modal opened")
-  }
+  // Listen for file deselection events to invalidate cache
+  useEffect(() => {
+    const handleFileDeselection = (event: CustomEvent) => {
+      if (event.detail && event.detail.fileIds) {
+        // Invalidate cache for the deselected files
+        mindMapCache.invalidate(event.detail.fileIds)
+        // Reset lastSelectedFileIds if they match the deselected files
+        if (lastSelectedFileIds.length > 0 && lastSelectedFileIds.every((id) => event.detail.fileIds.includes(id))) {
+          setLastSelectedFileIds([])
+        }
+      }
+    }
+
+    window.addEventListener("filesDeselected", handleFileDeselection as EventListener)
+
+    return () => {
+      window.removeEventListener("filesDeselected", handleFileDeselection as EventListener)
+    }
+  }, [lastSelectedFileIds])
 
   // Render component
   return (
