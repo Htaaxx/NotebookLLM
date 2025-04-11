@@ -196,9 +196,13 @@ def get_user_milvus_collection(user_id: str) -> Collection:
     return Collection(collection_name)
 
 
-def ask_question(user_id: str, question: str) -> str:
+def ask_question(user_id: str, question: str, header: List[str] = []) -> str:
     """Trả lời câu hỏi DỰA TRÊN CÁC DOCUMENT ĐÃ CHỌN của user."""
     vector_store = get_user_vector_store(user_id)
+    if len(header) > 0:
+        final_content = "\n".join(header) + "\n" + question
+    else:
+        final_content = question
 
     # --- TASK 3: Kết nối MongoDB và lấy Doc ID đã chọn ---
     mongo_collection = get_mongo_collection()
@@ -222,7 +226,7 @@ def ask_question(user_id: str, question: str) -> str:
             search_kwargs['expr'] = search_filter_expr 
 
         retrieved_docs = vector_store.similarity_search(
-            query=question,
+            query=final_content,
             k=8,
             search_kwargs=search_kwargs 
         )
