@@ -105,10 +105,21 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
 
   useEffect(() => {
     if (activePanel === "mindmap") {
-      console.log("MindMap panel active, loading default markdown content")
+      console.log("MindMap panel active, triggering refresh if needed")
 
-      // Đảm bảo reset error state
+      // Reset error state
       setError(null)
+
+      // Trigger a file selection changed event to refresh the mindmap if needed
+      window.dispatchEvent(
+        new CustomEvent("fileSelectionChanged", {
+          detail: {
+            refreshMindmap: true,
+            action: selectedFiles && selectedFiles.length > 0 ? "select" : "deselect",
+            fileIds: selectedFiles ? selectedFiles.map((file) => file.id) : [],
+          },
+        }),
+      )
 
       // If there's a selected file, try to load it
       if (selectedMarkdownFile) {
@@ -135,7 +146,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
           })
       }
     }
-  }, [activePanel, selectedMarkdownFile])
+  }, [activePanel, selectedMarkdownFile, selectedFiles])
 
   const handleHighlightText = () => {
     if (selectedPage === null) return

@@ -50,4 +50,3 @@ export function RightButtons({ onViewChange, activeView }: RightButtonsProps) {
     </motion.div>
   )
 }
-
