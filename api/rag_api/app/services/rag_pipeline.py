@@ -10,7 +10,7 @@ from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_openai import ChatOpenAI
 from langchain import hub
 from langchain_community.document_loaders import PyPDFLoader
-from pymilvus import connections, Collection, utility  # Thêm utility
+from pymilvus import connections, Collection, utility, Index  # Thêm utility
 import tempfile
 import time
 from tqdm import tqdm
@@ -29,8 +29,7 @@ import pytesseract  # Thêm pytesseract
 from pdf2image import convert_from_bytes  # Thêm pdf2image
 from pypdf import PdfReader
 import traceback  # Thêm traceback
-
-
+import asyncio
 import re
 
 load_dotenv()
@@ -43,6 +42,12 @@ ZILLIZ_CLOUD_TOKEN = os.getenv("ZILLIZ_CLOUD_TOKEN")
 MONGO_URI = os.getenv("MONGO_URI")  # <--- Lấy URI MongoDB
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")  # <--- Lấy tên DB
 MONGO_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_NAME")  # <--- Lấy tên Collection
+
+hnsw_index_params = {
+    "metric_type": "COSINE", # Phải khớp với embedding của bạn
+    "index_type": "HNSW",
+    "params": {"M": 16, "efConstruction": 200}
+}
 
 mongo_client = None
 if MONGO_URI:
@@ -80,7 +85,7 @@ def get_mongo_collection() -> Optional[MongoCollection]:
 
 # Set up embedding
 embeddings = HuggingFaceEmbeddings(
-    model_name="BAAI/bge-m3",
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
     model_kwargs={"device": "cpu"},
     encode_kwargs={"normalize_embeddings": True, "batch_size": 32},
 )
@@ -124,6 +129,55 @@ TÀI LIỆU THAM KHẢO (Chỉ dùng nếu câu hỏi hợp lệ):
 CÂU TRẢ LỜI CỦA BẠN:
 """
 )
+
+# --- Ví dụ: Hàm tạo index IVF_FLAT (bạn cần gọi hàm này sau khi thêm dữ liệu) ---
+def create_ivf_flat_index(user_id: str, nlist_value: int = 1024):
+    """Tạo index IVF_FLAT nếu chưa có."""
+    collection_name = get_user_collection_name(user_id)
+    if not utility.has_collection(collection_name):
+        print(f"Collection '{collection_name}' does not exist.")
+        return
+
+    try:
+        collection = Collection(name=collection_name)
+        vector_field_name = "embedding"
+
+        if collection.has_index():
+             index_info_list = collection.indexes # Lấy danh sách các index
+             # Kiểm tra xem có index nào trên trường vector chưa
+             vector_index_exists = any(idx.field_name == vector_field_name for idx in index_info_list)
+             if vector_index_exists:
+                  print(f"Index on field '{vector_field_name}' already exists for collection '{collection_name}'.")
+                  # Có thể kiểm tra thêm index_type và params nếu muốn drop và tạo lại
+                  # Ví dụ lấy params của index đầu tiên (cần kiểm tra đúng index)
+                  # current_params = index_info_list[0].params
+                  # print(f"Existing index params: {current_params}")
+                  # collection.release()
+                  # collection.drop_index()
+                  # print("Dropped existing index.")
+                  # --> Đi tiếp để tạo index mới
+                  return # Bỏ qua nếu không muốn tạo lại
+
+        print(f"Creating IVF_FLAT index for collection '{collection_name}' with nlist={nlist_value}")
+
+        ivf_flat_index_params = {
+            "metric_type": "COSINE",  # QUAN TRỌNG: Phải khớp với embedding của bạn
+            "index_type": "IVF_FLAT",
+            "params": {"nlist": nlist_value} # Tham số lúc xây dựng index
+        }
+
+        collection.create_index(field_name=vector_field_name, index_params=ivf_flat_index_params)
+        collection.flush()
+        print(f"Successfully created IVF_FLAT index on '{vector_field_name}'.")
+
+        print(f"Loading collection '{collection_name}'...")
+        collection.load() # Load collection để sẵn sàng search
+        print(f"Collection '{collection_name}' loaded.")
+
+    except Exception as e:
+        print(f"Error creating or loading index for collection '{collection_name}': {e}")
+        import traceback
+        traceback.print_exc()
 
 
 # --- THÊM HÀM HELPER ---
@@ -225,11 +279,7 @@ def ask_question(user_id: str, question: str, headers: List[str] = []) -> str:
 
     # --- TASK 3: Kết nối MongoDB và lấy Doc ID đã chọn ---
     mongo_collection = get_mongo_collection()
-    print(mongo_client)
-
-    print("Bug o day ne")
     selected_ids = get_selected_document_ids(user_id, mongo_collection)
-    print("Chua toi day")
     # -----------------------------------------------------
 
     search_filter_expr = None  # Khởi tạo filter là None
@@ -242,13 +292,21 @@ def ask_question(user_id: str, question: str, headers: List[str] = []) -> str:
         search_filter_expr = f"doc_id in {selected_ids}"
         print(f"Thực hiện tìm kiếm với Milvus filter: {search_filter_expr}")
     try:
-        search_kwargs = {}
+        nprobe_value = 64 
+        search_params_config = {
+            "metric_type": "COSINE", # Phải khớp metric lúc tạo index
+            "params": {
+                "nprobe": nprobe_value # Tham số tìm kiếm chính cho IVF_FLAT
+            }
+        }
+        search_kwargs = {"search_params": search_params_config}
         if search_filter_expr:
             search_kwargs["expr"] = search_filter_expr
-
+        
+        k_value = 15
         retrieved_docs = vector_store.similarity_search(
             query=question,
-            k=8,
+            k=k_value,
             search_kwargs=search_kwargs 
         )
     except Exception as e:
@@ -262,14 +320,15 @@ def ask_question(user_id: str, question: str, headers: List[str] = []) -> str:
             return (
                 "Không tìm thấy thông tin liên quan trong bất kỳ tài liệu nào của bạn."
             )
+    docs_for_context = retrieved_docs[:10]
 
-    citations = format_citations(retrieved_docs)
+    citations = format_citations(docs_for_context)
     context_parts = []
-    for idx, doc in enumerate(retrieved_docs, 1):
-        filename = doc.metadata.get("filename", "N/A")
-        page_number = doc.metadata.get("page_number", "N/A")
-        context_parts.append(
-            f"[DOCUMENT {idx}]\nFile: {filename}\nPage: {page_number}\nContent: {doc.page_content[:300]}..."
+    for idx, doc in enumerate(docs_for_context, 1):
+            filename = doc.metadata.get("filename", "N/A")
+            page_number = doc.metadata.get("page_number", "N/A")
+            context_parts.append(
+                f"[DOCUMENT {idx}]\nFile: {filename}\nPage: {page_number}\nContent: {doc.page_content[:300]}..."
         )
 
     # Gọi LLM với context đã lọc (hoặc không lọc nếu selected_ids rỗng và bạn chọn tìm tất cả)
@@ -278,10 +337,18 @@ def ask_question(user_id: str, question: str, headers: List[str] = []) -> str:
         {"question": question, "context": "\n\n".join(context_parts)}
     )
     response = llm.invoke(messages)
-    # final_response = validate_citations(response.content, citations) # Giả sử validate_citations tồn tại
+    # references_text = "\n\nREFERENCES:\n"
+    # for num, cit_data in citations.items():
+    #         # Lấy nội dung preview ngắn gọn hơn từ full_content nếu cần
+    #         content_preview = cit_data.get("full_content", "")[:100] + "..."
+    #         references_text += f"[{num}] File: \"{cit_data['file']}\", Trang: {cit_data['page']}, Nội dung: \"{content_preview}\"\n"
 
-    # Thêm REFERENCES nếu cần
-    # ...
+    # Chỉ thêm references nếu có citations được dùng trong response (cần logic kiểm tra phức tạp hơn)
+    # Hoặc đơn giản là luôn thêm nếu có citations được trả về
+    # if citations:
+    #         final_response = response.content + references_text
+    # else:
+    #         final_response = response.content
 
     return response.content
 
@@ -289,8 +356,6 @@ def ask_question(user_id: str, question: str, headers: List[str] = []) -> str:
 """
 CITATION FORMATTING
 """
-
-
 def validate_citations(response: str, citations: dict):
     # Kiểm tra mọi citation trong response đều có trong references
     used_citations = set(re.findall(r"\[(\d+)\]", response))
@@ -592,8 +657,8 @@ async def process_and_store_file(  # Đổi tên hàm và thêm content_type
 
     # --- Bước 3: Chunking ---
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,
-        chunk_overlap=200,
+        chunk_size=2500,
+        chunk_overlap=500,
         length_function=len,
         is_separator_regex=False,
     )
@@ -665,6 +730,21 @@ async def process_and_store_file(  # Đổi tên hàm và thêm content_type
         print(
             f"Thêm thành công {num_added} embeddings cho doc_id '{doc_id}' của user '{user_id}'."
         )
+
+        # --- BƯỚC 5: KIỂM TRA/TẠO INDEX SAU KHI THÊM DATA ---
+        if num_added > 0: # Chỉ chạy nếu thực sự có thêm dữ liệu mới
+            try:
+                print(f"Bắt đầu kiểm tra/tạo index IVF_FLAT cho user {user_id}...")
+                # **QUAN TRỌNG**: Chọn giá trị nlist phù hợp.
+                # Giá trị này nên ổn định cho mỗi user hoặc lấy từ cấu hình.
+                nlist_for_index = 1024 # Ví dụ, bạn cần xác định giá trị này
+                # Chạy hàm đồng bộ create_ivf_flat_index trong một thread riêng
+                await asyncio.to_thread(create_ivf_flat_index, user_id, nlist_for_index)
+                print(f"Hoàn tất kiểm tra/tạo index cho user {user_id}.")
+            except Exception as index_err:
+                # Ghi log lỗi nhưng không nên dừng toàn bộ quá trình xử lý file
+                print(f"LỖI trong quá trình kiểm tra/tạo index cho user {user_id}: {index_err}")
+                traceback.print_exc()
 
         return num_added
 
