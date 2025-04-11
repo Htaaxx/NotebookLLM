@@ -15,7 +15,7 @@ import time
 import random
 
 
-dotenv_path = os.path.abspath("../../API/.env")
+dotenv_path = os.path.abspath("../rag_api/app/.env")
 load_dotenv(dotenv_path)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
