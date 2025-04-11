@@ -66,6 +66,18 @@ interface MindMapNode {
   detailContent?: string
 }
 
+interface MindMapNodeModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  content: string;
+  node?: MindMapNode;
+  paths?: string[][];
+  onUseAsContext?: (paths: string[][], useAsContext: boolean) => void;
+  // Add proper typing for containerRef
+  containerRef?: React.RefObject<HTMLDivElement>;
+}
+
 // ----------------------------------------------------------------
 // COMPONENT IMPLEMENTATION
 // ----------------------------------------------------------------
@@ -959,6 +971,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         content={selectedNode?.content || ""}
         node={selectedNode?.node}
         paths={selectedNode?.paths || []}
+        containerRef={containerRef as React.RefObject<HTMLDivElement>}
         onUseAsContext={(paths, useAsContext) => {
           // Handle using paths as context
           if (useAsContext) {

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation" // Import usePathname
 import { UserCircle, ChevronDown, User, LogOut } from "lucide-react"
-import { Logo } from "./logo"
+import { Logo } from "../logo"
 import { authAPI } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
 import type { Language } from "@/lib/i18n"
