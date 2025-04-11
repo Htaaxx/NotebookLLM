@@ -56,6 +56,7 @@ export function ChatBox() {
   const [latestSearchNode, setLatestSearchNode] = useState<{ id: string; topic: string } | null>(null)
   const [useAsContext, setUseAsContext] = useState(false)
   const [expandedPaths, setExpandedPaths] = useState(false)
+  const [activeRecallSession, setActiveRecallSession] = useState<string | null>(null);
 
   useEffect(() => {
     if (useAsContext) {
@@ -116,80 +117,139 @@ export function ChatBox() {
   }, [chatHistory])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    const userMessage = message.trim()
-    if (!userMessage) return
-
-    setChatHistory((prev) => [...prev, { text: userMessage, isUser: true }])
-    setMessage("")
-    setIsLoading(true)
-
+    e.preventDefault();
+    const userMessage = message.trim();
+    if (!userMessage) return;
+  
+    // Add user message to chat history
+    setChatHistory((prev) => [...prev, { text: userMessage, isUser: true }]);
+    setMessage("");
+    setIsLoading(true);
+  
     try {
-      // Get user_id from localStorage
-      const currentUserId = localStorage.getItem("user_id") || "default_user"
-
-      const queryApiUrl = "http://localhost:8000/query/"
-
-      // Prepare request body
-      const requestBody = {
-        user_id: currentUserId,
-        question: userMessage,
-        // Include mind map paths as context if enabled
-        context: useAsContext && searchPaths.length > 0 ? searchPaths.map((path) => path.join(" > ")) : undefined,
-      }
-
-      console.log("Sending request to:", queryApiUrl)
-      console.log("Request body:", JSON.stringify(requestBody))
-
-      const response = await fetch(queryApiUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestBody),
-      })
-
-      if (!response.ok) {
-        let errorDetails = `API error: ${response.status}`
-        try {
-          const errorData = await response.json()
-          errorDetails += ` - ${JSON.stringify(errorData)}`
-        } catch (e) {
+      // Check if we're in a recall session
+      if (activeRecallSession) {
+        console.log(`Processing answer for recall session: ${activeRecallSession}`);
+        
+        // Send answer to recall API
+        const response = await fetch("http://localhost:8000/recall/answer", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            session_id: activeRecallSession,
+            user_answer: userMessage
+          }),
+        });
+  
+        if (!response.ok) {
+          let errorDetails = `Recall API error: ${response.status}`;
           try {
-            const errorText = await response.text()
-            errorDetails += ` - ${errorText}`
-          } catch (e2) {
-            /* Ignore */
+            const errorData = await response.json();
+            errorDetails += ` - ${JSON.stringify(errorData)}`;
+          } catch (e) {
+            /* Ignore parsing errors */
           }
+          throw new Error(errorDetails);
         }
-        throw new Error(errorDetails)
-      }
-
-      const data = await response.json()
-
-      if (data && typeof data.answer === "string") {
-        console.log("Received response data:", data)
-        setChatHistory((prev) => [...prev, { text: data.answer, isUser: false }])
+  
+        const data = await response.json();
+        
+        // Add feedback to chat as a chatbox reply
+        setChatHistory(prev => [
+          ...prev, 
+          { 
+            text: data.feedback || "Thank you for your answer.", 
+            isUser: false 
+          }
+        ]);
+        
+        // If there's a next question, add it as another chatbox reply
+        if (data.next_question) {
+          setChatHistory(prev => [
+            ...prev, 
+            { 
+              text: data.next_question, 
+              isUser: false
+            }
+          ]);
+        } else {
+          // End of session
+          setChatHistory(prev => [
+            ...prev, 
+            { 
+              text: "Recall session completed. Thank you for your answers!", 
+              isUser: false
+            }
+          ]);
+          setActiveRecallSession(null);
+        }
       } else {
-        console.error("Invalid response format. 'answer' field missing or not a string:", data)
-        setChatHistory((prev) => [
-          ...prev,
-          { text: "Sorry, received an invalid response from the server.", isUser: false },
-        ])
+        // Regular chat message handling (existing code)
+        const currentUserId = localStorage.getItem("user_id") || "default_user";
+        const queryApiUrl = "http://localhost:8000/query/";
+  
+        // Prepare request body
+        const requestBody = {
+          user_id: currentUserId,
+          question: userMessage,
+          headers: searchPaths.map((path) => path.join(" > ")),
+        };
+  
+        console.log("Sending request to:", queryApiUrl);
+        console.log("Request body:", JSON.stringify(requestBody));
+  
+        const response = await fetch(queryApiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        });
+  
+        if (!response.ok) {
+          let errorDetails = `API error: ${response.status}`;
+          try {
+            const errorData = await response.json();
+            errorDetails += ` - ${JSON.stringify(errorData)}`;
+          } catch (e) {
+            try {
+              const errorText = await response.text();
+              errorDetails += ` - ${errorText}`;
+            } catch (e2) {
+              /* Ignore */
+            }
+          }
+          throw new Error(errorDetails);
+        }
+  
+        const data = await response.json();
+  
+        if (data && typeof data.answer === "string") {
+          console.log("Received response data:", data);
+          setChatHistory((prev) => [...prev, { text: data.answer, isUser: false }]);
+        } else {
+          console.error("Invalid response format. 'answer' field missing or not a string:", data);
+          setChatHistory((prev) => [
+            ...prev,
+            { text: "Sorry, received an invalid response from the server.", isUser: false },
+          ]);
+        }
       }
     } catch (error) {
-      console.error("Failed to send message to /query/ API", error)
+      console.error("Failed to process message:", error);
       setChatHistory((prev) => [
         ...prev,
         {
           text: `Sorry, I couldn't process your request. Error: ${error instanceof Error ? error.message : String(error)}`,
           isUser: false,
         },
-      ])
+      ]);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const regenerateLastResponse = async () => {
     // Find the last user message
@@ -244,6 +304,45 @@ export function ChatBox() {
       setIsLoading(false)
     }
   }
+
+  useEffect(() => {
+    // Handler for recall questions
+    const handleRecallQuestion = (event: any) => {
+      const { question, sessionId, context } = event.detail;
+      
+      // Add a system message indicating this is a recall session
+      setChatHistory(prev => [
+        ...prev, 
+        { 
+          text: `Starting recall session for: ${context}`, 
+          isUser: false,
+          isSystem: true 
+        }
+      ]);
+      
+      // Add the question from LLM
+      setChatHistory(prev => [
+        ...prev, 
+        { 
+          text: question, 
+          isUser: false,
+          isRecallQuestion: true, // Add a flag to style differently if desired
+          sessionId: sessionId // Store the session ID with the message
+        }
+      ]);
+      
+      // Store the current active session ID for handling answers
+      setActiveRecallSession(sessionId);
+    };
+  
+    // Add event listener
+    window.addEventListener("recall_question", handleRecallQuestion);
+    
+    // Clean up
+    return () => {
+      window.removeEventListener("recall_question", handleRecallQuestion);
+    };
+  }, []);
 
   return (
     <motion.div
@@ -372,10 +471,6 @@ export function ChatBox() {
                                       <DropdownMenuItem className="flex items-center">
                                         <Eye className="mr-2 h-4 w-4" />
                                         <span>View full path</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem className="flex items-center">
-                                        <MapPin className="mr-2 h-4 w-4" />
-                                        <span>Locate in MindMap</span>
                                       </DropdownMenuItem>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem

@@ -1,7 +1,9 @@
 "use client"
 
+import type React from "react"
+
 import { useEffect, useRef, useState } from "react"
-import { X, ChevronRight, Loader2, BookOpen, Search, HelpCircle } from "lucide-react"
+import { X, ChevronRight, Loader2, BookOpen, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
@@ -14,7 +16,6 @@ interface MindMapNodeModal {
   detailContent?: string
 }
 
-// Update the interface to include the onUseAsContext prop
 interface MindMapNodeModalProps {
   isOpen: boolean
   onClose: () => void
@@ -23,6 +24,7 @@ interface MindMapNodeModalProps {
   node?: MindMapNodeModal
   paths?: string[][]
   onUseAsContext?: (paths: string[][], useAsContext: boolean) => void
+  containerRef?: React.RefObject<HTMLDivElement>
 }
 
 export function MindMapNodeModal({
@@ -33,6 +35,7 @@ export function MindMapNodeModal({
   node,
   paths = [],
   onUseAsContext,
+  containerRef,
 }: MindMapNodeModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
   const [isRecallLoading, setIsRecallLoading] = useState(false)
@@ -43,6 +46,7 @@ export function MindMapNodeModal({
   const [showFlashcardPaths, setShowFlashcardPaths] = useState(false)
   const [recallSuccess, setRecallSuccess] = useState<boolean | null>(null)
   const [flashcardSuccess, setFlashcardSuccess] = useState<boolean | null>(null)
+  const [apiCallInProgress, setApiCallInProgress] = useState(false)
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -81,63 +85,247 @@ export function MindMapNodeModal({
     }
   }, [isOpen, onClose])
 
-  // Add paths to chat context
-  const handleAddToChat = () => {
-    if (paths.length > 0) {
-      // Dispatch event to send paths to chat component
-      const searchEvent = new CustomEvent("mindmap_paths_updated", {
-        detail: {
-          paths: paths,
-          latestNode: node,
+  // Function to find a node by its ID in the mind map structure
+  const findNodeById = (rootNode: any, targetId: string): any => {
+    if (!rootNode) return null
+
+    // If we found the target node
+    if (rootNode.id === targetId) {
+      return rootNode
+    }
+
+    // Recursively search in children
+    if (rootNode.children && rootNode.children.length > 0) {
+      for (const child of rootNode.children) {
+        const found = findNodeById(child, targetId)
+        if (found) return found
+      }
+    }
+
+    return null
+  }
+
+  // Function to find all paths from a node to its leaf nodes
+  const findPathsToLeaves = (startNode: any): string[][] => {
+    const paths: string[][] = []
+
+    // Helper function to traverse recursively
+    const traverse = (node: any, currentPath: string[] = []) => {
+      // Add current node to path
+      const path = [...currentPath, node.topic]
+
+      // If node has no children, it's a leaf node - add the path
+      if (!node.children || node.children.length === 0) {
+        paths.push(path)
+        return
+      }
+
+      // Otherwise, continue traversing for each child
+      for (const child of node.children) {
+        traverse(child, path)
+      }
+    }
+
+    // Start traversal from the given node
+    traverse(startNode, [])
+    return paths
+  }
+
+  // Call API to generate questions based on the selected node and its paths
+  const callQuestionGenerationAPI = async (nodePaths: string[][]) => {
+    try {
+      setApiCallInProgress(true)
+  
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("user_id") || "default_user"
+  
+      // Prepare the request body for starting a recall session
+      const requestBody = {
+        user_id: userId,
+        topic: node?.topic || title,
+      }
+  
+      console.log("Starting recall session with:", requestBody)
+  
+      // Call the ACTUAL backend API endpoint
+      const response = await fetch("http://localhost:8000/recall/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
+        body: JSON.stringify(requestBody),
       })
-      window.dispatchEvent(searchEvent)
-      console.log("Added paths to chat:", paths)
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API error: ${response.status} - ${JSON.stringify(errorData)}`);
+      }
+  
+      const data = await response.json()
+      console.log("Recall session started successfully:", data)
+  
+      // Store session_id in localStorage for later use
+      localStorage.setItem("recall_session_id", data.session_id);
+      
+      // Instead of alert, add to chat history
+      addToChat(data.first_question);
+      
+      // Close modal after question is sent to chat
+      onClose();
+  
+      return true
+    } catch (error) {
+      console.error("Error starting recall session:", error)
+      return false
+    } finally {
+      setApiCallInProgress(false)
+    }
+  }
+  
+  // Add this function to send the question to chat
+  const addToChat = (question: string) => {
+    // Dispatch a custom event that the chat component can listen for
+    const event = new CustomEvent("recall_question", {
+      detail: {
+        question: question,
+        sessionId: localStorage.getItem("recall_session_id"),
+        context: `${node?.topic || title}`
+      }
+    });
+    window.dispatchEvent(event);
+  }
+
+  // Call API to generate flashcards based on the selected node and its paths
+  const callFlashcardGenerationAPI = async (nodePaths: string[][]) => {
+    try {
+      setApiCallInProgress(true)
+  
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("user_id") || "default_user"
+  
+      // Format the node paths into the structure expected by the backend
+      const nodes = nodePaths.map((path, index) => ({
+        header: path[0], // The first node in the path (selected node)
+        details: path.join(" > "), // Full path as details
+      }));
+  
+      // Prepare the request body
+      const requestBody = {
+        user_id: userId,
+        deck_id: `mind_map_${Date.now()}`, // Generate a temporary deck ID
+        nodes: nodes,
+        numQuestions: 5 // Number of flashcards to generate
+      }
+  
+      console.log("Starting flashcard generation with:", requestBody)
+       
+      // Call the proper flashcard generation endpoint
+      const response = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL+"/api/flashcards/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      })
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`API error: ${response.status} - ${JSON.stringify(errorData)}`);
+      }
+  
+      const data = await response.json()
+      console.log("Flashcard generation successful:", data)
+  
+      // Store flashcard data in localStorage
+      localStorage.setItem("last_generated_deck", JSON.stringify({
+        id: data.deck_id,
+        name: `From Mind Map: ${node?.topic || title}`,
+        description: "Generated from mind map",
+        cards: data.cards,
+        timestamp: Date.now()
+      }));
+  
+      return true
+    } catch (error) {
+      console.error("Error generating flashcards:", error)
+      return false
+    } finally {
+      setApiCallInProgress(false)
     }
   }
 
-  // Simulate fetching recall paths (node to leaf nodes)
+  // Generate questions from the selected node
   const handleMakeQuestion = async () => {
     setIsRecallLoading(true)
     setShowRecallPaths(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Get the mind map instance
+      if (!containerRef?.current || !containerRef.current._mindElixirInstance) {
+        throw new Error("Mind map instance not found")
+      }
 
-      // Mock data - in a real implementation, this would come from an API
-      const mockPaths = [
-        ["Mind Map", "Topic 1", "Subtopic 1.1", "Detail point"],
-        ["Mind Map", "Topic 1", "Subtopic 1.2", "Another detail"],
-        ["Mind Map", "Topic 2", "Subtopic 2.1", "More information"],
-      ]
+      // Get the root node data from the mind map
+      const mindElixirInstance = containerRef.current._mindElixirInstance
+      const rootNode = mindElixirInstance.nodeData
 
-      setRecallPaths(mockPaths)
+      // Find the selected node in the mind map data structure
+      const selectedNodeInMap = node ? findNodeById(rootNode, node.id) : null
+
+      if (!selectedNodeInMap) {
+        throw new Error("Selected node not found in mind map")
+      }
+
+      // Get all paths from the selected node to its leaf nodes
+      // This will only include the selected node and its descendants
+      const pathsToLeaves = findPathsToLeaves(selectedNodeInMap)
+
+      // Set the paths - these start from the selected node, not from root
+      setRecallPaths(pathsToLeaves)
+
+      // Call the API to generate questions
+      const apiSuccess = await callQuestionGenerationAPI(pathsToLeaves)
+
       setRecallSuccess(true)
     } catch (error) {
-      console.error("Error fetching recall paths:", error)
+      console.error("Error finding paths to leaves:", error)
       setRecallSuccess(false)
     } finally {
       setIsRecallLoading(false)
     }
   }
 
-  // Simulate creating flashcards
+  // Generate flashcards from the selected node
   const handleCreateFlashcard = async () => {
     setIsFlashcardLoading(true)
     setShowFlashcardPaths(true)
 
     try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      // Get the mind map instance
+      if (!containerRef?.current || !containerRef.current._mindElixirInstance) {
+        throw new Error("Mind map instance not found")
+      }
 
-      // Mock data - in a real implementation, this would come from an API
-      const mockPaths = [
-        ["Mind Map", "Topic 1", "Subtopic 1.1", "Detail point"],
-        ["Mind Map", "Topic 3", "Subtopic 3.2", "Important concept"],
-      ]
+      // Get the root node data from the mind map
+      const mindElixirInstance = containerRef.current._mindElixirInstance
+      const rootNode = mindElixirInstance.nodeData
 
-      setFlashcardPaths(mockPaths)
+      // Find the selected node in the mind map data structure
+      const selectedNodeInMap = node ? findNodeById(rootNode, node.id) : null
+
+      if (!selectedNodeInMap) {
+        throw new Error("Selected node not found in mind map")
+      }
+
+      // Get paths from the selected node to its leaf nodes
+      const pathsToLeaves = findPathsToLeaves(selectedNodeInMap)
+
+      // Set the paths - these start from the selected node, not from root
+      setFlashcardPaths(pathsToLeaves)
+
+      // Call the API to generate flashcards
+      const apiSuccess = await callFlashcardGenerationAPI(pathsToLeaves)
+
       setFlashcardSuccess(true)
     } catch (error) {
       console.error("Error creating flashcards:", error)
@@ -263,10 +451,10 @@ export function MindMapNodeModal({
                     </h3>
                     <Button
                       onClick={handleMakeQuestion}
-                      disabled={isRecallLoading}
+                      disabled={isRecallLoading || apiCallInProgress}
                       className="bg-purple-600 hover:bg-purple-700"
                     >
-                      {isRecallLoading ? (
+                      {isRecallLoading || (apiCallInProgress && !flashcardSuccess) ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Loading...
@@ -329,10 +517,10 @@ export function MindMapNodeModal({
                     </h3>
                     <Button
                       onClick={handleCreateFlashcard}
-                      disabled={isFlashcardLoading}
+                      disabled={isFlashcardLoading || apiCallInProgress}
                       className="bg-amber-600 hover:bg-amber-700"
                     >
-                      {isFlashcardLoading ? (
+                      {isFlashcardLoading || (apiCallInProgress && flashcardSuccess) ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                           Loading...
@@ -378,7 +566,26 @@ export function MindMapNodeModal({
                             ))}
                           </div>
                           <div className="mt-4 flex justify-end">
-                            <Button className="bg-amber-600 hover:bg-amber-700">Confirm Flashcard Creation</Button>
+                            <Button 
+                              variant="outline" 
+                              className="mr-2"
+                              onClick={onClose}
+                            >
+                              Close
+                            </Button>
+                            <Button 
+                              className="bg-amber-600 hover:bg-amber-700"
+                              onClick={() => {
+                                // Store the current deck ID for easy access
+                                const deckData = JSON.parse(localStorage.getItem("last_generated_deck") || "{}");
+                                localStorage.setItem("active_flashcard_deck", deckData.id);
+                                
+                                // Navigate to flashcard page
+                                window.location.href = "/flashcard";
+                              }}
+                            >
+                              View Flashcards
+                            </Button>
                           </div>
                         </>
                       )}

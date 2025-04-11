@@ -215,11 +215,11 @@ def get_user_milvus_collection(user_id: str) -> Collection:
     return Collection(collection_name)
 
 
-def ask_question(user_id: str, question: str, header: List[str] = []) -> str:
+def ask_question(user_id: str, question: str, headers: List[str] = []) -> str:
     """Trả lời câu hỏi DỰA TRÊN CÁC DOCUMENT ĐÃ CHỌN của user."""
     vector_store = get_user_vector_store(user_id)
-    if len(header) > 0:
-        final_content = "\n".join(header) + "\n" + question
+    if len(headers) > 0:
+        final_content = "\n".join(headers) + "\n" + question
     else:
         final_content = question
 

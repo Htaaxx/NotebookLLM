@@ -1,11 +1,11 @@
-"use client";
+"use client"
 
-import { useState, useEffect } from "react";
-import { NavBar } from "@/components/nav-bar";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState, useEffect } from "react"
+import { NavBar } from "@/components/ui/nav-bar"
+import { Card, CardContent } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Plus,
   ChevronLeft,
@@ -23,8 +23,8 @@ import {
   FileText,
   Upload,
   X,
-} from "lucide-react";
-import { useLanguage } from "@/lib/language-context";
+} from "lucide-react"
+import { useLanguage } from "@/lib/language-context"
 import {
   Dialog,
   DialogContent,
@@ -32,70 +32,70 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from "../../components/ui/dialog";
-import { documentAPI } from "@/lib/api";
-import type { FileItem } from "@/types/app-types";
+} from "../../components/ui/dialog"
+import { documentAPI } from "@/lib/api"
+import type { FileItem } from "@/types/app-types"
 
 interface Flashcard {
-  id: string;
-  front: string;
-  back: string;
-  starred: boolean;
-  lastReviewed: string;
-  status: "new" | "learning" | "review" | "mastered";
+  id: string
+  front: string
+  back: string
+  starred: boolean
+  lastReviewed: string
+  status: "new" | "learning" | "review" | "mastered"
 }
 
 interface Deck {
-  id: string;
-  name: string;
-  description: string;
-  cardCount: number;
-  lastStudied: string;
-  documentId?: string;
+  id: string
+  name: string
+  description: string
+  cardCount: number
+  lastStudied: string
+  documentId?: string
 }
 
 export default function FlashcardPage() {
-  const [activeTab, setActiveTab] = useState("decks");
-  const [activeDeck, setActiveDeck] = useState<string | null>(null);
-  const [cards, setCards] = useState<Flashcard[]>([]);
-  const [currentCard, setCurrentCard] = useState(0);
-  const [isFlipped, setIsFlipped] = useState(false);
-  const [newFront, setNewFront] = useState("");
-  const [newBack, setNewBack] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isCreateDeckDialogOpen, setIsCreateDeckDialogOpen] = useState(false);
-  const [newDeckName, setNewDeckName] = useState("");
-  const [newDeckDescription, setNewDeckDescription] = useState("");
-  const [userFiles, setUserFiles] = useState<FileItem[]>([]);
-  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
-  const { t } = useLanguage();
+  const [activeTab, setActiveTab] = useState("decks")
+  const [activeDeck, setActiveDeck] = useState<string | null>(null)
+  const [cards, setCards] = useState<Flashcard[]>([])
+  const [currentCard, setCurrentCard] = useState(0)
+  const [isFlipped, setIsFlipped] = useState(false)
+  const [newFront, setNewFront] = useState("")
+  const [newBack, setNewBack] = useState("")
+  const [searchQuery, setSearchQuery] = useState("")
+  const [isCreateDeckDialogOpen, setIsCreateDeckDialogOpen] = useState(false)
+  const [newDeckName, setNewDeckName] = useState("")
+  const [newDeckDescription, setNewDeckDescription] = useState("")
+  const [userFiles, setUserFiles] = useState<FileItem[]>([])
+  const [selectedFile, setSelectedFile] = useState<FileItem | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const { t } = useLanguage()
 
   // Sample decks
-  const [decks, setDecks] = useState<Deck[]>([]);
+  const [decks, setDecks] = useState<Deck[]>([])
 
   // Load user ID from localStorage
   useEffect(() => {
     if (typeof window !== "undefined") {
-      const storedUserId = localStorage.getItem("user_id");
+      const storedUserId = localStorage.getItem("user_id")
       if (storedUserId) {
-        setUserId(storedUserId);
+        setUserId(storedUserId)
       }
     }
-  }, []);
+  }, [])
 
   // Fetch user files when userId is available
   useEffect(() => {
     if (userId) {
-      fetchUserFiles(userId);
+      fetchUserFiles(userId)
     }
-  }, [userId]);
+  }, [userId])
 
   // Fetch user files from API
   const fetchUserFiles = async (userId: string) => {
     try {
-      const documents = await documentAPI.getDocuments(userId);
+      const documents = await documentAPI.getDocuments(userId)
       if (documents && documents.length > 0) {
         const files: FileItem[] = documents.map((doc: any) => ({
           id: doc.document_id,
@@ -108,86 +108,153 @@ export default function FlashcardPage() {
           size: 0,
           cloudinaryId: doc.document_id,
           FilePath: doc.document_path || "root",
-        }));
-        setUserFiles(files);
+        }))
+        setUserFiles(files)
       }
     } catch (error) {
-      console.error("Error fetching user files:", error);
+      console.error("Error fetching user files:", error)
     }
-  };
+  }
 
   // Helper function to determine file type based on filename
   const getFileTypeFromName = (filename: string): string => {
-    if (!filename) return "document";
-    const extension = filename.split(".").pop()?.toLowerCase();
-    if (!extension) return "document";
-    if (["pdf"].includes(extension)) return "application/pdf";
-    if (["jpg", "jpeg", "png", "gif", "svg"].includes(extension))
-      return "image/" + extension;
-    if (["mp4", "webm", "mov"].includes(extension)) return "video/" + extension;
-    if (["md", "markdown"].includes(extension)) return "text/markdown";
-    return "document";
-  };
+    if (!filename) return "document"
+    const extension = filename.split(".").pop()?.toLowerCase()
+    if (!extension) return "document"
+    if (["pdf"].includes(extension)) return "application/pdf"
+    if (["jpg", "jpeg", "png", "gif", "svg"].includes(extension)) return "image/" + extension
+    if (["mp4", "webm", "mov"].includes(extension)) return "video/" + extension
+    if (["md", "markdown"].includes(extension)) return "text/markdown"
+    return "document"
+  }
 
   // Helper function to get file extension
   const getFileExtension = (filename: string): string => {
-    if (!filename) return "";
-    const extensionMatch = filename.match(/\.[^.]+$/);
-    return extensionMatch ? extensionMatch[0].toLowerCase() : "";
-  };
+    if (!filename) return ""
+    const extensionMatch = filename.match(/\.[^.]+$/)
+    return extensionMatch ? extensionMatch[0].toLowerCase() : ""
+  }
 
   // Load cards for the selected deck
   useEffect(() => {
     if (activeDeck) {
-      const selectedDeck = decks.find((deck) => deck.id === activeDeck);
+      const selectedDeck = decks.find((deck) => deck.id === activeDeck)
       if (selectedDeck?.documentId) {
-        fetchFlashcardsForDocument(selectedDeck.documentId);
+        fetchFlashcardsForDocument(selectedDeck.documentId)
       } else {
         // If no document ID, just set empty cards array
-        setCards([]);
+        setCards([])
       }
-      setCurrentCard(0);
-      setIsFlipped(false);
+      setCurrentCard(0)
+      setIsFlipped(false)
     }
-  }, [activeDeck, decks]);
+  }, [activeDeck, decks])
 
-  // Fetch flashcards for a document (placeholder for backend API call)
+  // Add this after your other useEffect hooks
+  useEffect(() => {
+    // Check if we were directed here from mind map with a specific deck
+    const activeFlashcardDeck = localStorage.getItem("active_flashcard_deck")
+
+    if (activeFlashcardDeck && decks.length === 0) {
+      // Get the last generated deck data
+      const lastGeneratedDeck = localStorage.getItem("last_generated_deck")
+
+      if (lastGeneratedDeck) {
+        const deckData = JSON.parse(lastGeneratedDeck)
+
+        // Add the deck to our list
+        const newDeck: Deck = {
+          id: deckData.id,
+          name: deckData.name,
+          description: deckData.description || "Generated from mind map",
+          cardCount: deckData.cards.length,
+          lastStudied: "Never",
+          documentId: deckData.id,
+        }
+
+        setDecks([newDeck])
+        setActiveDeck(newDeck.id)
+        setActiveTab("study")
+
+        // Clear the active deck selection to avoid reloading on future visits
+        localStorage.removeItem("active_flashcard_deck")
+      }
+    }
+  }, [decks])
+
   const fetchFlashcardsForDocument = async (documentId: string) => {
-    setIsLoading(true);
+    setIsLoading(true)
     try {
-      // This is a placeholder - the user will implement the actual backend API call later
-      console.log(`Fetching flashcards for document: ${documentId}`);
+      // Check for recently generated flashcards first
+      const lastGeneratedDeck = localStorage.getItem("last_generated_deck")
 
-      // Simulate API call with timeout
-      setTimeout(() => {
-        // For now, just set empty cards array
-        setCards([]);
-        setIsLoading(false);
-      }, 1000);
+      if (lastGeneratedDeck) {
+        const deckData = JSON.parse(lastGeneratedDeck)
 
-      // The actual API call would look something like this:
-      // const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_API_URL}/flashcards/${documentId}`)
-      // const data = await response.json()
-      // setCards(data.flashcards)
+        // If this deck was created within the last hour and matches our document
+        if (deckData.id === documentId || (deckData.timestamp && Date.now() - deckData.timestamp < 3600000)) {
+          // Convert the stored cards to the format expected by the component
+          const flashcards: Flashcard[] = deckData.cards.map((card: any) => ({
+            id: card.id,
+            front: card.question,
+            back: card.answer,
+            starred: false,
+            lastReviewed: "Never",
+            status: "new",
+          }))
+
+          setCards(flashcards)
+          setIsLoading(false)
+          return
+        }
+      }
+
+      // Otherwise, fetch from API
+      const response = await fetch(`http://localhost:8000/flashcard/deck/${documentId}`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      // Convert API response to the format expected by the component
+      const flashcards: Flashcard[] = data.cards.map((card: any) => ({
+        id: card.id,
+        front: card.question,
+        back: card.answer,
+        starred: false,
+        lastReviewed: card.last_reviewed || "Never",
+        status: card.status || "new",
+      }))
+
+      setCards(flashcards)
     } catch (error) {
-      console.error("Error fetching flashcards:", error);
-      setCards([]);
-      setIsLoading(false);
+      console.error("Error fetching flashcards:", error)
+      // Fall back to the empty array
+      setCards([])
+    } finally {
+      setIsLoading(false)
     }
-  };
+  }
 
   const filteredDecks = searchQuery
     ? decks.filter(
         (deck) =>
           deck.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          deck.description.toLowerCase().includes(searchQuery.toLowerCase())
+          deck.description.toLowerCase().includes(searchQuery.toLowerCase()),
       )
-    : decks;
+    : decks
 
   const createDeck = () => {
-    if (!newDeckName.trim()) return;
+    if (!newDeckName.trim()) return
 
-    setIsLoading(true);
+    setIsLoading(true)
 
     try {
       // Create a new deck with reference to the selected document
@@ -198,29 +265,29 @@ export default function FlashcardPage() {
         cardCount: 0, // Will be updated when cards are fetched
         lastStudied: "Never",
         documentId: selectedFile?.id,
-      };
+      }
 
-      setDecks([...decks, newDeck]);
+      setDecks([...decks, newDeck])
 
       // Reset form
-      setNewDeckName("");
-      setNewDeckDescription("");
-      setSelectedFile(null);
-      setIsCreateDeckDialogOpen(false);
+      setNewDeckName("")
+      setNewDeckDescription("")
+      setSelectedFile(null)
+      setIsCreateDeckDialogOpen(false)
 
       // Fetch flashcards for the new deck if document is selected
       if (selectedFile?.id) {
-        console.log(`Created new deck with document ID: ${selectedFile.id}`);
+        console.log(`Created new deck with document ID: ${selectedFile.id}`)
       }
     } catch (error) {
-      console.error("Error creating deck:", error);
+      console.error("Error creating deck:", error)
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const addCard = () => {
-    if (!newFront.trim() || !newBack.trim() || !activeDeck) return;
+    if (!newFront.trim() || !newBack.trim() || !activeDeck) return
 
     const newCard: Flashcard = {
       id: Math.random().toString(36).substr(2, 9),
@@ -229,82 +296,70 @@ export default function FlashcardPage() {
       starred: false,
       lastReviewed: "Never",
       status: "new",
-    };
+    }
 
-    setCards([...cards, newCard]);
+    setCards([...cards, newCard])
 
     // Update card count in the deck
-    setDecks(
-      decks.map((deck) =>
-        deck.id === activeDeck
-          ? { ...deck, cardCount: deck.cardCount + 1 }
-          : deck
-      )
-    );
+    setDecks(decks.map((deck) => (deck.id === activeDeck ? { ...deck, cardCount: deck.cardCount + 1 } : deck)))
 
-    setNewFront("");
-    setNewBack("");
-  };
+    setNewFront("")
+    setNewBack("")
+  }
 
   const nextCard = () => {
     if (currentCard < cards.length - 1) {
-      setCurrentCard(currentCard + 1);
-      setIsFlipped(false);
+      setCurrentCard(currentCard + 1)
+      setIsFlipped(false)
     }
-  };
+  }
 
   const prevCard = () => {
     if (currentCard > 0) {
-      setCurrentCard(currentCard - 1);
-      setIsFlipped(false);
+      setCurrentCard(currentCard - 1)
+      setIsFlipped(false)
     }
-  };
+  }
 
   const toggleStar = (cardId: string) => {
-    setCards(
-      cards.map((card) =>
-        card.id === cardId ? { ...card, starred: !card.starred } : card
-      )
-    );
-  };
+    setCards(cards.map((card) => (card.id === cardId ? { ...card, starred: !card.starred } : card)))
+  }
 
   const updateCardStatus = (cardId: string, status: Flashcard["status"]) => {
-    setCards(
-      cards.map((card) =>
-        card.id === cardId
-          ? { ...card, status, lastReviewed: "Just now" }
-          : card
-      )
-    );
+    setCards(cards.map((card) => (card.id === cardId ? { ...card, status, lastReviewed: "Just now" } : card)))
 
     // Move to next card after marking
     setTimeout(() => {
       if (currentCard < cards.length - 1) {
-        nextCard();
+        nextCard()
       } else {
         // If it's the last card, show completion message or reset
-        alert("You've completed all cards in this deck!");
-        setCurrentCard(0);
-        setIsFlipped(false);
+        alert("You've completed all cards in this deck!")
+        setCurrentCard(0)
+        setIsFlipped(false)
       }
-    }, 500);
-  };
+    }, 500)
+  }
 
   const submitReview = async (cardId: string, ease: number) => {
     try {
-      const response = await fetch(`/api/review/${cardId}`, {
+      const response = await fetch(`http://localhost:8000/review/${cardId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ ease }),
-      });
+        body: JSON.stringify({
+          user_id: userId,
+          ease: ease,
+          timestamp: new Date().toISOString(),
+        }),
+      })
 
-      if (!response.ok) throw new Error("Failed to update review");
+      if (!response.ok) throw new Error("Failed to update review")
 
-      const updated = await response.json();
+      const updated = await response.json()
 
-      // Cập nhật flashcard local
+      // Update flashcard locally
       setCards((prevCards) =>
         prevCards.map((card) =>
           card.id === cardId
@@ -313,68 +368,62 @@ export default function FlashcardPage() {
                 status: ease < 3 ? "learning" : "mastered",
                 lastReviewed: new Date().toISOString(),
               }
-            : card
-        )
-      );
+            : card,
+        ),
+      )
 
       // Auto next card
       setTimeout(() => {
         if (currentCard < cards.length - 1) {
-          nextCard();
+          nextCard()
         } else {
-          alert("You've completed all cards in this deck!");
+          alert("You've completed all cards in this deck!")
         }
-      }, 500);
+      }, 500)
     } catch (error) {
-      console.error("Error submitting review:", error);
+      console.error("Error submitting review:", error)
     }
-  };
+  }
 
   const deleteCard = (cardId: string) => {
-    setCards(cards.filter((card) => card.id !== cardId));
+    setCards(cards.filter((card) => card.id !== cardId))
 
     // Update card count in the deck
     if (activeDeck) {
-      setDecks(
-        decks.map((deck) =>
-          deck.id === activeDeck
-            ? { ...deck, cardCount: deck.cardCount - 1 }
-            : deck
-        )
-      );
+      setDecks(decks.map((deck) => (deck.id === activeDeck ? { ...deck, cardCount: deck.cardCount - 1 } : deck)))
     }
 
     if (currentCard >= cards.length - 1) {
-      setCurrentCard(Math.max(0, cards.length - 2));
+      setCurrentCard(Math.max(0, cards.length - 2))
     }
-  };
+  }
 
   const deleteDeck = (deckId: string) => {
-    setDecks(decks.filter((deck) => deck.id !== deckId));
+    setDecks(decks.filter((deck) => deck.id !== deckId))
     if (activeDeck === deckId) {
-      setActiveDeck(null);
-      setCards([]);
+      setActiveDeck(null)
+      setCards([])
     }
-  };
+  }
 
   const getStatusColor = (status: Flashcard["status"]) => {
     switch (status) {
       case "new":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800"
       case "learning":
-        return "bg-yellow-100 text-yellow-800";
+        return "bg-yellow-100 text-yellow-800"
       case "review":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 text-purple-800"
       case "mastered":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800"
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800"
     }
-  };
+  }
 
   const handleFileSelect = (file: FileItem) => {
-    setSelectedFile(file);
-  };
+    setSelectedFile(file)
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-black">
@@ -411,8 +460,8 @@ export default function FlashcardPage() {
                     key={deck.id}
                     className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
                     onClick={() => {
-                      setActiveDeck(deck.id);
-                      setActiveTab("study");
+                      setActiveDeck(deck.id)
+                      setActiveTab("study")
                     }}
                   >
                     <div className="h-2 bg-green-600"></div>
@@ -424,16 +473,14 @@ export default function FlashcardPage() {
                           size="sm"
                           className="h-8 w-8 p-0 -mt-1 -mr-1"
                           onClick={(e) => {
-                            e.stopPropagation();
-                            deleteDeck(deck.id);
+                            e.stopPropagation()
+                            deleteDeck(deck.id)
                           }}
                         >
                           <Trash2 className="h-4 w-4 text-red-500" />
                         </Button>
                       </div>
-                      <p className="text-gray-500 mb-4 line-clamp-2">
-                        {deck.description}
-                      </p>
+                      <p className="text-gray-500 mb-4 line-clamp-2">{deck.description}</p>
                       <div className="flex justify-between text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <BookOpen className="w-4 h-4" />
@@ -449,10 +496,7 @@ export default function FlashcardPage() {
                 ))}
 
                 {/* Add New Deck Card */}
-                <Dialog
-                  open={isCreateDeckDialogOpen}
-                  onOpenChange={setIsCreateDeckDialogOpen}
-                >
+                <Dialog open={isCreateDeckDialogOpen} onOpenChange={setIsCreateDeckDialogOpen}>
                   <DialogTrigger asChild>
                     <Card className="border-2 border-dashed flex items-center justify-center h-[180px] cursor-pointer hover:border-green-600 transition-colors">
                       <div className="text-center">
@@ -467,9 +511,7 @@ export default function FlashcardPage() {
                     </DialogHeader>
                     <div className="space-y-4 mt-4">
                       <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Deck Name
-                        </label>
+                        <label className="block text-sm font-medium mb-1">Deck Name</label>
                         <Input
                           value={newDeckName}
                           onChange={(e) => setNewDeckName(e.target.value)}
@@ -477,33 +519,23 @@ export default function FlashcardPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Description (Optional)
-                        </label>
+                        <label className="block text-sm font-medium mb-1">Description (Optional)</label>
                         <Input
                           value={newDeckDescription}
-                          onChange={(e) =>
-                            setNewDeckDescription(e.target.value)
-                          }
+                          onChange={(e) => setNewDeckDescription(e.target.value)}
                           placeholder="Enter deck description"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-sm font-medium mb-1">
-                          Select a Document
-                        </label>
-                        <p className="text-sm text-gray-500 mb-2">
-                          Choose a document to generate flashcards from
-                        </p>
+                        <label className="block text-sm font-medium mb-1">Select a Document</label>
+                        <p className="text-sm text-gray-500 mb-2">Choose a document to generate flashcards from</p>
 
                         {/* Selected file display */}
                         {selectedFile && (
                           <div className="flex items-center p-2 bg-gray-50 rounded-md mb-2">
                             <FileText className="h-5 w-5 text-gray-500 mr-2" />
-                            <span className="text-sm flex-grow truncate">
-                              {selectedFile.name}
-                            </span>
+                            <span className="text-sm flex-grow truncate">{selectedFile.name}</span>
                             <Button
                               variant="ghost"
                               size="sm"
@@ -523,16 +555,12 @@ export default function FlashcardPage() {
                                 <div
                                   key={file.id}
                                   className={`flex items-center p-2 rounded-md cursor-pointer ${
-                                    selectedFile?.id === file.id
-                                      ? "bg-green-50"
-                                      : "hover:bg-gray-50"
+                                    selectedFile?.id === file.id ? "bg-green-50" : "hover:bg-gray-50"
                                   }`}
                                   onClick={() => handleFileSelect(file)}
                                 >
                                   <FileText className="h-4 w-4 text-gray-400 mr-2" />
-                                  <span className="text-sm truncate">
-                                    {file.name}
-                                  </span>
+                                  <span className="text-sm truncate">{file.name}</span>
                                 </div>
                               ))}
                             </div>
@@ -550,19 +578,15 @@ export default function FlashcardPage() {
                             className="flex items-center justify-center p-2 border border-dashed rounded-md cursor-pointer hover:bg-gray-50"
                           >
                             <Upload className="h-4 w-4 mr-2 text-gray-500" />
-                            <span className="text-sm">
-                              Upload a new document
-                            </span>
+                            <span className="text-sm">Upload a new document</span>
                             <input
                               id="file-upload"
                               type="file"
                               className="hidden"
                               onChange={(e) => {
                                 // This would be implemented by the user later
-                                console.log("File upload:", e.target.files);
-                                alert(
-                                  "File upload functionality will be implemented later"
-                                );
+                                console.log("File upload:", e.target.files)
+                                alert("File upload functionality will be implemented later")
                               }}
                             />
                           </label>
@@ -573,10 +597,10 @@ export default function FlashcardPage() {
                         <Button
                           variant="outline"
                           onClick={() => {
-                            setIsCreateDeckDialogOpen(false);
-                            setSelectedFile(null);
-                            setNewDeckName("");
-                            setNewDeckDescription("");
+                            setIsCreateDeckDialogOpen(false)
+                            setSelectedFile(null)
+                            setNewDeckName("")
+                            setNewDeckDescription("")
                           }}
                         >
                           Cancel
@@ -596,13 +620,8 @@ export default function FlashcardPage() {
 
               {decks.length === 0 && !searchQuery && (
                 <div className="text-center py-8">
-                  <p className="text-gray-500 mb-4">
-                    You don't have any flashcard decks yet
-                  </p>
-                  <Button
-                    onClick={() => setIsCreateDeckDialogOpen(true)}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
+                  <p className="text-gray-500 mb-4">You don't have any flashcard decks yet</p>
+                  <Button onClick={() => setIsCreateDeckDialogOpen(true)} className="bg-green-600 hover:bg-green-700">
                     <Plus className="h-4 w-4 mr-2" />
                     Create Your First Deck
                   </Button>
@@ -611,9 +630,7 @@ export default function FlashcardPage() {
 
               {decks.length > 0 && filteredDecks.length === 0 && (
                 <div className="text-center py-8">
-                  <p className="text-gray-500">
-                    No decks found matching "{searchQuery}"
-                  </p>
+                  <p className="text-gray-500">No decks found matching "{searchQuery}"</p>
                 </div>
               )}
             </TabsContent>
@@ -624,13 +641,9 @@ export default function FlashcardPage() {
                 <>
                   <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold">
-                      {decks.find((d) => d.id === activeDeck)?.name ||
-                        "Study Deck"}
+                      {decks.find((d) => d.id === activeDeck)?.name || "Study Deck"}
                     </h2>
-                    <Button
-                      variant="outline"
-                      onClick={() => setActiveTab("decks")}
-                    >
+                    <Button variant="outline" onClick={() => setActiveTab("decks")}>
                       Back to Decks
                     </Button>
                   </div>
@@ -643,12 +656,7 @@ export default function FlashcardPage() {
                     <div className="space-y-6">
                       {/* Card Navigation */}
                       <div className="flex justify-between items-center">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={prevCard}
-                          disabled={currentCard === 0}
-                        >
+                        <Button variant="outline" size="sm" onClick={prevCard} disabled={currentCard === 0}>
                           <ChevronLeft className="w-4 h-4 mr-1" />
                           Previous
                         </Button>
@@ -674,17 +682,13 @@ export default function FlashcardPage() {
                           }`}
                           style={{
                             transformStyle: "preserve-3d",
-                            transform: isFlipped
-                              ? "rotateY(180deg)"
-                              : "rotateY(0deg)",
+                            transform: isFlipped ? "rotateY(180deg)" : "rotateY(0deg)",
                           }}
                         >
                           {/* Front of Card */}
                           <Card
                             className={`p-8 min-h-[300px] flex flex-col ${
-                              isFlipped
-                                ? "absolute inset-0 backface-hidden"
-                                : "relative"
+                              isFlipped ? "absolute inset-0 backface-hidden" : "relative"
                             }`}
                             style={{
                               backfaceVisibility: "hidden",
@@ -697,8 +701,8 @@ export default function FlashcardPage() {
                                 size="sm"
                                 className="h-8 w-8 p-0"
                                 onClick={(e) => {
-                                  e.stopPropagation();
-                                  toggleStar(cards[currentCard].id);
+                                  e.stopPropagation()
+                                  toggleStar(cards[currentCard].id)
                                 }}
                               >
                                 {cards[currentCard].starred ? (
@@ -712,8 +716,8 @@ export default function FlashcardPage() {
                                 size="sm"
                                 className="h-8 w-8 p-0"
                                 onClick={(e) => {
-                                  e.stopPropagation();
-                                  deleteCard(cards[currentCard].id);
+                                  e.stopPropagation()
+                                  deleteCard(cards[currentCard].id)
                                 }}
                               >
                                 <Trash2 className="h-4 w-4 text-red-500" />
@@ -721,9 +725,7 @@ export default function FlashcardPage() {
                             </div>
 
                             <div className="flex-1 flex items-center justify-center">
-                              <h3 className="text-xl font-medium text-center">
-                                {cards[currentCard].front}
-                              </h3>
+                              <h3 className="text-xl font-medium text-center">{cards[currentCard].front}</h3>
                             </div>
 
                             <div className="text-center mt-4 text-gray-500">
@@ -737,9 +739,7 @@ export default function FlashcardPage() {
                           {/* Back of Card */}
                           <Card
                             className={`p-8 min-h-[300px] flex flex-col ${
-                              isFlipped
-                                ? "relative"
-                                : "absolute inset-0 backface-hidden"
+                              isFlipped ? "relative" : "absolute inset-0 backface-hidden"
                             }`}
                             style={{
                               backfaceVisibility: "hidden",
@@ -748,85 +748,52 @@ export default function FlashcardPage() {
                             onClick={() => setIsFlipped(!isFlipped)}
                           >
                             <div className="flex-1 flex items-center justify-center">
-                              <p className="text-lg text-center">
-                                {cards[currentCard].back}
-                              </p>
+                              <p className="text-lg text-center">{cards[currentCard].back}</p>
                             </div>
 
+                            {/* Fixed: Removed nested buttons */}
                             <div className="mt-6 flex justify-center gap-2">
                               <Button
                                 variant="outline"
                                 className="border-red-500 text-red-500 hover:bg-red-50"
                                 onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateCardStatus(
-                                    cards[currentCard].id,
-                                    "learning"
-                                  );
+                                  e.stopPropagation()
+                                  updateCardStatus(cards[currentCard].id, "learning")
                                 }}
                               >
                                 <XCircle className="h-4 w-4 mr-1" />
-                                <div className="mt-6 flex justify-center gap-2">
-                                  {[0, 1, 2, 3, 4, 5].map((ease) => (
-                                    <Button
-                                      key={ease}
-                                      variant="outline"
-                                      className={`border-gray-300 ${
-                                        ease >= 4
-                                          ? "bg-green-100"
-                                          : ease <= 2
-                                          ? "bg-red-100"
-                                          : ""
-                                      }`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        submitReview(
-                                          cards[currentCard].id,
-                                          ease
-                                        );
-                                      }}
-                                    >
-                                      {ease}
-                                    </Button>
-                                  ))}
-                                </div>
+                                Difficult
                               </Button>
+
                               <Button
                                 className="bg-green-600 hover:bg-green-700"
                                 onClick={(e) => {
-                                  e.stopPropagation();
-                                  updateCardStatus(
-                                    cards[currentCard].id,
-                                    "mastered"
-                                  );
+                                  e.stopPropagation()
+                                  updateCardStatus(cards[currentCard].id, "mastered")
                                 }}
                               >
                                 <CheckCircle2 className="h-4 w-4 mr-1" />
-                                <div className="mt-6 flex justify-center gap-2">
-                                  {[0, 1, 2, 3, 4, 5].map((ease) => (
-                                    <Button
-                                      key={ease}
-                                      variant="outline"
-                                      className={`border-gray-300 ${
-                                        ease >= 4
-                                          ? "bg-green-100"
-                                          : ease <= 2
-                                          ? "bg-red-100"
-                                          : ""
-                                      }`}
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        submitReview(
-                                          cards[currentCard].id,
-                                          ease
-                                        );
-                                      }}
-                                    >
-                                      {ease}
-                                    </Button>
-                                  ))}
-                                </div>
+                                Easy
                               </Button>
+                            </div>
+
+                            {/* Rating buttons - separate from the above buttons */}
+                            <div className="mt-6 flex justify-center gap-2">
+                              {[0, 1, 2, 3, 4, 5].map((ease) => (
+                                <Button
+                                  key={ease}
+                                  variant="outline"
+                                  className={`border-gray-300 ${
+                                    ease >= 4 ? "bg-green-100" : ease <= 2 ? "bg-red-100" : ""
+                                  }`}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    submitReview(cards[currentCard].id, ease)
+                                  }}
+                                >
+                                  {ease}
+                                </Button>
+                              ))}
                             </div>
 
                             <div className="text-center mt-4 text-gray-500">
@@ -843,12 +810,9 @@ export default function FlashcardPage() {
                       <div className="flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(
-                              cards[currentCard].status
-                            )}`}
+                            className={`px-2 py-1 rounded-full text-xs ${getStatusColor(cards[currentCard].status)}`}
                           >
-                            {cards[currentCard].status.charAt(0).toUpperCase() +
-                              cards[currentCard].status.slice(1)}
+                            {cards[currentCard].status.charAt(0).toUpperCase() + cards[currentCard].status.slice(1)}
                           </span>
                           <span className="text-sm text-gray-500">
                             Last reviewed: {cards[currentCard].lastReviewed}
@@ -859,9 +823,9 @@ export default function FlashcardPage() {
                           size="sm"
                           className="flex items-center gap-1"
                           onClick={() => {
-                            setActiveTab("create");
-                            setNewFront(cards[currentCard].front);
-                            setNewBack(cards[currentCard].back);
+                            setActiveTab("create")
+                            setNewFront(cards[currentCard].front)
+                            setNewBack(cards[currentCard].back)
                           }}
                         >
                           <Edit className="h-4 w-4" />
@@ -871,13 +835,8 @@ export default function FlashcardPage() {
                     </div>
                   ) : (
                     <div className="text-center py-12">
-                      <p className="text-gray-500 mb-4">
-                        No flashcards found for this deck
-                      </p>
-                      <Button
-                        onClick={() => setActiveTab("create")}
-                        className="bg-green-600 hover:bg-green-700"
-                      >
+                      <p className="text-gray-500 mb-4">No flashcards found for this deck</p>
+                      <Button onClick={() => setActiveTab("create")} className="bg-green-600 hover:bg-green-700">
                         <Plus className="h-4 w-4 mr-2" />
                         Create Your First Card
                       </Button>
@@ -886,13 +845,8 @@ export default function FlashcardPage() {
                 </>
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-500 mb-4">
-                    Please select a deck to study
-                  </p>
-                  <Button
-                    onClick={() => setActiveTab("decks")}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
+                  <p className="text-gray-500 mb-4">Please select a deck to study</p>
+                  <Button onClick={() => setActiveTab("decks")} className="bg-green-600 hover:bg-green-700">
                     View All Decks
                   </Button>
                 </div>
@@ -934,9 +888,9 @@ export default function FlashcardPage() {
                           <Button
                             variant="outline"
                             onClick={() => {
-                              setNewFront("");
-                              setNewBack("");
-                              setActiveTab("study");
+                              setNewFront("")
+                              setNewBack("")
+                              setActiveTab("study")
                             }}
                           >
                             Cancel
@@ -955,13 +909,8 @@ export default function FlashcardPage() {
                   </Card>
                 ) : (
                   <div className="text-center py-12">
-                    <p className="text-gray-500 mb-4">
-                      Please select a deck first
-                    </p>
-                    <Button
-                      onClick={() => setActiveTab("decks")}
-                      className="bg-green-600 hover:bg-green-700"
-                    >
+                    <p className="text-gray-500 mb-4">Please select a deck first</p>
+                    <Button onClick={() => setActiveTab("decks")} className="bg-green-600 hover:bg-green-700">
                       View All Decks
                     </Button>
                   </div>
@@ -972,5 +921,5 @@ export default function FlashcardPage() {
         </div>
       </main>
     </div>
-  );
+  )
 }
