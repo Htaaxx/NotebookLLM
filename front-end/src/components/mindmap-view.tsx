@@ -623,6 +623,8 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         keypress: true,
         allowUndo: true,
         overflowHidden: false,
+        zoomable: true,
+        scale: 1,
         primaryLinkStyle: {
           lineWidth: theme.lineStyle.width,
           lineColor: theme.lineStyle.color,

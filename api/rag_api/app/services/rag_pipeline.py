@@ -877,7 +877,7 @@ async def get_smaller_branches_from_docs(
                 ]
             )
             text = completion.content
-            header_text = extract_all_headers(text)
+            header_text = add_hashtag_to_header(text)
             result += header_text
         except Exception as e:
             print(f"Error processing cluster {i} for user {user_id}: {e}")
@@ -914,13 +914,22 @@ def extract_all_headers(text: str) -> str:
     for line in lines:
         stripped_line = line.strip()
         if stripped_line.startswith("#"):
-            # Potentially add indentation based on header level for visual structure if needed
-            # level = stripped_line.count('#', 0, 3) # Count '#' at the beginning
-            # indentation = "  " * (level - 1) if level > 0 else ""
-            # header_text += indentation + stripped_line + "\n"
-            header_text += "#" + stripped_line + "\n"  # Keep it simple for now
+            header_text += "#" + stripped_line + "\n" 
+        else :
+            header_text += stripped_line + "\n"
     return header_text
-
+def add_hashtag_to_header(text: str) -> str:
+    """Adds # to lines starting with #, ##, ### while preserving relative order."""
+    header_text = ""
+    lines = text.split("\n")
+    for line in lines:
+        stripped_line = line.strip()
+        if stripped_line.startswith("#"):
+            header_text += "#" + stripped_line + "\n" 
+        else :
+            header_text += stripped_line + "\n"
+    return header_text
+    
 
 # (Optional) Function to write content to a file, ensure correct encoding
 def write_to_file(file_path: str, content: str):
