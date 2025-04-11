@@ -150,3 +150,4 @@ async def get_transcript(link: YouTubeLink):
 @app.get("/")
 def read_root():
     return {"message": "File Extraction API is running"}
+    

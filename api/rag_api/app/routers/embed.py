@@ -14,7 +14,7 @@ from fastapi import (
 # Giả sử rag_api là thư mục gốc chứa app
 from ..services.rag_pipeline import (
     # vector_store, # Không cần trực tiếp ở đây
-    process_and_store_pdf,
+    process_and_store_file,
     delete_embeddings,
     get_document_embeddings,
     get_smaller_branches_from_docs,  # Đổi tên hàm API cho nhất quán
@@ -82,17 +82,16 @@ async def embed_pdf(
     """
     Upload và embed file PDF. Yêu cầu user_id và doc_id trong request body (multipart/form-data).
     """
-    if not file.filename.endswith(".pdf"):
-        raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 
     try:
         contents = await file.read()
         # Truyền user_id nhận được vào service
-        chunk_count = process_and_store_pdf(
-            user_id=user_id,  # Truyền user_id đã nhận
+        chunk_count = await process_and_store_file( # Đổi tên hàm cho tổng quát
+            user_id=user_id,
             file_bytes=contents,
             filename=file.filename,
             doc_id=doc_id,
+            content_type=file.content_type # Truyền content_type
         )
         # ... (response logic) ...
         message = f"PDF processed. Added {chunk_count} embeddings for user {user_id}."
