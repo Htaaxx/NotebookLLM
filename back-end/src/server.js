@@ -6,6 +6,7 @@ const webRoutes = require("./routes/web");
 const mongoose = require("mongoose"); //Import mongoose
 const uploadRoutes = require("./routes/upload"); // Import Cloudinary routes
 const flashcardRoutes = require("./routes/flashcard");
+const reviewRoutes = require("./routes/review");
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -32,7 +33,9 @@ app.get("/", (req, res) => {
 app.use("/api", webRoutes);
 app.use("/user", uploadRoutes); // Cloudinary
 
-app.use("/api", flashcardRoutes);
+app.use("/api/review", reviewRoutes);
+app.use("/api/flashcards", flashcardRoutes);
+
 
 // Start server
 app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));

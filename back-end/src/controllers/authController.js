@@ -30,9 +30,34 @@ const documentSchema = new mongoose.Schema({
   document_path: { type: String, required: true },
 });
 
+// Flashcard Collection Schema
+// const flashcardSchema = new mongoose.Schema({
+//   flashcard_id: {
+//     type: String,
+//     default: () => new mongoose.Types.ObjectId().toString(),
+//     unique: true,
+//   },
+//   user_id: {
+//     type: String,
+//     required: true,
+//   },
+//   front: {
+//     type: String,
+//     required: true,
+//   },
+//   back: {
+//     type: String,
+//     required: true,
+//   },
+//   tags: [{
+//     type: String,
+//   }],
+// }, { timestamps: true });
+
 // Models
 const User = mongoose.model("User", userSchema);
 const Document = mongoose.model("Document", documentSchema);
+const Flashcard = mongoose.model("Flashcard", flashcardSchema);
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -229,3 +254,24 @@ exports.getDocumentWithUser = async (req, res) => {
   }
 };
 
+// const saveFlashcards = async (req, res) => {
+//   try {
+//     const { flashcards, user_id } = req.body;
+
+//     if (!flashcards || !Array.isArray(flashcards)) {
+//       return res.status(400).json({ message: "Invalid flashcards array." });
+//     }
+
+//     const saved = await Flashcard.insertMany(
+//       flashcards.map(fc => ({
+//         ...fc,
+//         user_id
+//       }))
+//     );
+
+//     res.status(201).json({ message: "Flashcards saved", data: saved });
+//   } catch (err) {
+//     console.error("Error saving flashcards:", err);
+//     res.status(500).json({ message: "Server error." });
+//   }
+// };

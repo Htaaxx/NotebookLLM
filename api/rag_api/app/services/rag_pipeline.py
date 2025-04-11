@@ -18,15 +18,17 @@ from langchain_core.prompts import ChatPromptTemplate
 from sklearn.cluster import KMeans
 from typing import Tuple, List, Dict, Any, Optional  # Thêm Dict, Any, Optional
 
-import pymongo # <--- THÊM IMPORT PYMONGO
-from pymongo.collection import Collection as MongoCollection # <--- Để tránh trùng tên với pymilvus
+import pymongo  # <--- THÊM IMPORT PYMONGO
+from pymongo.collection import (
+    Collection as MongoCollection,
+)  # <--- Để tránh trùng tên với pymilvus
 
 # File Processing & OCR
-from PIL import Image, ImageEnhance, ImageFilter # Thêm PIL
-import pytesseract                             # Thêm pytesseract
-from pdf2image import convert_from_bytes       # Thêm pdf2image
-from pypdf import PdfReader     
-import traceback # Thêm traceback
+from PIL import Image, ImageEnhance, ImageFilter  # Thêm PIL
+import pytesseract  # Thêm pytesseract
+from pdf2image import convert_from_bytes  # Thêm pdf2image
+from pypdf import PdfReader
+import traceback  # Thêm traceback
 
 
 import re
@@ -38,9 +40,9 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ZILLIZ_CLOUD_URI = os.getenv("ZILLIZ_CLOUD_URI")
 ZILLIZ_CLOUD_TOKEN = os.getenv("ZILLIZ_CLOUD_TOKEN")
 
-MONGO_URI = os.getenv("MONGO_URI") # <--- Lấy URI MongoDB
-MONGO_DB_NAME = os.getenv("MONGO_DB_NAME") # <--- Lấy tên DB
-MONGO_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_NAME") # <--- Lấy tên Collection
+MONGO_URI = os.getenv("MONGO_URI")  # <--- Lấy URI MongoDB
+MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")  # <--- Lấy tên DB
+MONGO_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_NAME")  # <--- Lấy tên Collection
 
 mongo_client = None
 if MONGO_URI:
@@ -54,7 +56,10 @@ if MONGO_URI:
         print(f"Lỗi kết nối MongoDB khác: {e}")
         mongo_client = None
 else:
-    print("Cảnh báo: MONGO_URI chưa được cấu hình trong .env. Không thể kết nối MongoDB.")
+    print(
+        "Cảnh báo: MONGO_URI chưa được cấu hình trong .env. Không thể kết nối MongoDB."
+    )
+
 
 def get_mongo_collection() -> Optional[MongoCollection]:
     """Lấy đối tượng collection MongoDB."""
@@ -66,11 +71,12 @@ def get_mongo_collection() -> Optional[MongoCollection]:
         collection = db[MONGO_COLLECTION_NAME]
         # Kiểm tra kết nối nhanh (tùy chọn)
         # collection.count_documents({}) # Ví dụ kiểm tra
-        return collection # <--- CẦN THÊM DÒNG NÀY ĐỂ TRẢ VỀ COLLECTION KHI THÀNH CÔNG
+        return collection  # <--- CẦN THÊM DÒNG NÀY ĐỂ TRẢ VỀ COLLECTION KHI THÀNH CÔNG
 
     except Exception as e:
         print(f"Lỗi khi lấy MongoDB collection: {e}")
         return None
+
 
 # Set up embedding
 embeddings = HuggingFaceEmbeddings(
@@ -142,8 +148,11 @@ def get_user_vector_store(user_id: str) -> Zilliz:
     )
     return vector_store_instance
 
+
 # --- HÀM MỚI: LẤY DOC ID ĐÃ CHỌN TỪ MONGODB (TASK 3) ---
-def get_selected_document_ids(user_id: str, mongo_coll: Optional[MongoCollection]) -> List[str]:
+def get_selected_document_ids(
+    user_id: str, mongo_coll: Optional[MongoCollection]
+) -> List[str]:
     """
     Truy vấn MongoDB để lấy danh sách các document_id có trường 'status' là 1 (số nguyên)
     cho user_id cụ thể.
@@ -151,17 +160,24 @@ def get_selected_document_ids(user_id: str, mongo_coll: Optional[MongoCollection
     # --- SỬA LỖI LOGIC KIỂM TRA ---
     # Phải kiểm tra xem mongo_coll CÓ KHÔNG HỢP LỆ (None) hay không
     if mongo_coll is None:
-        print("Lỗi: Không thể truy vấn MongoDB do kết nối không hợp lệ (mongo_coll is None).")
-        return [] # Trả về rỗng nếu không có đối tượng collection\
-
+        print(
+            "Lỗi: Không thể truy vấn MongoDB do kết nối không hợp lệ (mongo_coll is None)."
+        )
+        return []  # Trả về rỗng nếu không có đối tượng collection\
 
     selected_ids = []
     try:
         # Tìm các document có user_id và status là số nguyên 1
         # Chỉ lấy trường 'document_id'
         cursor = mongo_coll.find(
-            {"user_id": user_id, "status": 1},  # <<< THAY ĐỔI: Dùng số nguyên 1 thay vì chuỗi "1"
-            {"document_id": 1, "_id": 0}     # Projection: chỉ lấy document_id, bỏ _id mặc định
+            {
+                "user_id": user_id,
+                "status": 1,
+            },  # <<< THAY ĐỔI: Dùng số nguyên 1 thay vì chuỗi "1"
+            {
+                "document_id": 1,
+                "_id": 0,
+            },  # Projection: chỉ lấy document_id, bỏ _id mặc định
         )
 
         # Lấy danh sách document_id từ cursor, đảm bảo document_id tồn tại
@@ -171,14 +187,17 @@ def get_selected_document_ids(user_id: str, mongo_coll: Optional[MongoCollection
         # Cách 2: Dùng .get() để an toàn hơn nếu key có thể thiếu (dù projection đã yêu cầu)
         # selected_ids = [doc.get("document_id") for doc in cursor if doc.get("document_id")]
 
-        print(f"Tìm thấy {len(selected_ids)} document có status=1 cho user {user_id} từ MongoDB.")
+        print(
+            f"Tìm thấy {len(selected_ids)} document có status=1 cho user {user_id} từ MongoDB."
+        )
 
     except Exception as e:
         # Ghi log lỗi sẽ tốt hơn là chỉ print trong môi trường production
         print(f"Lỗi khi truy vấn MongoDB lấy doc_id có status=1: {e}")
-        return [] # Trả về rỗng nếu có lỗi xảy ra
+        return []  # Trả về rỗng nếu có lỗi xảy ra
 
     return selected_ids
+
 
 def get_user_milvus_collection(user_id: str) -> Collection:
     """Lấy đối tượng Collection của pymilvus cho user."""
@@ -196,30 +215,36 @@ def get_user_milvus_collection(user_id: str) -> Collection:
     return Collection(collection_name)
 
 
-def ask_question(user_id: str, question: str) -> str:
+def ask_question(user_id: str, question: str, header: List[str] = []) -> str:
     """Trả lời câu hỏi DỰA TRÊN CÁC DOCUMENT ĐÃ CHỌN của user."""
     vector_store = get_user_vector_store(user_id)
+    if len(header) > 0:
+        final_content = "\n".join(header) + "\n" + question
+    else:
+        final_content = question
 
     # --- TASK 3: Kết nối MongoDB và lấy Doc ID đã chọn ---
     mongo_collection = get_mongo_collection()
     print(mongo_client)
 
     print("Bug o day ne")
-    selected_ids = get_selected_document_ids(user_id, mongo_collection) 
-    print("Chua toi day")  
+    selected_ids = get_selected_document_ids(user_id, mongo_collection)
+    print("Chua toi day")
     # -----------------------------------------------------
 
-    search_filter_expr = None # Khởi tạo filter là None
+    search_filter_expr = None  # Khởi tạo filter là None
     if not selected_ids:
-        print(f"Không có document nào được chọn cho user {user_id}. Không thực hiện tìm kiếm.")
+        print(
+            f"Không có document nào được chọn cho user {user_id}. Không thực hiện tìm kiếm."
+        )
         return "Vui lòng chọn ít nhất một tài liệu để thực hiện tìm kiếm trong đó."
     else:
-        search_filter_expr = f'doc_id in {selected_ids}'
+        search_filter_expr = f"doc_id in {selected_ids}"
         print(f"Thực hiện tìm kiếm với Milvus filter: {search_filter_expr}")
     try:
         search_kwargs = {}
         if search_filter_expr:
-            search_kwargs['expr'] = search_filter_expr 
+            search_kwargs["expr"] = search_filter_expr
 
         retrieved_docs = vector_store.similarity_search(
             query=question,
@@ -227,20 +252,22 @@ def ask_question(user_id: str, question: str) -> str:
             search_kwargs=search_kwargs 
         )
     except Exception as e:
-         print(f"Lỗi trong quá trình similarity search (có thể do filter): {e}")
-         return f"Đã xảy ra lỗi trong quá trình tìm kiếm tài liệu: {e}"
+        print(f"Lỗi trong quá trình similarity search (có thể do filter): {e}")
+        return f"Đã xảy ra lỗi trong quá trình tìm kiếm tài liệu: {e}"
 
     if not retrieved_docs:
-        if selected_ids: 
-             return "Không tìm thấy thông tin liên quan trong các tài liệu bạn đã chọn."
+        if selected_ids:
+            return "Không tìm thấy thông tin liên quan trong các tài liệu bạn đã chọn."
         else:
-             return "Không tìm thấy thông tin liên quan trong bất kỳ tài liệu nào của bạn."
+            return (
+                "Không tìm thấy thông tin liên quan trong bất kỳ tài liệu nào của bạn."
+            )
 
     citations = format_citations(retrieved_docs)
     context_parts = []
     for idx, doc in enumerate(retrieved_docs, 1):
-        filename = doc.metadata.get('filename', 'N/A')
-        page_number = doc.metadata.get('page_number', 'N/A')
+        filename = doc.metadata.get("filename", "N/A")
+        page_number = doc.metadata.get("page_number", "N/A")
         context_parts.append(
             f"[DOCUMENT {idx}]\nFile: {filename}\nPage: {page_number}\nContent: {doc.page_content[:300]}..."
         )
@@ -258,9 +285,11 @@ def ask_question(user_id: str, question: str) -> str:
 
     return response.content
 
+
 """
 CITATION FORMATTING
 """
+
 
 def validate_citations(response: str, citations: dict):
     # Kiểm tra mọi citation trong response đều có trong references
@@ -298,28 +327,31 @@ def format_citations(retrieved_docs):
 
 """""" """""" """""" """""" """""" """""" """""" """""" """""" """""" """""" """""" """"""
 
+
 # --- CÁC HÀM HELPER OCR ---
 def clean_text(text):
     """Làm sạch văn bản OCR."""
-    text = re.sub(r"\n+", " ", text) # Thay nhiều newline bằng 1 space
-    text = re.sub(r" +", " ", text) # Thay nhiều space bằng 1 space
+    text = re.sub(r"\n+", " ", text)  # Thay nhiều newline bằng 1 space
+    text = re.sub(r" +", " ", text)  # Thay nhiều space bằng 1 space
     return text.strip()
+
 
 def preprocess_image(image: Image.Image) -> Image.Image:
     """Cải thiện chất lượng ảnh cho OCR."""
     try:
-        image = image.convert("L") # Chuyển ảnh xám
-        image = ImageEnhance.Contrast(image).enhance(2) # Tăng tương phản
-        image = image.filter(ImageFilter.SHARPEN) # Làm nét
+        image = image.convert("L")  # Chuyển ảnh xám
+        image = ImageEnhance.Contrast(image).enhance(2)  # Tăng tương phản
+        image = image.filter(ImageFilter.SHARPEN)  # Làm nét
     except Exception as e:
         print(f"Cảnh báo: Lỗi tiền xử lý ảnh: {e}")
     return image
+
 
 def ocr_image(image: Image.Image) -> str:
     """Trích xuất text từ ảnh PIL bằng pytesseract."""
     try:
         processed_image = preprocess_image(image)
-        custom_config = r'--oem 3 --psm 6 -l vie+eng' # Ngôn ngữ vie+eng
+        custom_config = r"--oem 3 --psm 6 -l vie+eng"  # Ngôn ngữ vie+eng
         extracted_text = pytesseract.image_to_string(
             processed_image, config=custom_config
         )
@@ -330,19 +362,22 @@ def ocr_image(image: Image.Image) -> str:
     except Exception as e:
         print(f"Lỗi khi OCR ảnh: {e}")
         return ""
+
+
 # --- KẾT THÚC HELPER OCR ---
 
 
 def sanitize_metadata_keys(metadata: dict) -> dict:
     return {re.sub(r"[^a-zA-Z0-9_]", "_", k): v for k, v in metadata.items()}
 
+
 # --- HÀM CHÍNH: Xử lý File (PDF/Ảnh) và Lưu trữ (VIẾT LẠI) ---
-async def process_and_store_file( # Đổi tên hàm và thêm content_type
+async def process_and_store_file(  # Đổi tên hàm và thêm content_type
     user_id: str,
     file_bytes: bytes,
     filename: str,
     doc_id: str,
-    content_type: Optional[str] # Thêm tham số content_type
+    content_type: Optional[str],  # Thêm tham số content_type
 ) -> int:
     """
     Xử lý file PDF hoặc Ảnh, trích xuất text, chunk và lưu vào Milvus.
@@ -353,10 +388,12 @@ async def process_and_store_file( # Đổi tên hàm và thêm content_type
     # --- Kiểm tra tồn tại (Giữ logic kiểm tra từ code bạn cung cấp) ---
     existing_milvus_count = get_embedding_count_for_doc_id(user_id, doc_id)
     if existing_milvus_count > 0:
-         print(f"Cảnh báo: Đã tìm thấy {existing_milvus_count} embeddings cho doc_id '{doc_id}' trong Milvus của user '{user_id}'. Bỏ qua embedding.")
+        print(
+            f"Cảnh báo: Đã tìm thấy {existing_milvus_count} embeddings cho doc_id '{doc_id}' trong Milvus của user '{user_id}'. Bỏ qua embedding."
+        )
 
     # --- Khởi tạo list lưu text các trang ---
-    extracted_pages: List[Tuple[int, str]] = [] # List of (page_number, page_text)
+    extracted_pages: List[Tuple[int, str]] = []  # List of (page_number, page_text)
 
     # --- Bước 1: Trích xuất Text ---
     try:
@@ -370,25 +407,31 @@ async def process_and_store_file( # Đổi tên hàm và thêm content_type
                 reader = PdfReader(io.BytesIO(file_bytes))
                 num_pages = len(reader.pages)
                 print(f"PDF có {num_pages} trang. Thử trích xuất text trực tiếp...")
-                page_data_temp = [] # Lưu tạm để quyết định fallback
+                page_data_temp = []  # Lưu tạm để quyết định fallback
                 for i, page in enumerate(reader.pages):
                     page_num = i + 1
                     try:
-                         page_text = page.extract_text() or "" # Trả về chuỗi rỗng nếu extract_text() là None
-                         page_data_temp.append((page_num, page_text.strip()))
-                         temp_text_check += page_text
+                        page_text = (
+                            page.extract_text() or ""
+                        )  # Trả về chuỗi rỗng nếu extract_text() là None
+                        page_data_temp.append((page_num, page_text.strip()))
+                        temp_text_check += page_text
                     except Exception as page_extract_err:
-                        print(f"  - Lỗi trích xuất text trang {page_num}: {page_extract_err}. Xem như trang rỗng.")
+                        print(
+                            f"  - Lỗi trích xuất text trang {page_num}: {page_extract_err}. Xem như trang rỗng."
+                        )
                         page_data_temp.append((page_num, ""))
 
                 # Heuristic để quyết định có fallback không
-                if len(temp_text_check.strip()) > max(50, num_pages * 5): # Cần nhiều hơn 50 ký tự hoặc 5 ký tự/trang
-                     print("Trích xuất text PDF trực tiếp thành công.")
-                     extracted_pages = page_data_temp # Sử dụng kết quả trực tiếp
-                     pdf_text_extracted = True
+                if len(temp_text_check.strip()) > max(
+                    50, num_pages * 5
+                ):  # Cần nhiều hơn 50 ký tự hoặc 5 ký tự/trang
+                    print("Trích xuất text PDF trực tiếp thành công.")
+                    extracted_pages = page_data_temp  # Sử dụng kết quả trực tiếp
+                    pdf_text_extracted = True
                 else:
-                     print("Text PDF trực tiếp không đủ hoặc lỗi. Fallback sang OCR...")
-                     # Không gán extracted_pages ở đây, để logic OCR xử lý
+                    print("Text PDF trực tiếp không đủ hoặc lỗi. Fallback sang OCR...")
+                    # Không gán extracted_pages ở đây, để logic OCR xử lý
 
             except Exception as pypdf_err:
                 print(f"Lỗi khi đọc PDF bằng pypdf: {pypdf_err}. Fallback sang OCR.")
@@ -400,8 +443,10 @@ async def process_and_store_file( # Đổi tên hàm và thêm content_type
                 try:
                     images = convert_from_bytes(file_bytes, dpi=300)
                     print(f"Chuyển PDF thành {len(images)} ảnh để OCR.")
-                    if not images: # Nếu pdf2image không trả về ảnh nào
-                        raise ValueError("Không thể chuyển đổi PDF thành ảnh (có thể file PDF lỗi hoặc trống).")
+                    if not images:  # Nếu pdf2image không trả về ảnh nào
+                        raise ValueError(
+                            "Không thể chuyển đổi PDF thành ảnh (có thể file PDF lỗi hoặc trống)."
+                        )
                     for i, image in enumerate(images):
                         page_num = i + 1
                         print(f"  - OCR trang {page_num}/{len(images)}...")
@@ -410,51 +455,94 @@ async def process_and_store_file( # Đổi tên hàm và thêm content_type
                         image.close()
                     print("OCR PDF hoàn tất.")
                 except Exception as pdf_ocr_err:
-                     print(f"Lỗi trong quá trình OCR PDF: {pdf_ocr_err}")
-                     # Nếu cả 2 cách đều lỗi, raise lỗi để báo thất bại
-                     raise RuntimeError(f"Không thể trích xuất text từ PDF bằng cả hai phương pháp: {pdf_ocr_err}") from pdf_ocr_err
+                    print(f"Lỗi trong quá trình OCR PDF: {pdf_ocr_err}")
+                    # Nếu cả 2 cách đều lỗi, raise lỗi để báo thất bại
+                    raise RuntimeError(
+                        f"Không thể trích xuất text từ PDF bằng cả hai phương pháp: {pdf_ocr_err}"
+                    ) from pdf_ocr_err
 
         elif content_type and content_type.startswith("image/"):
             print("Đang xử lý Ảnh...")
             try:
                 image = Image.open(io.BytesIO(file_bytes))
                 image_text = ocr_image(image)
-                extracted_pages.append((1, image_text)) # Ảnh coi là 1 trang
+                extracted_pages.append((1, image_text))  # Ảnh coi là 1 trang
                 image.close()
                 print("OCR ảnh hoàn tất.")
             except Exception as img_err:
                 # Phân loại lỗi Pillow và các lỗi khác
-                if isinstance(img_err, (IOError, SyntaxError)): # Lỗi Pillow thường gặp
-                    raise ValueError(f"File ảnh không hợp lệ hoặc không được hỗ trợ: {img_err}") from img_err
-                else: # Lỗi khác (ví dụ Tesseract)
+                if isinstance(img_err, (IOError, SyntaxError)):  # Lỗi Pillow thường gặp
+                    raise ValueError(
+                        f"File ảnh không hợp lệ hoặc không được hỗ trợ: {img_err}"
+                    ) from img_err
+                else:  # Lỗi khác (ví dụ Tesseract)
                     raise RuntimeError(f"Lỗi khi xử lý ảnh: {img_err}") from img_err
-                
+
         elif content_type == "text/plain":
             print("Đang xử lý file Text...")
             decoded_text = ""
             try:
                 # Thử decode bằng UTF-8 trước, thay thế ký tự lỗi
-                decoded_text = file_bytes.decode('utf-8', errors='replace')
+                decoded_text = file_bytes.decode("utf-8", errors="replace")
                 print("Decode file text bằng UTF-8 thành công.")
             except UnicodeDecodeError:
                 print("Decode UTF-8 thất bại, thử decode bằng latin-1...")
                 try:
                     # Thử fallback sang latin-1 (phổ biến cho một số file text)
-                    decoded_text = file_bytes.decode('latin-1', errors='replace')
+                    decoded_text = file_bytes.decode("latin-1", errors="replace")
                     print("Decode file text bằng latin-1 thành công.")
                 except Exception as decode_err:
-                     # Nếu cả hai đều lỗi, báo lỗi
-                     raise ValueError(f"Không thể decode file text với UTF-8 hoặc latin-1: {decode_err}") from decode_err
+                    # Nếu cả hai đều lỗi, báo lỗi
+                    raise ValueError(
+                        f"Không thể decode file text với UTF-8 hoặc latin-1: {decode_err}"
+                    ) from decode_err
             except Exception as txt_err:
-                 raise ValueError(f"Lỗi khi xử lý file text: {txt_err}") from txt_err
+                raise ValueError(f"Lỗi khi xử lý file text: {txt_err}") from txt_err
 
             # Làm sạch và thêm vào danh sách trang (coi là 1 trang)
-            cleaned_decoded_text = clean_text(decoded_text) # Dùng hàm clean_text đã có
+            cleaned_decoded_text = clean_text(decoded_text)  # Dùng hàm clean_text đã có
             if cleaned_decoded_text:
                 extracted_pages.append((1, cleaned_decoded_text))
-                print(f"Trích xuất thành công {len(cleaned_decoded_text)} ký tự từ file text.")
+                print(
+                    f"Trích xuất thành công {len(cleaned_decoded_text)} ký tự từ file text."
+                )
             else:
-                print("Cảnh báo: File text rỗng hoặc không có nội dung sau khi làm sạch.")
+                print(
+                    "Cảnh báo: File text rỗng hoặc không có nội dung sau khi làm sạch."
+                )
+        elif content_type in ["text/markdown", "text/x-markdown"] or (
+            filename and filename.lower().endswith((".md", ".markdown"))
+        ):
+            print("Processing Markdown file...")
+            decoded_text = ""
+            try:
+                # Thử decode bằng UTF-8 trước, thay thế ký tự lỗi
+                decoded_text = file_bytes.decode("utf-8", errors="replace")
+                print("Decode file Markdown bằng UTF-8 thành công.")
+            except UnicodeDecodeError:
+                print("Decode UTF-8 thất bại cho Markdown, thử decode bằng latin-1...")
+                try:
+                    # Thử fallback sang latin-1
+                    decoded_text = file_bytes.decode("latin-1", errors="replace")
+                    print("Decode file Markdown bằng latin-1 thành công.")
+                except Exception as decode_err:
+                    # Nếu cả hai đều lỗi, báo lỗi
+                    raise ValueError(
+                        f"Không thể decode file Markdown: {decode_err}"
+                    ) from decode_err
+            except Exception as md_err:
+                raise ValueError(f"Lỗi khi xử lý file Markdown: {md_err}") from md_err
+
+            # Coi toàn bộ nội dung Markdown là trang 1
+            cleaned_md_text = decoded_text.strip()  # Strip khoảng trắng thừa
+            if cleaned_md_text:
+                # Lưu raw markdown text vào extracted_pages
+                extracted_pages.append((1, cleaned_md_text))
+                print(
+                    f"Trích xuất thành công {len(cleaned_md_text)} ký tự từ file Markdown."
+                )
+            else:
+                print("Cảnh báo: File Markdown rỗng hoặc không có nội dung.")
 
         else:
             # Loại file không xác định hoặc không hỗ trợ
@@ -462,45 +550,52 @@ async def process_and_store_file( # Đổi tên hàm và thêm content_type
 
     except (ValueError, RuntimeError, Exception) as extraction_err:
         # Bắt các lỗi đã raise và lỗi khác
-        print(f"Lỗi nghiêm trọng trong giai đoạn trích xuất text cho {filename}: {extraction_err}")
+        print(
+            f"Lỗi nghiêm trọng trong giai đoạn trích xuất text cho {filename}: {extraction_err}"
+        )
         traceback.print_exc()
-        return 0 # Trả về 0 chunk
+        return 0  # Trả về 0 chunk
 
     # --- Kiểm tra lại nếu không trích xuất được gì ---
     if not extracted_pages or all(not text.strip() for _, text in extracted_pages):
-         print(f"Cảnh báo: Không trích xuất được nội dung văn bản nào từ {filename}.")
-         # Cập nhật trạng thái vào MongoDB
-         mongo_coll = get_mongo_collection()
-         if mongo_coll:
-             mongo_coll.update_one(
-                 {"user_id": user_id, "document_id": doc_id},
-                 {"$set": {"processing_status": "no_text_extracted"}},
-                 upsert=True
-             )
-         return 0
+        print(f"Cảnh báo: Không trích xuất được nội dung văn bản nào từ {filename}.")
+        # Cập nhật trạng thái vào MongoDB
+        mongo_coll = get_mongo_collection()
+        if mongo_coll:
+            mongo_coll.update_one(
+                {"user_id": user_id, "document_id": doc_id},
+                {"$set": {"processing_status": "no_text_extracted"}},
+                upsert=True,
+            )
+        return 0
 
     # --- Bước 2: Tạo Langchain Documents ---
     docs: List[Document] = []
     total_pages_processed = len(extracted_pages)
     for page_num, page_text in extracted_pages:
-        if page_text and page_text.strip(): # Chỉ tạo Document nếu page_text không rỗng
+        if page_text and page_text.strip():  # Chỉ tạo Document nếu page_text không rỗng
             metadata = {
                 "doc_id": doc_id,
                 "user_id": user_id,
                 "filename": filename,
-                "page_number": int(page_num), # Đảm bảo là int
-                "total_pages": int(total_pages_processed), # Đảm bảo là int
+                "page_number": int(page_num),  # Đảm bảo là int
+                "total_pages": int(total_pages_processed),  # Đảm bảo là int
             }
             docs.append(Document(page_content=page_text, metadata=metadata))
 
     if not docs:
-        print(f"Cảnh báo: Không tạo được Document object nào sau trích xuất cho {filename}.")
+        print(
+            f"Cảnh báo: Không tạo được Document object nào sau trích xuất cho {filename}."
+        )
         return 0
     print(f"Đã tạo {len(docs)} Document objects để chunking.")
 
     # --- Bước 3: Chunking ---
     text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000, chunk_overlap=200, length_function=len, is_separator_regex=False,
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+        is_separator_regex=False,
     )
     # Bọc split_documents trong try-except phòng lỗi chunking
     try:
@@ -511,11 +606,16 @@ async def process_and_store_file( # Đổi tên hàm và thêm content_type
         # Cập nhật trạng thái lỗi vào MongoDB
         mongo_coll = get_mongo_collection()
         if mongo_coll:
-             mongo_coll.update_one(
-                 {"user_id": user_id, "document_id": doc_id},
-                 {"$set": {"processing_status": "chunking_failed", "error_message": str(chunk_err)}},
-                 upsert=True
-             )
+            mongo_coll.update_one(
+                {"user_id": user_id, "document_id": doc_id},
+                {
+                    "$set": {
+                        "processing_status": "chunking_failed",
+                        "error_message": str(chunk_err),
+                    }
+                },
+                upsert=True,
+            )
         return 0
 
     final_chunks = []
@@ -535,19 +635,18 @@ async def process_and_store_file( # Đổi tên hàm và thêm content_type
             chunk.metadata["chunk_id"] = str(chunk.metadata.get("chunk_id", ""))
             final_chunks.append(chunk)
         except Exception as meta_err:
-             print(f"Lỗi khi xử lý metadata cho chunk {i} của doc {doc_id}: {meta_err}")
-             # Bỏ qua chunk này hoặc xử lý khác
+            print(f"Lỗi khi xử lý metadata cho chunk {i} của doc {doc_id}: {meta_err}")
+            # Bỏ qua chunk này hoặc xử lý khác
 
     if not final_chunks:
         print(f"Cảnh báo: Không có chunk hợp lệ nào được tạo cho {filename}.")
         return 0
     print(f"Đã chia thành {len(final_chunks)} chunks.")
 
-
     # --- Bước 4: Embedding và Lưu trữ ---
     try:
         vector_store = get_user_vector_store(user_id)
-        batch_size = 32 # Điều chỉnh nếu cần
+        batch_size = 32  # Điều chỉnh nếu cần
         num_added = 0
         for i in tqdm(
             range(0, len(final_chunks), batch_size),
@@ -556,23 +655,25 @@ async def process_and_store_file( # Đổi tên hàm và thêm content_type
             batch = final_chunks[i : i + batch_size]
             # Thêm try-except quanh add_documents để bắt lỗi cụ thể hơn nếu cần
             try:
-                 vector_store.add_documents(batch)
-                 num_added += len(batch)
+                vector_store.add_documents(batch)
+                num_added += len(batch)
             except Exception as add_doc_err:
-                 print(f"Lỗi khi thêm batch {i//batch_size} vào Milvus: {add_doc_err}")
-                 # Quyết định dừng lại hay tiếp tục với batch khác
-                 raise add_doc_err # Dừng lại nếu có lỗi nghiêm trọng
+                print(f"Lỗi khi thêm batch {i//batch_size} vào Milvus: {add_doc_err}")
+                # Quyết định dừng lại hay tiếp tục với batch khác
+                raise add_doc_err  # Dừng lại nếu có lỗi nghiêm trọng
 
-        print(f"Thêm thành công {num_added} embeddings cho doc_id '{doc_id}' của user '{user_id}'.")
+        print(
+            f"Thêm thành công {num_added} embeddings cho doc_id '{doc_id}' của user '{user_id}'."
+        )
 
         return num_added
 
     except Exception as e:
-        print(f"Lỗi nghiêm trọng khi thêm documents vào Milvus cho doc_id {doc_id}, user {user_id}: {e}")
+        print(
+            f"Lỗi nghiêm trọng khi thêm documents vào Milvus cho doc_id {doc_id}, user {user_id}: {e}"
+        )
         traceback.print_exc()
         raise RuntimeError(f"Không thể thêm embeddings vào vector store: {e}") from e
-
-
 
 
 # Ví dụ sửa đổi hàm delete_embeddings
@@ -767,7 +868,8 @@ async def get_smaller_branches_from_docs(
         try:
             completion = llm.invoke(  # hoặc await nếu llm.invoke là async
                 [
-                    {  "role": "system",
+                    {
+                        "role": "system",
                         "content": "You are a helpful assistant that reformats to markdown text for better readability with \n"
                         "# for header 1, \n ## for header 2, \n ### header 3 and the doc. \n the header must appear in order # -> ## -> ###",
                     },
@@ -816,7 +918,7 @@ def extract_all_headers(text: str) -> str:
             # level = stripped_line.count('#', 0, 3) # Count '#' at the beginning
             # indentation = "  " * (level - 1) if level > 0 else ""
             # header_text += indentation + stripped_line + "\n"
-            header_text += '#' + stripped_line + "\n"  # Keep it simple for now
+            header_text += "#" + stripped_line + "\n"  # Keep it simple for now
     return header_text
 
 
