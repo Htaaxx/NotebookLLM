@@ -79,6 +79,62 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   // Add a new state for sidebar visibility at the top of the FileCollection component
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
+  const getAllFileIdsRecursive = (folders: FolderType[]): string[] => {
+    let fileIds: string[] = [];
+    folders.forEach(folder => {
+      folder.files.forEach(file => fileIds.push(file.id));
+      if (folder.folders.length > 0) {
+        fileIds = fileIds.concat(getAllFileIdsRecursive(folder.folders));
+      }
+    });
+    return fileIds;
+  };
+
+
+  // useEffect để reset trạng thái file khi tải lần đầu
+  useEffect(() => {
+    // Chỉ chạy khi là lần tải đầu tiên, có userID và có dữ liệu file/folder
+    if (isInitialLoad && userID && (rootFiles.length > 0 || rootFolders.length > 0)) {
+      console.log("Initial load: Resetting all document statuses to '0'");
+
+      // Lấy ID của tất cả các file từ root và các folder con
+      const allRootFileIds = rootFiles.map(file => file.id);
+      const allFolderFileIds = getAllFileIdsRecursive(rootFolders);
+      const allFileIds = [...allRootFileIds, ...allFolderFileIds];
+
+      if (allFileIds.length > 0) {
+        // Tạo mảng các promises để cập nhật trạng thái
+        const updatePromises = allFileIds.map(fileId => {
+          console.log(`Calling updateDocumentStatus for ${fileId} with status '0'`);
+          // Giả sử bạn muốn reset trạng thái về '0' (không được chọn)
+          return documentAPI.updateDocumentStatus(fileId, '0')
+            .catch(error => {
+              // Ghi lại lỗi nếu có file cập nhật thất bại nhưng không dừng các file khác
+              console.error(`Failed to update status for document ${fileId}:`, error);
+              return null; // Hoặc trả về một object lỗi để xử lý sau
+            });
+        });
+
+        // Chờ tất cả các promise hoàn thành (hoặc thất bại)
+        Promise.allSettled(updatePromises).then(results => {
+          console.log("Finished attempting to reset document statuses.");
+          // Bạn có thể kiểm tra results ở đây để xem có lỗi nào không
+          // Đánh dấu là không còn là lần tải đầu tiên nữa
+          // Quan trọng: Đặt setIsInitialLoad(false) *sau khi* các lệnh gọi API được thực hiện
+          // hoặc ít nhất là được bắt đầu, để tránh chạy lại logic này không cần thiết.
+          setIsInitialLoad(false);
+        });
+      } else {
+         // Không có file nào để cập nhật, vẫn đánh dấu là đã qua lần tải đầu
+         console.log("No documents found to reset status.");
+         setIsInitialLoad(false);
+      }
+    }
+    // Dependencies: Chạy lại nếu userID, rootFiles, rootFolders thay đổi *VÀ* isInitialLoad vẫn là true.
+    // Sau khi setIsInitialLoad(false) được gọi, điều kiện if sẽ không bao giờ đúng nữa.
+  }, [userID, rootFiles, rootFolders, isInitialLoad, documentAPI]); // Thêm documentAPI vào dependency nếu nó có thể thay đổi (mặc dù thường là không)
+
+
   // Add a function to toggle sidebar
   const toggleSidebar = useCallback(() => {
     setSidebarOpen((prev) => !prev)

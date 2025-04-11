@@ -1,6 +1,7 @@
 from urllib.parse import urlparse
 import re
 from crawl4ai import *
+import asyncio
 
 
 def get_page_name(url):
@@ -45,3 +46,22 @@ async def web_crawler(url):
         "web_name": web_name,
         "text": result.markdown
     }
+
+# import asyncio
+# from your_module_name import web_crawler  # Đổi tên module nếu không phải là your_module_name
+
+async def main():
+    url = input("Nhập URL trang web cần crawl: ").strip()
+    
+    if not url.startswith("http"):
+        url = "https://" + url
+
+    try:
+        result = await web_crawler(url)
+        print(f"\n✅ Crawl xong trang: {result['web_name']}")
+        print(f"📝 Nội dung markdown đã được lưu vào file `{result['web_name']}.md`")
+    except Exception as e:
+        print(f"❌ Có lỗi xảy ra khi crawl: {e}")
+
+if __name__ == "__main__":
+    asyncio.run(main())
