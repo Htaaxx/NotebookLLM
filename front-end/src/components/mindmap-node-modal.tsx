@@ -1,20 +1,48 @@
 "use client"
 
-import { useEffect, useRef } from "react"
-import { X } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { X, ChevronRight, Loader2, BookOpen, Search, HelpCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { motion, AnimatePresence } from "framer-motion"
+import { Separator } from "@/components/ui/separator"
 
+interface MindMapNodeModal {
+  id: string
+  topic: string
+  level: number
+  detailContent?: string
+}
+
+// Update the interface to include the onUseAsContext prop
 interface MindMapNodeModalProps {
   isOpen: boolean
   onClose: () => void
   title: string
   content: string
+  node?: MindMapNodeModal
+  paths?: string[][]
+  onUseAsContext?: (paths: string[][], useAsContext: boolean) => void
 }
 
-export function MindMapNodeModal({ isOpen, onClose, title, content }: MindMapNodeModalProps) {
+export function MindMapNodeModal({
+  isOpen,
+  onClose,
+  title,
+  content,
+  node,
+  paths = [],
+  onUseAsContext,
+}: MindMapNodeModalProps) {
   const modalRef = useRef<HTMLDivElement>(null)
+  const [isRecallLoading, setIsRecallLoading] = useState(false)
+  const [isFlashcardLoading, setIsFlashcardLoading] = useState(false)
+  const [recallPaths, setRecallPaths] = useState<string[][]>([])
+  const [flashcardPaths, setFlashcardPaths] = useState<string[][]>([])
+  const [showRecallPaths, setShowRecallPaths] = useState(false)
+  const [showFlashcardPaths, setShowFlashcardPaths] = useState(false)
+  const [recallSuccess, setRecallSuccess] = useState<boolean | null>(null)
+  const [flashcardSuccess, setFlashcardSuccess] = useState<boolean | null>(null)
 
   // Close modal when clicking outside
   useEffect(() => {
@@ -52,6 +80,72 @@ export function MindMapNodeModal({ isOpen, onClose, title, content }: MindMapNod
       document.removeEventListener("keydown", handleEscKey)
     }
   }, [isOpen, onClose])
+
+  // Add paths to chat context
+  const handleAddToChat = () => {
+    if (paths.length > 0) {
+      // Dispatch event to send paths to chat component
+      const searchEvent = new CustomEvent("mindmap_paths_updated", {
+        detail: {
+          paths: paths,
+          latestNode: node,
+        },
+      })
+      window.dispatchEvent(searchEvent)
+      console.log("Added paths to chat:", paths)
+    }
+  }
+
+  // Simulate fetching recall paths (node to leaf nodes)
+  const handleMakeQuestion = async () => {
+    setIsRecallLoading(true)
+    setShowRecallPaths(true)
+
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // Mock data - in a real implementation, this would come from an API
+      const mockPaths = [
+        ["Mind Map", "Topic 1", "Subtopic 1.1", "Detail point"],
+        ["Mind Map", "Topic 1", "Subtopic 1.2", "Another detail"],
+        ["Mind Map", "Topic 2", "Subtopic 2.1", "More information"],
+      ]
+
+      setRecallPaths(mockPaths)
+      setRecallSuccess(true)
+    } catch (error) {
+      console.error("Error fetching recall paths:", error)
+      setRecallSuccess(false)
+    } finally {
+      setIsRecallLoading(false)
+    }
+  }
+
+  // Simulate creating flashcards
+  const handleCreateFlashcard = async () => {
+    setIsFlashcardLoading(true)
+    setShowFlashcardPaths(true)
+
+    try {
+      // Simulate API call
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      // Mock data - in a real implementation, this would come from an API
+      const mockPaths = [
+        ["Mind Map", "Topic 1", "Subtopic 1.1", "Detail point"],
+        ["Mind Map", "Topic 3", "Subtopic 3.2", "Important concept"],
+      ]
+
+      setFlashcardPaths(mockPaths)
+      setFlashcardSuccess(true)
+    } catch (error) {
+      console.error("Error creating flashcards:", error)
+      setFlashcardSuccess(false)
+    } finally {
+      setIsFlashcardLoading(false)
+    }
+  }
 
   // Parse the content to render it properly
   const renderContent = () => {
@@ -127,7 +221,7 @@ export function MindMapNodeModal({ isOpen, onClose, title, content }: MindMapNod
           {/* Modal */}
           <motion.div
             ref={modalRef}
-            className="z-10 w-full max-w-2xl max-h-[80vh] overflow-hidden"
+            className="z-10 w-full max-w-3xl max-h-[90vh] overflow-hidden"
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.9, opacity: 0 }}
@@ -145,7 +239,159 @@ export function MindMapNodeModal({ isOpen, onClose, title, content }: MindMapNod
                   <X className="h-5 w-5" />
                 </Button>
               </CardHeader>
-              <CardContent className="p-6 max-h-[calc(80vh-80px)] overflow-y-auto">{renderContent()}</CardContent>
+
+              <CardContent className="p-6 max-h-[calc(90vh-160px)] overflow-y-auto">
+                {/* Node Detail Content */}
+                <div className="mb-6">
+                  <h3 className="text-lg font-medium mb-3 flex items-center">
+                    <span className="bg-green-100 text-green-800 text-xs font-medium px-2.5 py-0.5 rounded-full mr-2">
+                      Node Detail
+                    </span>
+                  </h3>
+                  {renderContent()}
+                </div>
+
+                <Separator className="my-4" />
+
+                {/* Recall Service */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-medium flex items-center">
+                      <span className="bg-purple-100 text-purple-800 text-xs font-medium px-2.5 py-0.5 rounded-full mr-2">
+                        Recall Service
+                      </span>
+                    </h3>
+                    <Button
+                      onClick={handleMakeQuestion}
+                      disabled={isRecallLoading}
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      {isRecallLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <HelpCircle className="h-4 w-4 mr-2" />
+                          Make Question
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {showRecallPaths && (
+                    <div className="mt-3">
+                      {recallSuccess === false && (
+                        <div className="bg-red-100 text-red-800 p-3 rounded-md mb-3">
+                          Failed to retrieve paths. Please try again.
+                        </div>
+                      )}
+
+                      {recallSuccess === true && (
+                        <>
+                          <div className="bg-green-100 text-green-800 p-3 rounded-md mb-3">
+                            Successfully retrieved paths for question generation.
+                          </div>
+                          <div className="space-y-2 mt-2">
+                            {recallPaths.map((path, index) => (
+                              <div key={index} className="bg-gray-50 p-3 rounded-md">
+                                <div className="flex items-center">
+                                  <div className="flex items-center flex-wrap">
+                                    {path.map((node, nodeIndex) => (
+                                      <span key={nodeIndex} className="flex items-center">
+                                        <span className="text-gray-700">{node}</span>
+                                        {nodeIndex < path.length - 1 && (
+                                          <ChevronRight className="h-4 w-4 text-gray-400 mx-1" />
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                <Separator className="my-4" />
+
+                {/* Create Flashcard */}
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-medium flex items-center">
+                      <span className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full mr-2">
+                        Create Flashcard
+                      </span>
+                    </h3>
+                    <Button
+                      onClick={handleCreateFlashcard}
+                      disabled={isFlashcardLoading}
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      {isFlashcardLoading ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <BookOpen className="h-4 w-4 mr-2" />
+                          Create Flashcard
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  {showFlashcardPaths && (
+                    <div className="mt-3">
+                      {flashcardSuccess === false && (
+                        <div className="bg-red-100 text-red-800 p-3 rounded-md mb-3">
+                          Failed to create flashcards. Please try again.
+                        </div>
+                      )}
+
+                      {flashcardSuccess === true && (
+                        <>
+                          <div className="bg-green-100 text-green-800 p-3 rounded-md mb-3">
+                            Successfully prepared content for flashcard creation.
+                          </div>
+                          <div className="space-y-2 mt-2">
+                            {flashcardPaths.map((path, index) => (
+                              <div key={index} className="bg-gray-50 p-3 rounded-md">
+                                <div className="flex items-center">
+                                  <div className="flex items-center flex-wrap">
+                                    {path.map((node, nodeIndex) => (
+                                      <span key={nodeIndex} className="flex items-center">
+                                        <span className="text-gray-700">{node}</span>
+                                        {nodeIndex < path.length - 1 && (
+                                          <ChevronRight className="h-4 w-4 text-gray-400 mx-1" />
+                                        )}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-4 flex justify-end">
+                            <Button className="bg-amber-600 hover:bg-amber-700">Confirm Flashcard Creation</Button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+
+              <CardFooter className="bg-gray-50 py-3 px-6 flex justify-end">
+                <Button variant="outline" onClick={onClose}>
+                  Close
+                </Button>
+              </CardFooter>
             </Card>
           </motion.div>
         </div>

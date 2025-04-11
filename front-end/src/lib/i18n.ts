@@ -163,7 +163,7 @@ export const translations: Record<Language, Translations> = {
 
     // Chat
     chatSettings: "Cài đặt trò chuyện",
-    typeMessage: "Nhập tin nhắn của bạn tại đây...",
+    typeMessage: "Nhập tin nhắn c��a bạn tại đây...",
     send: "Gửi",
     regenerate: "Tạo lại",
 
@@ -204,4 +204,3 @@ export const translations: Record<Language, Translations> = {
     saveChanges: "Lưu thay đổi",
   },
 }
-
