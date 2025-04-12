@@ -487,60 +487,60 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       const uploadResponse = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL + "/user/upload", {
         method: "POST",
         body: mainUploadFormData,
-      });
+      })
 
       if (!uploadResponse.ok) {
         // ... (xử lý lỗi uploadResponse giữ nguyên) ...
-        throw new Error(`Upload failed: ${uploadResponse.status}`);
+        throw new Error(`Upload failed: ${uploadResponse.status}`)
       }
 
-      const data = await uploadResponse.json();
-      console.log("Upload successful:", data);
+      const data = await uploadResponse.json()
+      console.log("Upload successful:", data)
 
       // 3. Trigger the embedding API asynchronously (/embed/)
       setTimeout(async () => {
         // --- ĐIỀU CHỈNH Ở ĐÂY ---
         // Tạo FormData RIÊNG cho API embedding
-        const embedFormData = new FormData();
+        const embedFormData = new FormData()
         // Thêm file (backend mong đợi key 'file')
-        embedFormData.append("file", file);
+        embedFormData.append("file", file)
         // Thêm doc_id (backend mong đợi key 'doc_id')
-        embedFormData.append("doc_id", documentId);
+        embedFormData.append("doc_id", documentId)
         // *** THÊM DÒNG NÀY: Thêm user_id (backend mong đợi key 'user_id') ***
         // Giả sử userID là state variable chứa ID người dùng hiện tại trong component
-        embedFormData.append("user_id", userID);
+        embedFormData.append("user_id", userID)
 
         // URL của API embedding (Đảm bảo đúng URL backend của bạn)
-        const embeddingsUrl = `http://localhost:8000/embed/`;
-        console.log("Calling Embedding API:", embeddingsUrl);
+        const embeddingsUrl = `http://localhost:8000/embed/`
+        console.log("Calling Embedding API:", embeddingsUrl)
         // Cập nhật log để thấy cả user_id
-        console.log("Sending FormData with keys:", Array.from(embedFormData.keys())); // Log keys: file, doc_id, user_id
+        console.log("Sending FormData with keys:", Array.from(embedFormData.keys())) // Log keys: file, doc_id, user_id
 
         try {
           const embeddingsResponse = await fetch(embeddingsUrl, {
             method: "POST",
             body: embedFormData, // Gửi FormData với file, doc_id, user_id
-          });
+          })
           // --- KẾT THÚC ĐIỀU CHỈNH ---
 
           if (embeddingsResponse.ok) {
             // ... (xử lý kết quả embedding thành công giữ nguyên) ...
-            console.log("Embedding API call successful:", await embeddingsResponse.json());
+            console.log("Embedding API call successful:", await embeddingsResponse.json())
           } else {
             // ... (xử lý lỗi embedding giữ nguyên) ...
-            console.warn("Embedding API call failed:", embeddingsResponse.status, await embeddingsResponse.text());
+            console.warn("Embedding API call failed:", embeddingsResponse.status, await embeddingsResponse.text())
           }
         } catch (err) {
           // ... (xử lý lỗi mạng giữ nguyên) ...
-          console.warn("Embedding API call failed (Network Error or other issue):", err);
+          console.warn("Embedding API call failed (Network Error or other issue):", err)
         }
-      }, 100); // Delay
+      }, 100) // Delay
 
       // 4. Return the file item for UI update (giữ nguyên)
       // ...
-      const fileExtension = getFileExtension(file.name);
-      const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${documentId}${fileExtension}`;
-      const fileType = getFileTypeFromName(file.name);
+      const fileExtension = getFileExtension(file.name)
+      const cloudinaryURL = `https://res.cloudinary.com/df4dk9tjq/image/upload/v1743076103/${documentId}${fileExtension}`
+      const fileType = getFileTypeFromName(file.name)
 
       return {
         id: documentId,
@@ -551,12 +551,12 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         size: file.size,
         cloudinaryId: documentId,
         FilePath: filePath,
-      };
+      }
     } catch (error) {
-      console.error("Error in main upload process:", error);
-      return null;
+      console.error("Error in main upload process:", error)
+      return null
     }
-  };
+  }
 
   // Update the file upload handler to ensure it doesn't cause duplicates
   const handleFileUpload = useCallback(
@@ -707,7 +707,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       if (folder) {
         const updateFilesRecursively = async (folder: FolderType) => {
           // Update status for all files in this folder
-          const newStatus = isCurrentlySelected ? '1' : '0'
+          const newStatus = isCurrentlySelected ? "1" : "0"
 
           // Update direct files in this folder
           const updatePromises = folder.files.map((file) =>
@@ -978,32 +978,31 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const renderFile = (file: FileItem, folderId?: string) => (
     <div
       key={file.id}
-      className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1"
+      className="flex items-center hover:bg-gray-50 rounded-md p-1"
       draggable
       onDragStart={(e) => handleDragStart(e, file, "file", folderId || null)}
       title={getFullFilePath(file.id, folderId)}
     >
-      <div className="w-4 h-4 flex items-center justify-center"></div>
-      <Checkbox
-        checked={file.selected}
-        onCheckedChange={() => toggleFileSelection(file.id, folderId)}
-        className="h-4 w-4"
-      />
-      <FileText className="w-4 h-4 text-gray-400" />
-      <span className="text-sm truncate flex-grow">{file.name}</span>
-      <div className="flex items-center">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-6 w-6 p-0"
-          onClick={(e) => {
-            e.stopPropagation()
-            deleteFile(file.id, folderId)
-          }}
-        >
-          <Trash2 className="w-4 h-4 text-red-500" />
-        </Button>
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <Checkbox
+          checked={file.selected}
+          onCheckedChange={() => toggleFileSelection(file.id, folderId)}
+          className="h-4 w-4 flex-shrink-0"
+        />
+        <FileText className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        <span className="text-sm truncate">{file.name}</span>
       </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 w-6 p-0 ml-2 flex-shrink-0"
+        onClick={(e) => {
+          e.stopPropagation()
+          deleteFile(file.id, folderId)
+        }}
+      >
+        <Trash2 className="w-4 h-4 text-red-500" />
+      </Button>
     </div>
   )
 
@@ -1017,24 +1016,26 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       onDragOver={handleDragOver}
       onDrop={(e) => handleDrop(e, folder.id)}
     >
-      <div className="flex items-center gap-2 hover:bg-gray-50 rounded-md p-1" title={getFullFolderPath(folder.id)}>
-        <button
-          onClick={() => toggleFolder(folder.id)}
-          className="text-gray-500 w-4 h-4 flex items-center justify-center"
-        >
-          {folder.expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-        </button>
-        <Checkbox
-          checked={folder.selected}
-          onCheckedChange={() => toggleFolderSelection(folder.id)}
-          className="h-4 w-4"
-        />
-        <Folder className="w-4 h-4 text-gray-400" />
-        <span className="text-sm truncate flex-grow">{folder.name}</span>
-        <div className="flex items-center">
+      <div className="flex items-center hover:bg-gray-50 rounded-md p-1" title={getFullFolderPath(folder.id)}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <button
+            onClick={() => toggleFolder(folder.id)}
+            className="text-gray-500 w-4 h-4 flex items-center justify-center flex-shrink-0"
+          >
+            {folder.expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+          </button>
+          <Checkbox
+            checked={folder.selected}
+            onCheckedChange={() => toggleFolderSelection(folder.id)}
+            className="h-4 w-4 flex-shrink-0"
+          />
+          <Folder className="w-4 h-4 text-gray-400 flex-shrink-0" />
+          <span className="text-sm truncate">{folder.name}</span>
+        </div>
+        <div className="flex items-center ml-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+              <Button variant="ghost" size="sm" className="h-6 w-6 p-0 flex-shrink-0">
                 <Plus className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -1059,7 +1060,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 w-6 p-0"
+            className="h-6 w-6 p-0 flex-shrink-0"
             onClick={(e) => {
               e.stopPropagation() // Prevent event bubbling
               deleteFolder(folder.id, parentId || undefined)

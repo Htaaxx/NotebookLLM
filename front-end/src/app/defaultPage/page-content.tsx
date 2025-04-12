@@ -132,8 +132,9 @@ export default function DefaultPageContent() {
         >
           <ChatBox />
         </div>
+        {/* Move RightButtons outside of AnimatePresence to ensure it's always visible */}
         <RightButtons onViewChange={handleViewChange} activeView={activePanel} />
-        <RightPanel activePanel={activePanel} selectedFiles={selectedFiles} />
+        <RightPanel activePanel={activePanel} selectedFiles={selectedFiles} onViewChange={handleViewChange} />
       </div>
     </main>
   )

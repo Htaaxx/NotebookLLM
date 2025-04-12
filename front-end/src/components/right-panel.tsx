@@ -34,9 +34,10 @@ interface Annotation {
 interface RightPanelProps {
   activePanel: "preview" | "mindmap" | "cheatsheet" | null
   selectedFiles: FileItem[]
+  onViewChange: (view: "preview" | "mindmap" | "cheatsheet" | null) => void
 }
 
-export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
+export function RightPanel({ activePanel, selectedFiles, onViewChange }: RightPanelProps) {
   const [scale, setScale] = useState(1.0)
   const [error, setError] = useState<string | null>(null)
   const [annotations, setAnnotations] = useState<Annotation[]>([])
@@ -107,10 +108,9 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
     if (activePanel === "mindmap" || activePanel === "cheatsheet") {
       console.log(`${activePanel} panel active, triggering refresh if needed`)
 
-      // Reset error state
+      // Đảm bảo reset error state
       setError(null)
 
-      // Trigger a file selection changed event to refresh the mindmap if needed
       window.dispatchEvent(
         new CustomEvent("fileSelectionChanged", {
           detail: {
@@ -146,7 +146,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
           })
       }
     }
-  }, [activePanel, selectedMarkdownFile, selectedFiles])
+  }, [activePanel, selectedMarkdownFile])
 
   const handleHighlightText = () => {
     if (selectedPage === null) return
@@ -183,7 +183,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
 
   if (!activePanel) return null
 
-  if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap" && activePanel !== "cheatsheet")) {
+  if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap")) {
     return (
       <motion.div
         className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-white text-black"
@@ -200,14 +200,98 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
   const handleZoomIn = () => setScale((prevScale) => Math.min(prevScale + 0.1, 2))
   const handleZoomOut = () => setScale((prevScale) => Math.max(prevScale - 0.1, 0.5))
 
+  // Add the right buttons component
+  const renderRightButtons = () => (
+    <div className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10">
+      <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+        <Button
+          variant={activePanel === "preview" ? "default" : "outline"}
+          size="icon"
+          onClick={() => onViewChange(activePanel === "preview" ? null : "preview")}
+          className={`rounded-full w-10 h-10 ${activePanel === "preview" ? "bg-green-600 hover:bg-green-700" : "hover:text-green-600 hover:border-green-600"}`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </Button>
+      </motion.div>
+      <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+        <Button
+          variant={activePanel === "mindmap" ? "default" : "outline"}
+          size="icon"
+          onClick={() => onViewChange(activePanel === "mindmap" ? null : "mindmap")}
+          className={`rounded-full w-10 h-10 ${activePanel === "mindmap" ? "bg-green-600 hover:bg-green-700" : "hover:text-green-600 hover:border-green-600"}`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <circle cx="18" cy="5" r="3"></circle>
+            <circle cx="6" cy="12" r="3"></circle>
+            <circle cx="18" cy="19" r="3"></circle>
+            <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+            <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+          </svg>
+        </Button>
+      </motion.div>
+      <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
+        <Button
+          variant={activePanel === "cheatsheet" ? "default" : "outline"}
+          size="icon"
+          onClick={() => onViewChange(activePanel === "cheatsheet" ? null : "cheatsheet")}
+          className={`rounded-full w-10 h-10 ${activePanel === "cheatsheet" ? "bg-green-600 hover:bg-green-700" : "hover:text-green-600 hover:border-green-600"}`}
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+          </svg>
+        </Button>
+      </motion.div>
+    </div>
+  )
+
   return (
     <motion.div
-      className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black overflow-hidden`}
+      className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black overflow-hidden relative`}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Always render the right buttons outside of the AnimatePresence */}
+      {renderRightButtons()}
+
       <AnimatePresence mode="wait">
         {activePanel === "preview" && (
           <motion.div
@@ -351,10 +435,7 @@ export function RightPanel({ activePanel, selectedFiles }: RightPanelProps) {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
           >
-            <CheatsheetView
-              initialMarkdown={selectedMarkdownFile ? markdownContent : undefined}
-              selectedFiles={selectedFiles}
-            />
+            <CheatsheetView initialMarkdown={selectedMarkdownFile ? markdownContent : undefined} />
           </motion.div>
         )}
       </AnimatePresence>
