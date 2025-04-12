@@ -14,7 +14,6 @@ import {
   Trash2,
   MoreVertical,
   Eye,
-  MapPin,
   Check,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -49,6 +48,9 @@ export function ChatBox() {
   const [useSummary, setUseSummary] = useState(true)
   const [contextWindow, setContextWindow] = useState(10)
 
+  // Add this at the top of the component, after the state declarations
+  const [showDisclaimer, setShowDisclaimer] = useState(true)
+
   const chatEndRef = useRef<HTMLDivElement | null>(null)
 
   const [searchPaths, setSearchPaths] = useState<string[][]>([])
@@ -56,7 +58,7 @@ export function ChatBox() {
   const [latestSearchNode, setLatestSearchNode] = useState<{ id: string; topic: string } | null>(null)
   const [useAsContext, setUseAsContext] = useState(false)
   const [expandedPaths, setExpandedPaths] = useState(false)
-  const [activeRecallSession, setActiveRecallSession] = useState<string | null>(null);
+  const [activeRecallSession, setActiveRecallSession] = useState<string | null>(null)
 
   useEffect(() => {
     if (useAsContext) {
@@ -117,20 +119,20 @@ export function ChatBox() {
   }, [chatHistory])
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const userMessage = message.trim();
-    if (!userMessage) return;
-  
+    e.preventDefault()
+    const userMessage = message.trim()
+    if (!userMessage) return
+
     // Add user message to chat history
-    setChatHistory((prev) => [...prev, { text: userMessage, isUser: true }]);
-    setMessage("");
-    setIsLoading(true);
-  
+    setChatHistory((prev) => [...prev, { text: userMessage, isUser: true }])
+    setMessage("")
+    setIsLoading(true)
+
     try {
       // Check if we're in a recall session
       if (activeRecallSession) {
-        console.log(`Processing answer for recall session: ${activeRecallSession}`);
-        
+        console.log(`Processing answer for recall session: ${activeRecallSession}`)
+
         // Send answer to recall API
         const response = await fetch("http://localhost:8000/recall/answer", {
           method: "POST",
@@ -139,117 +141,117 @@ export function ChatBox() {
           },
           body: JSON.stringify({
             session_id: activeRecallSession,
-            user_answer: userMessage
+            user_answer: userMessage,
           }),
-        });
-  
+        })
+
         if (!response.ok) {
-          let errorDetails = `Recall API error: ${response.status}`;
+          let errorDetails = `Recall API error: ${response.status}`
           try {
-            const errorData = await response.json();
-            errorDetails += ` - ${JSON.stringify(errorData)}`;
+            const errorData = await response.json()
+            errorDetails += ` - ${JSON.stringify(errorData)}`
           } catch (e) {
             /* Ignore parsing errors */
           }
-          throw new Error(errorDetails);
+          throw new Error(errorDetails)
         }
-  
-        const data = await response.json();
-        
+
+        const data = await response.json()
+
         // Add feedback to chat as a chatbox reply
-        setChatHistory(prev => [
-          ...prev, 
-          { 
-            text: data.feedback || "Thank you for your answer.", 
-            isUser: false 
-          }
-        ]);
-        
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            text: data.feedback || "Thank you for your answer.",
+            isUser: false,
+          },
+        ])
+
         // If there's a next question, add it as another chatbox reply
         if (data.next_question) {
-          setChatHistory(prev => [
-            ...prev, 
-            { 
-              text: data.next_question, 
-              isUser: false
-            }
-          ]);
+          setChatHistory((prev) => [
+            ...prev,
+            {
+              text: data.next_question,
+              isUser: false,
+            },
+          ])
         } else {
           // End of session
-          setChatHistory(prev => [
-            ...prev, 
-            { 
-              text: "Recall session completed. Thank you for your answers!", 
-              isUser: false
-            }
-          ]);
-          setActiveRecallSession(null);
+          setChatHistory((prev) => [
+            ...prev,
+            {
+              text: "Recall session completed. Thank you for your answers!",
+              isUser: false,
+            },
+          ])
+          setActiveRecallSession(null)
         }
       } else {
         // Regular chat message handling (existing code)
-        const currentUserId = localStorage.getItem("user_id") || "default_user";
-        const queryApiUrl = "http://localhost:8000/query/";
-  
+        const currentUserId = localStorage.getItem("user_id") || "default_user"
+        const queryApiUrl = "http://localhost:8000/query/"
+
         // Prepare request body
         const requestBody = {
           user_id: currentUserId,
           question: userMessage,
           headers: searchPaths.map((path) => path.join(" > ")),
-        };
-  
-        console.log("Sending request to:", queryApiUrl);
-        console.log("Request body:", JSON.stringify(requestBody));
-  
+        }
+
+        console.log("Sending request to:", queryApiUrl)
+        console.log("Request body:", JSON.stringify(requestBody))
+
         const response = await fetch(queryApiUrl, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify(requestBody),
-        });
-  
+        })
+
         if (!response.ok) {
-          let errorDetails = `API error: ${response.status}`;
+          let errorDetails = `API error: ${response.status}`
           try {
-            const errorData = await response.json();
-            errorDetails += ` - ${JSON.stringify(errorData)}`;
+            const errorData = await response.json()
+            errorDetails += ` - ${JSON.stringify(errorData)}`
           } catch (e) {
             try {
-              const errorText = await response.text();
-              errorDetails += ` - ${errorText}`;
+              const errorText = await response.text()
+              errorDetails += ` - ${errorText}`
             } catch (e2) {
               /* Ignore */
             }
           }
-          throw new Error(errorDetails);
+          throw new Error(errorDetails)
         }
-  
-        const data = await response.json();
-  
+
+        const data = await response.json()
+
         if (data && typeof data.answer === "string") {
-          console.log("Received response data:", data);
-          setChatHistory((prev) => [...prev, { text: data.answer, isUser: false }]);
+          console.log("Received response data:", data)
+          setChatHistory((prev) => [...prev, { text: data.answer, isUser: false }])
         } else {
-          console.error("Invalid response format. 'answer' field missing or not a string:", data);
+          console.error("Invalid response format. 'answer' field missing or not a string:", data)
           setChatHistory((prev) => [
             ...prev,
             { text: "Sorry, received an invalid response from the server.", isUser: false },
-          ]);
+          ])
         }
       }
     } catch (error) {
-      console.error("Failed to process message:", error);
+      console.error("Failed to process message:", error)
       setChatHistory((prev) => [
         ...prev,
         {
           text: `Sorry, I couldn't process your request. Error: ${error instanceof Error ? error.message : String(error)}`,
           isUser: false,
         },
-      ]);
+      ])
     } finally {
-      setIsLoading(false);
+      setIsLoading(false)
     }
-  };
+  }
 
   const regenerateLastResponse = async () => {
     // Find the last user message
@@ -308,41 +310,41 @@ export function ChatBox() {
   useEffect(() => {
     // Handler for recall questions
     const handleRecallQuestion = (event: any) => {
-      const { question, sessionId, context } = event.detail;
-      
+      const { question, sessionId, context } = event.detail
+
       // Add a system message indicating this is a recall session
-      setChatHistory(prev => [
-        ...prev, 
-        { 
-          text: `Starting recall session for: ${context}`, 
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          text: `Starting recall session for: ${context}`,
           isUser: false,
-          isSystem: true 
-        }
-      ]);
-      
+          isSystem: true,
+        },
+      ])
+
       // Add the question from LLM
-      setChatHistory(prev => [
-        ...prev, 
-        { 
-          text: question, 
+      setChatHistory((prev) => [
+        ...prev,
+        {
+          text: question,
           isUser: false,
           isRecallQuestion: true, // Add a flag to style differently if desired
-          sessionId: sessionId // Store the session ID with the message
-        }
-      ]);
-      
+          sessionId: sessionId, // Store the session ID with the message
+        },
+      ])
+
       // Store the current active session ID for handling answers
-      setActiveRecallSession(sessionId);
-    };
-  
+      setActiveRecallSession(sessionId)
+    }
+
     // Add event listener
-    window.addEventListener("recall_question", handleRecallQuestion);
-    
+    window.addEventListener("recall_question", handleRecallQuestion)
+
     // Clean up
     return () => {
-      window.removeEventListener("recall_question", handleRecallQuestion);
-    };
-  }, []);
+      window.removeEventListener("recall_question", handleRecallQuestion)
+    }
+  }, [])
 
   return (
     <motion.div
@@ -351,6 +353,35 @@ export function ChatBox() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Disclaimer and Recall Mode Toggle - smaller size, no border */}
+      <div className="rounded-md p-2 mb-2 flex justify-between items-center bg-[#CEFFC9] text-sm">
+        <p className="text-gray-700 text-xs">
+          NoteUS có thể đưa ra thông tin không chính xác, hãy kiểm tra câu trả lời mà bạn nhận được
+        </p>
+        <div className="flex items-center gap-1 ml-2">
+          <span className="text-green-600 text-xs leading-tight">
+            Recall<br />active<br />mode
+          </span>
+          <Switch
+            checked={!!activeRecallSession}
+            onCheckedChange={(checked) => {
+              if (!checked && activeRecallSession) {
+                setActiveRecallSession(null)
+                setChatHistory((prev) => [
+                  ...prev,
+                  {
+                    text: "Recall session ended. Returning to normal chat mode.",
+                    isUser: false,
+                    isSystem: true,
+                  },
+                ])
+              }
+            }}
+            className={`${activeRecallSession ? "bg-green-600" : "bg-gray-300"} scale-75`}
+          />
+        </div>
+      </div>
+
       {/* Chat Messages */}
       <motion.div className="flex-1 p-4 overflow-y-auto" variants={fadeIn("down", 0.2)} initial="hidden" animate="show">
         {chatHistory.map((msg, index) => (
