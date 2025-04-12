@@ -29,7 +29,10 @@ Welcome to NoteUS, a full-stack machine learning application developed by the Wi
 
 
 ## 🚀 Getting Started (Local Development)
-
+### Clone project
+```
+git clone https://github.com/Htaaxx/NoteUS/
+```
 ### API detail
 ```
 cd api
