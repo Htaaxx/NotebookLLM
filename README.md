@@ -1,68 +1,73 @@
-# NotebookLLM
+# 🗒️ NoteUS
 
-Welcome to **NotebookLLM**, a machine learning project developed by the **Notebook Team** as part of the 'Machine Learning' course. This repository contains the complete source code, including APIs, front-end, and back-end components.
+Welcome to NoteUS, a full-stack machine learning application developed by the Win to Win team as part of the Machine Learning course. NoteUS offers powerful features to help users interact with unstructured content:
+* 💬 Question answering from:
+   * Uploaded documents (PDF, text, etc.)
+   * YouTube video URLs
+   * Audio files (speech-to-text processing)
+* 🧠 Automatic mind map generation to visualize key concepts and relationships
+* 📄 Cheat sheet creation for quick summaries and review
+* 🧭 Interactive mind map functionality:
+   * Ask and receive context-aware questions
+   * Highlight key sections
+   * Generate flashcards from selected branches
 
-## Team Members
+---
+
+## 👨‍💻 Team Members
 
 | **Name**             | **Major**                                            | **University**                 |
-| -------------------- | ---------------------------------------------------- | ------------------------------ |
+|----------------------|------------------------------------------------------|--------------------------------|
 | Tuan-Anh Ha          | Information Technology - Data Science                | University of Science (VNUHCM) |
 | Quang-Thang Duong    | Information Technology - Computer Vision             | University of Science (VNUHCM) |
 | Quoc-Thang Nguyen    | Information Technology - Computer Vision             | University of Science (VNUHCM) |
 | Hai-Long Pham-Nguyen | Information Technology - Computer Vision             | University of Science (VNUHCM) |
 | Thanh-Nghia Vo       | Information Technology - Natural Language Processing | University of Science (VNUHCM) |
 
-## Project Structure
-
-The project is divided into three main components: **API**, **Front-end**, and **Back-end**.
-
-### API Structure
-
-To use the API, follow these steps:
-1. Create a virtual environment:
-   ```sh
-   python -m venv venv
-   ```
-2. Install dependencies from `requirements.txt`:
-   ```sh
-   pip install -r requirements.txt
-   ```
-
-> **Note:** This project uses `torch==2.6.0+cpu`. If you have an NVIDIA GPU, install the appropriate CUDA version of PyTorch for better performance.
-
-#### API Directory Structure:
-```
-API/
-├── extract_file_content_api/
-├── get_youtube_transcript_api/
-├── requirements.txt
-```
-
-### Front-End Structure
-
-The front-end is built with **Next.js** and manages the user interface and interactions.
-
-#### Front-End Directory Structure:
-```
-frontend/
-├── public/
-├── src/
-├── package.json  # Front-end dependencies and scripts
-├── .env          # Front-end environment variables
-└── README.md     # Front-end documentation
-```
-
-### Back-End Structure
-
-The back-end is built with **Express.js**, handling server-side logic, API endpoints, database operations, and authentication.
-
-#### Back-End Directory Structure:
-```
-backend/
-├── src/
-├── package.json  # Back-end dependencies and scripts
-├── .env          # Back-end environment variables
-└── README.md     # Back-end documentation
-```
-
 ---
+
+
+
+## 🚀 Getting Started (Local Development)
+
+### API detail
+```
+cd api
+python -m venv venv
+source venv/bin/activate  # or .\venv\Scripts\activate on Windows
+pip install -r requirements.txt
+python main.py
+```
+Runs at http://localhost:8000
+### Front-end detail
+Built using Next.js, the front-end provides a modern UI for interacting with the APIs and backend.
+```
+cd front-end
+npm install
+npm run dev
+```
+Runs at http://localhost:3000
+### Back-End detail
+```
+cd back-end
+npm install
+node src/server
+```
+Runs at http://localhost:5000
+### Environment Variables
+If needed, you can copy the sample environment files:
+```
+cp api/.env.example api/.env
+cp back-end/.env.example back-end/.env.local
+cp front-end/.env.example back-end/.env.local
+```
+### Docker Integration (Coming Soon)
+We are working on integrating docker-compose to simplify project setup and deployment. Soon, you’ll be able to start all services — API, back-end, and front-end — with a single command:
+```
+docker-compose up --build
+```
+This will automatically:
+* Build and run the Python API
+* 	Start the Express.js back-end server
+* 	Launch the Next.js front-end in development mode
+
