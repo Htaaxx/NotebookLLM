@@ -32,24 +32,15 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import UrlContext from "../components/url-context"
 
 export function ChatBox() {
   const [showSettings, setShowSettings] = useState(false)
+  const [showUrlSettings, setShowUrlSettings] = useState(false)
   const [message, setMessage] = useState("")
   const [chatHistory, setChatHistory] = useState<Array<{ text: string; isUser: boolean }>>([])
   const [isLoading, setIsLoading] = useState(false)
   const { t } = useLanguage()
-
-  // Chat settings state
-  const [model, setModel] = useState("gpt-4o")
-  const [temperature, setTemperature] = useState(0.7)
-  const [maxTokens, setMaxTokens] = useState(4000)
-  const [useRAG, setUseRAG] = useState(true)
-  const [useSummary, setUseSummary] = useState(true)
-  const [contextWindow, setContextWindow] = useState(10)
-
-  // Add this at the top of the component, after the state declarations
-  const [showDisclaimer, setShowDisclaimer] = useState(true)
 
   const chatEndRef = useRef<HTMLDivElement | null>(null)
 
@@ -59,6 +50,10 @@ export function ChatBox() {
   const [useAsContext, setUseAsContext] = useState(false)
   const [expandedPaths, setExpandedPaths] = useState(false)
   const [activeRecallSession, setActiveRecallSession] = useState<string | null>(null)
+
+    // URL context state
+    const [useUrlContext, setUseUrlContext] = useState(false)
+    const [urls, setUrls] = useState<string[]>([])
 
   useEffect(() => {
     if (useAsContext) {
@@ -346,6 +341,12 @@ export function ChatBox() {
     }
   }, [])
 
+  const handleAddUrl = (url: string) => {
+    if (url && !urls.includes(url)) {
+      setUrls([...urls, url])
+    }
+  }
+
   return (
     <motion.div
       className="flex flex-col h-[calc(100vh-64px)] bg-white text-black"
@@ -393,11 +394,10 @@ export function ChatBox() {
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
             <div
-              className={`prose prose-sm max-w-none p-3 rounded-2xl ${
-                msg.isUser
+              className={`prose prose-sm max-w-none p-3 rounded-2xl ${msg.isUser
                   ? "bg-green-500 text-white rounded-tr-none prose-invert"
                   : "bg-gray-100 text-black rounded-tl-none"
-              }`}
+                }`}
             >
               <ReactMarkdown>{msg.text}</ReactMarkdown>
             </div>
@@ -551,6 +551,15 @@ export function ChatBox() {
             )}
           </AnimatePresence>
         </div>
+
+        {/* URL Context Section */}
+        <UrlContext
+          useAsContext={useUrlContext}
+          onToggleUseAsContext={setUseUrlContext}
+          showSettings={showUrlSettings}
+          onToggleShowSettings={() => setShowUrlSettings(!showUrlSettings)}
+          onAddUrl={handleAddUrl}
+        />
 
         <form onSubmit={handleSubmit} className="flex gap-2 max-w-3xl mx-auto">
           <Input

@@ -19,6 +19,7 @@ import {
 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import "../styles/cheatsheet.css"
+import cheatsheetCache from "../lib/cheatsheet-cache"
 
 interface CheatsheetViewProps {
   initialMarkdown?: string
@@ -87,6 +88,7 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
   const [isMobileView, setIsMobileView] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
   const [isFullscreen, setIsFullscreen] = useState(false)
+  const [noFilesSelected, setNoFilesSelected] = useState(false)
   const cheatsheetRef = useRef<HTMLDivElement>(null)
   const pagesRef = useRef<(HTMLDivElement | null)[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
@@ -143,10 +145,19 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
   const fetchCheatsheetFromAPI = async (selectedFiles: any[]) => {
     if (!selectedFiles || selectedFiles.length === 0) {
       console.log("No files selected for cheatsheet generation")
+      setNoFilesSelected(true)
       return null
     }
 
+    setNoFilesSelected(false)
     const documentIds = selectedFiles.map((file) => file.id)
+
+    // Check if we have this data in cache
+    const cachedData = cheatsheetCache.get(documentIds)
+    if (cachedData) {
+      console.log("Using cached cheatsheet data")
+      return cachedData
+    }
 
     setIsLoading(true)
     setError(null)
@@ -208,6 +219,9 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
           processedData = data
         }
       }
+
+      // Cache the processed data
+      cheatsheetCache.set(documentIds, processedData)
 
       return processedData
     } catch (error) {
@@ -418,23 +432,30 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
 
   // Render a table
   const renderTable = (table: CheatsheetTable) => {
+    if (!table || (!table.headers?.length && !table.rows?.length)) {
+      return null
+    }
+
     return (
       <table className="cheatsheet-table">
-        <thead>
-          <tr>
-            {table.headers.map((header, index) => (
-              <th key={index}>{header}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {table.rows.map((row, rowIndex) => (
-            <tr key={rowIndex}>
-              {row.map((cell, cellIndex) => (
-                <td key={cellIndex}>{cell}</td>
+        {table.headers && table.headers.length > 0 && (
+          <thead>
+            <tr>
+              {table.headers.map((header, index) => (
+                <th key={index}>{formatText(header)}</th>
               ))}
             </tr>
-          ))}
+          </thead>
+        )}
+        <tbody>
+          {table.rows &&
+            table.rows.map((row, rowIndex) => (
+              <tr key={rowIndex}>
+                {row.map((cell, cellIndex) => (
+                  <td key={cellIndex}>{formatText(cell)}</td>
+                ))}
+              </tr>
+            ))}
         </tbody>
       </table>
     )
@@ -691,28 +712,40 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
   // Load cheatsheet content when selected files change
   useEffect(() => {
     if (selectedFiles && selectedFiles.length > 0) {
-      fetchCheatsheetFromAPI(selectedFiles)
-        .then((content) => {
-          if (content) {
-            const { title: newTitle, subtitle: newSubtitle, pages: newPages } = parseMarkdownToCheatsheet(content)
-            setTitle(newTitle)
-            setSubtitle(newSubtitle)
-            setPages(newPages)
-            setCurrentPageIndex(0)
-          }
-        })
-        .catch((err) => {
-          console.error("Error fetching cheatsheet:", err)
-          setError(`Failed to fetch cheatsheet: ${err instanceof Error ? err.message : String(err)}`)
-        })
+      const documentIds = selectedFiles.map((file) => file.id)
+
+      // Check if we need to refresh based on file selection changes
+      const needsRefresh = cheatsheetCache.needsRefresh(lastSelectedFileIds, documentIds)
+
+      if (needsRefresh) {
+        fetchCheatsheetFromAPI(selectedFiles)
+          .then((content) => {
+            if (content) {
+              const { title: newTitle, subtitle: newSubtitle, pages: newPages } = parseMarkdownToCheatsheet(content)
+              setTitle(newTitle)
+              setSubtitle(newSubtitle)
+              setPages(newPages)
+              setCurrentPageIndex(0)
+            } else {
+              setNoFilesSelected(true)
+            }
+          })
+          .catch((err) => {
+            console.error("Error fetching cheatsheet:", err)
+            setError(`Failed to fetch cheatsheet: ${err instanceof Error ? err.message : String(err)}`)
+          })
+      }
     } else if (initialMarkdown) {
       const { title: newTitle, subtitle: newSubtitle, pages: newPages } = parseMarkdownToCheatsheet(initialMarkdown)
       setTitle(newTitle)
       setSubtitle(newSubtitle)
       setPages(newPages)
       setCurrentPageIndex(0)
+    } else {
+      // No files selected
+      setNoFilesSelected(true)
     }
-  }, [initialMarkdown, selectedFiles])
+  }, [initialMarkdown, selectedFiles, lastSelectedFileIds])
 
   // Add this useEffect to break up the heavy computation into smaller chunks
   // Add this right after the useEffect that loads cheatsheet content
@@ -963,6 +996,7 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
               onDoubleClick={() => {
                 const updatedPages = [...pages]
                 const sectionIndex = updatedPages[pageIndex].sections.findIndex((s) => s.id === section.id)
+
                 if (sectionIndex !== -1) {
                   updatedPages[pageIndex].sections[sectionIndex].isEditing = true
                   setPages(updatedPages)
@@ -1015,23 +1049,6 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
         </div>
       </div>
     )
-  }
-
-  // Add this function to debounce the layout calculation
-  const useDebounce = (value: any, delay: number) => {
-    const [debouncedValue, setDebouncedValue] = useState(value)
-
-    useEffect(() => {
-      const handler = setTimeout(() => {
-        setDebouncedValue(value)
-      }, delay)
-
-      return () => {
-        clearTimeout(handler)
-      }
-    }, [value, delay])
-
-    return debouncedValue
   }
 
   return (
@@ -1135,13 +1152,13 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
       {isLoading ? (
         <div className="flex-grow flex items-center justify-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
-          <p className="ml-3">Generating cheatsheet...</p>
+          <p className="ml-3">Generating cheatsheet... Longer files may take more time...</p>
         </div>
       ) : error ? (
         <div className="flex-grow flex items-center justify-center text-red-500">
           <p>{error}</p>
         </div>
-      ) : pages.length === 0 ? (
+      ) : noFilesSelected || pages.length === 0 ? (
         <div className="flex-grow flex flex-col items-center justify-center text-gray-500">
           <p className="mb-4">No content available. Please select files to generate a cheatsheet.</p>
           <Button onClick={addPage} className="bg-green-600 hover:bg-green-700">

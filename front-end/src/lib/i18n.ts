@@ -31,6 +31,9 @@ export interface Translations {
   typeMessage: string
   send: string
   regenerate: string
+  disclaimer: string
+  recallActiveMode: string
+  recallSessionEnded: string
 
   // Right panel
   noChosenFile: string
@@ -67,6 +70,30 @@ export interface Translations {
   newPassword: string
   confirmPassword: string
   saveChanges: string
+
+  // Mindmap and Cheatsheet
+  noContentAvailable: string
+  selectFilesToGenerate: string
+  mindmap: string
+  cheatsheet: string
+  preview: string
+  fullscreen: string
+  exitFullscreen: string
+  exportToPDF: string
+  print: string
+  loading: string
+  zoomIn: string
+  zoomOut: string
+  nextPage: string
+  previousPage: string
+  pageOf: string
+
+  // URL Context
+  urlContext: string
+  enterUrl: string
+  addUrl: string
+  useAsContext: string
+  mindMapPaths: string
 }
 
 // Define the translations
@@ -100,6 +127,9 @@ export const translations: Record<Language, Translations> = {
     typeMessage: "Type your message here...",
     send: "Send",
     regenerate: "Regen",
+    disclaimer: "NoteUS may provide inaccurate information. Please verify the answers you receive.",
+    recallActiveMode: "Recall active mode",
+    recallSessionEnded: "Recall session ended. Returning to normal chat mode.",
 
     // Right panel
     noChosenFile: "No chosen file",
@@ -136,6 +166,30 @@ export const translations: Record<Language, Translations> = {
     newPassword: "New Password",
     confirmPassword: "Confirm New Password",
     saveChanges: "Save Changes",
+
+    // Mindmap and Cheatsheet
+    noContentAvailable: "No content available.",
+    selectFilesToGenerate: "Please select files to generate a mindmap.",
+    mindmap: "Mindmap",
+    cheatsheet: "Cheatsheet",
+    preview: "Preview",
+    fullscreen: "Fullscreen",
+    exitFullscreen: "Exit Fullscreen",
+    exportToPDF: "Export to PDF",
+    print: "Print",
+    loading: "Loading...",
+    zoomIn: "Zoom In",
+    zoomOut: "Zoom Out",
+    nextPage: "Next Page",
+    previousPage: "Previous Page",
+    pageOf: "Page {current} of {total}",
+
+    // URL Context
+    urlContext: "URL Context",
+    enterUrl: "Enter URL (website or YouTube)",
+    addUrl: "Add",
+    useAsContext: "Use as context",
+    mindMapPaths: "Mind Map Paths",
   },
   vi: {
     // Navigation
@@ -163,9 +217,12 @@ export const translations: Record<Language, Translations> = {
 
     // Chat
     chatSettings: "Cài đặt trò chuyện",
-    typeMessage: "Nhập tin nhắn c��a bạn tại đây...",
+    typeMessage: "Nhập tin nhắn của bạn tại đây...",
     send: "Gửi",
     regenerate: "Tạo lại",
+    disclaimer: "NoteUS có thể đưa ra thông tin không chính xác, hãy kiểm tra câu trả lời mà bạn nhận được",
+    recallActiveMode: "Chế độ nhắc lại đang hoạt động",
+    recallSessionEnded: "Phiên nhắc lại đã kết thúc. Quay lại chế độ trò chuyện bình thường.",
 
     // Right panel
     noChosenFile: "Không có tệp nào được chọn",
@@ -202,5 +259,29 @@ export const translations: Record<Language, Translations> = {
     newPassword: "Mật khẩu mới",
     confirmPassword: "Xác nhận mật khẩu mới",
     saveChanges: "Lưu thay đổi",
+
+    // Mindmap and Cheatsheet
+    noContentAvailable: "Không có nội dung.",
+    selectFilesToGenerate: "Vui lòng chọn tệp để tạo sơ đồ tư duy.",
+    mindmap: "Sơ đồ tư duy",
+    cheatsheet: "Bảng tóm tắt",
+    preview: "Xem trước",
+    fullscreen: "Toàn màn hình",
+    exitFullscreen: "Thoát toàn màn hình",
+    exportToPDF: "Xuất ra PDF",
+    print: "In",
+    loading: "Đang tải...",
+    zoomIn: "Phóng to",
+    zoomOut: "Thu nhỏ",
+    nextPage: "Trang tiếp",
+    previousPage: "Trang trước",
+    pageOf: "Trang {current} / {total}",
+
+    // URL Context
+    urlContext: "Ngữ cảnh URL",
+    enterUrl: "Nhập URL (trang web hoặc YouTube)",
+    addUrl: "Thêm",
+    useAsContext: "Sử dụng làm ngữ cảnh",
+    mindMapPaths: "Đường dẫn sơ đồ tư duy",
   },
 }

@@ -67,15 +67,15 @@ interface MindMapNode {
 }
 
 interface MindMapNodeModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title: string;
-  content: string;
-  node?: MindMapNode;
-  paths?: string[][];
-  onUseAsContext?: (paths: string[][], useAsContext: boolean) => void;
+  isOpen: boolean
+  onClose: () => void
+  title: string
+  content: string
+  node?: MindMapNode
+  paths?: string[][]
+  onUseAsContext?: (paths: string[][], useAsContext: boolean) => void
   // Add proper typing for containerRef
-  containerRef?: React.RefObject<HTMLDivElement>;
+  containerRef?: React.RefObject<HTMLDivElement>
 }
 
 // ----------------------------------------------------------------
@@ -106,6 +106,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [mindmap_node_search, setMindmapNodeSearch] = useState<string[][]>([])
   const [userID, setUserID] = useState("")
   const [lastSelectedFileIds, setLastSelectedFileIds] = useState<string[]>([])
+  const [noFilesSelected, setNoFilesSelected] = useState(true)
 
   // Get the current theme object
   const getThemeObject = (): MindMapTheme => {
@@ -219,9 +220,11 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const fetchMindMapFromAPI = async (selectedFiles: any[]) => {
     if (!selectedFiles || selectedFiles.length === 0) {
       console.log("No files selected for mindmap generation")
-      return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
+      setNoFilesSelected(true)
+      return null
     }
 
+    setNoFilesSelected(false)
     const documentIds = selectedFiles.map((file) => file.id)
 
     // Check if we have this data in cache
@@ -310,7 +313,7 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     } catch (error) {
       console.error("Error fetching mindmap from API:", error)
       setError(`Failed to fetch mindmap: ${error instanceof Error ? error.message : String(error)}`)
-      return themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
+      return null
     } finally {
       setIsLoading(false)
     }
@@ -363,14 +366,16 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         console.log("Selected files changed, fetching new mindmap data")
         fetchMindMapFromAPI(selectedFiles)
           .then((content) => {
-            setMarkdown(content)
-            setLoadedContent(content)
+            if (content) {
+              setMarkdown(content)
+              setLoadedContent(content)
+            } else {
+              setNoFilesSelected(true)
+            }
           })
           .catch((err) => {
             console.error("Error fetching mindmap:", err)
             setError(`Failed to fetch mindmap: ${err instanceof Error ? err.message : String(err)}`)
-            setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
-            setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
           })
       } else {
         console.log("Selected files unchanged, using existing mindmap data")
@@ -385,17 +390,14 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         .catch((err) => {
           console.error("Error loading markdown from file:", err)
           setError(`Failed to load markdown file: ${err instanceof Error ? err.message : String(err)}`)
-          setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
-          setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
         })
     } else if (markdownContent) {
       // If direct markdown content is provided
       setMarkdown(markdownContent)
       setLoadedContent(markdownContent)
     } else {
-      // Default case - use the current theme's template
-      setMarkdown(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
-      setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+      // Default case - no files selected
+      setNoFilesSelected(true)
     }
   }, [markdownContent, markdownFilePath, selectedFiles]) // Removed currentTheme from dependencies
 
@@ -595,8 +597,19 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
     const container = containerRef.current
 
     // Use the loaded content or default
-    const contentToUse =
-      loadedContent || themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original
+    const contentToUse = loadedContent || ""
+
+    // If no content and no files selected, show empty state
+    if ((!contentToUse || contentToUse.trim() === "") && noFilesSelected) {
+      // Clear the container and show empty state
+      container.innerHTML = `
+        <div class="flex items-center justify-center h-full">
+          <p class="text-lg text-gray-500">No content available. Please select files to generate a mindmap.</p>
+        </div>
+      `
+      return
+    }
+
     console.log("Initializing mind map with content length:", contentToUse.length)
 
     try {
@@ -928,15 +941,15 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         containerRef={containerRef as React.RefObject<HTMLDivElement>}
         nodes={allNodes}
         onNodeSelect={handleNodeSelect}
-        onNodeSearch={handleNodeSearch} // Add this
-        searchPaths={mindmap_node_search} // Add this
-        onRemoveSearchPath={handleRemoveSearchPath} // Add this
+        onNodeSearch={handleNodeSearch}
+        searchPaths={mindmap_node_search}
+        onRemoveSearchPath={handleRemoveSearchPath}
       />
 
       {isLoading ? (
         <div className="p-4 text-center flex-grow flex items-center justify-center">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-green-500 border-r-transparent"></div>
-          <p className="mt-2 text-gray-700 ml-3">Generating mind map...</p>
+          <p className="mt-2 text-gray-700 ml-3">Generating mind map... Longer files take more time.</p>
         </div>
       ) : error ? (
         <div className="p-4 text-red-500 flex-grow flex flex-col items-center justify-center">
@@ -945,11 +958,15 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
             className="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={() => {
               setError(null)
-              setLoadedContent(themeTemplates[currentTheme as keyof typeof themeTemplates] || themeTemplates.original)
+              setLoadedContent("")
             }}
           >
-            Load Default Mindmap
+            Reset
           </button>
+        </div>
+      ) : noFilesSelected && (!loadedContent || loadedContent.trim() === "") ? (
+        <div className="w-full h-full flex items-center justify-center">
+          <p className="text-lg text-gray-500">No content available. Please select files to generate a mindmap.</p>
         </div>
       ) : (
         <div
