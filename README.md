@@ -28,7 +28,7 @@ Welcome to NoteUS, a full-stack machine learning application developed by the Wi
 
 
 
-## 🚀 Getting Started (Local Development)
+## Getting Started (Local Development, manually)
 ### Clone project
 ```
 git clone https://github.com/Htaaxx/NoteUS/
@@ -64,13 +64,14 @@ cp api/.env.example api/.env
 cp back-end/.env.example back-end/.env.local
 cp front-end/.env.example back-end/.env.local
 ```
-### Docker Integration (Coming Soon)
-We are working on integrating docker-compose to simplify project setup and deployment. Soon, you’ll be able to start all services — API, back-end, and front-end — with a single command:
+## 🚀 Getting Started (Local Development with Docker)
+To run the entire application (API, frontend, and database), simply run:
 ```
-docker-compose up --build
+docker-compose up
 ```
-This will automatically:
-* Build and run the Python API
-* 	Start the Express.js back-end server
-* 	Launch the Next.js front-end in development mode
+Docker Compose will automatically:
+	1.	Start the API
+	2.	Wait for the API to become ready
+	3.	Start the frontend and database once the API is up
+No additional setup is needed — just make sure Docker is running on your machine.
 
