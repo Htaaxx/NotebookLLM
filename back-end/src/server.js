@@ -9,7 +9,7 @@ const flashcardRoutes = require("./routes/flashcard");
 const reviewRoutes = require("./routes/review");
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT_BACKEND || 5000;
 // Change the URI to your own database.
 const MONGO_URI = process.env.MONGO_URI ;
 
