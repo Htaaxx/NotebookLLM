@@ -143,6 +143,8 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
 
   // Fetch cheatsheet data from API based on selected files
   const fetchCheatsheetFromAPI = async (selectedFiles: any[]) => {
+    console.log("fetchCheatsheetFromAPI called with files:", selectedFiles)
+
     if (!selectedFiles || selectedFiles.length === 0) {
       console.log("No files selected for cheatsheet generation")
       setNoFilesSelected(true)
@@ -151,6 +153,7 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
 
     setNoFilesSelected(false)
     const documentIds = selectedFiles.map((file) => file.id)
+    console.log("Document IDs for cheatsheet API call:", documentIds)
 
     // Check if we have this data in cache
     const cachedData = cheatsheetCache.get(documentIds)
@@ -185,13 +188,16 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
         }),
       })
 
+      console.log("API response status:", response.status)
+
       if (!response.ok) {
         console.error(`API error: ${response.status} ${response.statusText}`)
         throw new Error(`API error: ${response.status}`)
       }
 
       const data = await response.text()
-      console.log("Received cheatsheet data:", data.substring(0, 100) + "...")
+      console.log("Received cheatsheet data length:", data.length)
+      console.log("First 100 chars:", data.substring(0, 100) + "...")
 
       // Store the document IDs for future reference
       setLastSelectedFileIds(documentIds)
@@ -711,22 +717,29 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
 
   // Load cheatsheet content when selected files change
   useEffect(() => {
+    console.log("CheatsheetView useEffect triggered with selectedFiles:", selectedFiles)
+
     if (selectedFiles && selectedFiles.length > 0) {
       const documentIds = selectedFiles.map((file) => file.id)
+      console.log("Selected document IDs:", documentIds)
 
       // Check if we need to refresh based on file selection changes
       const needsRefresh = cheatsheetCache.needsRefresh(lastSelectedFileIds, documentIds)
+      console.log("Needs refresh:", needsRefresh, "Last selected file IDs:", lastSelectedFileIds)
 
       if (needsRefresh) {
+        console.log("Fetching new cheatsheet data")
         fetchCheatsheetFromAPI(selectedFiles)
           .then((content) => {
             if (content) {
+              console.log("Cheatsheet content received, length:", content.length)
               const { title: newTitle, subtitle: newSubtitle, pages: newPages } = parseMarkdownToCheatsheet(content)
               setTitle(newTitle)
               setSubtitle(newSubtitle)
               setPages(newPages)
               setCurrentPageIndex(0)
             } else {
+              console.log("No cheatsheet content received")
               setNoFilesSelected(true)
             }
           })
@@ -734,8 +747,11 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
             console.error("Error fetching cheatsheet:", err)
             setError(`Failed to fetch cheatsheet: ${err instanceof Error ? err.message : String(err)}`)
           })
+      } else {
+        console.log("Using existing cheatsheet data")
       }
     } else if (initialMarkdown) {
+      console.log("Using initialMarkdown")
       const { title: newTitle, subtitle: newSubtitle, pages: newPages } = parseMarkdownToCheatsheet(initialMarkdown)
       setTitle(newTitle)
       setSubtitle(newSubtitle)
@@ -743,6 +759,7 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
       setCurrentPageIndex(0)
     } else {
       // No files selected
+      console.log("No files selected for cheatsheet")
       setNoFilesSelected(true)
     }
   }, [initialMarkdown, selectedFiles, lastSelectedFileIds])

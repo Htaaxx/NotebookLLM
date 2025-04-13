@@ -12,7 +12,7 @@ interface RightButtonsProps {
 export function RightButtons({ onViewChange, activeView }: RightButtonsProps) {
   return (
     <motion.div
-      className="absolute right-4 top-1/2 -translate-y-1/2 flex flex-col gap-2 z-10"
+      className="flex flex-col gap-2 z-50"
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, delay: 0.3 }}
