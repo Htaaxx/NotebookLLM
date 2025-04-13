@@ -1,5 +1,6 @@
-# 🗒️ NoteUS
+**Before going to details, our deployments on vercel just include front-end and login, logout so people could see our website you can not use any service on these deployments yet.**
 
+# 🗒️ NoteUS
 Welcome to NoteUS, a full-stack machine learning application developed by the Win to Win team as part of the Machine Learning course. NoteUS offers powerful features to help users interact with unstructured content:
 * 💬 Question answering from:
    * Uploaded documents (PDF, text, etc.)
@@ -13,6 +14,7 @@ Welcome to NoteUS, a full-stack machine learning application developed by the Wi
    * Generate flashcards from selected branches
 
 ---
+
 
 ## 👨‍💻 Team Members
 
