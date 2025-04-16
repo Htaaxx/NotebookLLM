@@ -1,7 +1,10 @@
+# File: app/routers/recall.py
 from fastapi import APIRouter, HTTPException, Body
-from pydantic import BaseModel, Field  # Thêm Field
+from pydantic import BaseModel, Field
 import uuid
-from rag_api.app.services import recall_service  # Import service mới
+
+# Import này vẫn đúng vì recall_service.py nằm trong services
+from ..services import recall_service
 from typing import List, Optional
 
 router = APIRouter()
