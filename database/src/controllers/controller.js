@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   refreshToken: { type: String, default: null },
+  accountType: { type: String, default: "Free" },
 });
 
 // Document Collection Schema
@@ -35,6 +36,15 @@ const documentSchema = new mongoose.Schema({
     default: 0    // Trạng thái mặc định là 0 (inactive)
   }
   // --- Hết phần cập nhật ---
+});
+
+// Count Collection Schema
+const countSchema = new mongoose.Schema({
+  user_id: { type: String, ref: "User", required: true },
+  countQuery: { type: Number, default: 0 },
+  countMindmap: { type: Number, default: 0 },
+  countCheatSheet: { type: Number, default: 0 },
+  countFlashcard: { type: Number, default: 0 },
 });
 
 // Models
@@ -73,7 +83,7 @@ exports.signup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword, email });
+    const newUser = new User({ username, password: hashedPassword, email});
     await newUser.save();
 
     res.json({ message: "User registered successfully", user: { user_id: newUser.user_id, username: newUser.username, email: newUser.email } });
@@ -396,5 +406,193 @@ exports.getUserWithDocument = async (req, res) => {
   } catch (error) {
     console.error("Error getting user with document:", error);
     res.status(500).json({ message: "Error retrieving user ID", error: error.message });
+  }
+};
+
+// Get Count Query
+exports.getCountQuery = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const count = await User.findOne({ user_id });
+    if (!count) {
+      return res.status(404).json({ message: "Count data not found" });
+    }
+
+    res.json({ countQuery: count.countQuery });
+  } catch (error) {
+    console.error("Error getting countQuery:", error);
+    res.status(500).json({ message: "Error retrieving countQuery", error: error.message });
+  }
+};
+
+// Get Count Mindmap
+exports.getCountMindmap = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const count = await User.findOne({ user_id });
+    if (!count) {
+      return res.status(404).json({ message: "Count data not found" });
+    }
+
+    res.json({ countMindmap: count.countMindmap });
+  } catch (error) {
+    console.error("Error getting countMindmap:", error);
+    res.status(500).json({ message: "Error retrieving countMindmap", error: error.message });
+  }
+};
+
+// Get Count CheatSheet
+exports.getCountCheatSheet = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const count = await User.findOne({ user_id });
+    if (!count) {
+      return res.status(404).json({ message: "Count data not found" });
+    }
+
+    res.json({ countCheatSheet: count.countCheatSheet });
+  } catch (error) {
+    console.error("Error getting countCheatSheet:", error);
+    res.status(500).json({ message: "Error retrieving countCheatSheet", error: error.message });
+  }
+};
+
+// Get Count Flashcard
+exports.getCountFlashcard = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const count = await User.findOne({ user_id });
+    if (!count) {
+      return res.status(404).json({ message: "Count data not found" });
+    }
+
+    res.json({ countFlashcard: count.countFlashcard });
+  } catch (error) {
+    console.error("Error getting countFlashcard:", error);
+    res.status(500).json({ message: "Error retrieving countFlashcard", error: error.message });
+  }
+};
+
+// Update Count Query
+exports.updateCountQuery = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const count = await User.findOneAndUpdate(
+      { user_id },
+      { $inc: { countQuery: 1 } }, // Tăng countQuery lên 1
+      { new: true }
+    );
+
+    if (!count) {
+      return res.status(404).json({ message: "Count data not found" });
+    }
+
+    res.json({ message: "Count updated successfully", countQuery: count.countQuery });
+  } catch (error) {
+    console.error("Error updating countQuery:", error);
+    res.status(500).json({ message: "Error updating countQuery", error: error.message });
+  }
+};
+
+// Update Count Mindmap
+exports.updateCountMindmap = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const count = await User.findOneAndUpdate(
+      { user_id },
+      { $inc: { countMindmap: 1 } }, // Tăng countMindmap lên 1
+      { new: true }
+    );
+
+    if (!count) {
+      return res.status(404).json({ message: "Count data not found" });
+    }
+
+    res.json({ message: "Count updated successfully", countMindmap: count.countMindmap });
+  } catch (error) {
+    console.error("Error updating countMindmap:", error);
+    res.status(500).json({ message: "Error updating countMindmap", error: error.message });
+  }
+};
+
+// Update Count CheatSheet
+exports.updateCountCheatSheet = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const count = await User.findOneAndUpdate(
+      { user_id },
+      { $inc: { countCheatSheet: 1 } }, // Tăng countCheatSheet lên 1
+      { new: true }
+    );
+
+    if (!count) {
+      return res.status(404).json({ message: "Count data not found" });
+    }
+
+    res.json({ message: "Count updated successfully", countCheatSheet: count.countCheatSheet });
+  } catch (error) {
+    console.error("Error updating countCheatSheet:", error);
+    res.status(500).json({ message: "Error updating countCheatSheet", error: error.message });
+  }
+};
+
+// Update Count Flashcard
+exports.updateCountFlashcard = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const count = await User.findOneAndUpdate(
+      { user_id },
+      { $inc: { countFlashcard: 1 } }, // Tăng countFlashcard lên 1
+      { new: true }
+    );
+
+    if (!count) {
+      return res.status(404).json({ message: "Count data not found" });
+    }
+
+    res.json({ message: "Count updated successfully", countFlashcard: count.countFlashcard });
+  } catch (error) {
+    console.error("Error updating countFlashcard:", error);
+    res.status(500).json({ message: "Error updating countFlashcard", error: error.message });
   }
 };
