@@ -2,7 +2,10 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Any  # Thêm Dict, Optional, Any
-from ..services.rag_pipeline import ask_question
+
+# --- Đường dẫn import CẦN CẬP NHẬT ---
+# from ..services.rag_pipeline import ask_question # Đường dẫn cũ
+from ..services.rag_logic.generation.querying import ask_question  # <<< Đường dẫn mới
 
 router = APIRouter()
 
