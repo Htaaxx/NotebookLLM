@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Check, ArrowLeft, Loader2 } from "lucide-react"
 import { plans, createPaymentIntent, getStripe } from "@/lib/stripe"
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js"
+import { accountTypeAPI } from "@/lib/api"
 
 function CheckoutForm({
   clientSecret,
@@ -304,10 +305,25 @@ export default function PaymentPage() {
 
   const handlePaymentSuccess = () => {
     console.log("handlePaymentSuccess called");
+
+
     // IMPORTANT: Update user's subscription status securely on your BACKEND
     // based on successful payment confirmation (ideally via webhooks).
+
+    const userID = localStorage.getItem("user_id")
     // Client-side update is for UI feedback only.
     localStorage.setItem("currentPlan", selectedPlan?.name || 'Unknown') // Update UI state
+    if (selectedPlan.name === "Pro") {
+      if (userID) {
+        const update = accountTypeAPI.updateAccountType(userID, "PRO");
+      } else {
+      if (userID) {
+        const update = accountTypeAPI.updateAccountType(userID, "STANDARD");
+      } else {
+        console.error("User ID is null. Cannot update account type.");
+      }
+      }
+    }
     // Consider removing sensitive items after success:
     // localStorage.removeItem("selectedPlan");
     router.push("/payment/success") // Redirect to success page
@@ -316,7 +332,7 @@ export default function PaymentPage() {
   const handleFreePlanActivation = () => {
     console.log("handleFreePlanActivation called");
     // IMPORTANT: Update user's subscription status securely on your BACKEND.
-    localStorage.setItem("currentPlan", selectedPlan?.name || "Free")
+    localStorage.setItem("currentPlan", selectedPlan?.name || "FREE")
     // localStorage.removeItem("selectedPlan");
     router.push("/payment/success")
   }

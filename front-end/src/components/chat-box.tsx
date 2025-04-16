@@ -27,14 +27,14 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
+import { accountTypeAPI } from "@/lib/api";
+import { ACCOUNT_LIMITS, shouldResetDailyCounts } from "@/lib/account-limits";
 
 interface ChatBoxProps {
   isDisabled?: boolean
 }
 
 export function ChatBox({ isDisabled = false }: ChatBoxProps) {
-  const [showSettings, setShowSettings] = useState(false)
-  const [showUrlSettings, setShowUrlSettings] = useState(false)
   const [message, setMessage] = useState("")
   const [chatHistory, setChatHistory] = useState<Array<{ text: string; isUser: boolean }>>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -57,6 +57,12 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
   const [urlSearchQuery, setUrlSearchQuery] = useState("")
   const [urls, setUrls] = useState<string[]>([])
   const [useUrlContext, setUseUrlContext] = useState(false)
+
+  // account type
+  const [accountType, setAccountType] = useState<string>("FREE");
+  const [queryCount, setQueryCount] = useState<number>(0);
+  const [limitExceeded, setLimitExceeded] = useState<boolean>(false);
+  const [userId, setUserId] = useState<string | null>(null);
 
   // URL context functions
   const handleAddUrl = () => {
@@ -86,6 +92,57 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
     if (!urlSearchQuery) return true
     return url.toLowerCase().includes(urlSearchQuery.toLowerCase())
   })
+
+  // Check account type and usage counts on component mount
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const storedUserId = localStorage.getItem('user_id');
+        if (!storedUserId) return;
+        
+        setUserId(storedUserId);
+        
+        // Check if we need to reset daily counts
+        if (shouldResetDailyCounts()) {
+          console.log("Resetting daily counts");
+          // You would implement server-side reset here
+          // For now, we'll just update our local state
+          setQueryCount(0);
+        }
+        
+        // Fetch account type
+        const accountTypeData = await accountTypeAPI.getAccountTypes(storedUserId);
+        setAccountType(accountTypeData.accountType || "FREE");
+        
+        // Fetch query count
+        const countData = await accountTypeAPI.getCountQuery(storedUserId);
+        setQueryCount(countData.countQuery || 0);
+        
+        // Check if limit exceeded
+        checkQueryLimit(accountTypeData.accountType || "FREE", countData.countQuery || 0);
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+      }
+    };
+    
+    fetchUserInfo();
+  }, []);
+
+  // Add this function to check if user has exceeded their daily limit
+  const checkQueryLimit = (type: string, count: number) => {
+    const limit = 
+      type === "PRO" ? ACCOUNT_LIMITS.PRO.CHAT_QUERIES :
+      type === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES :
+      ACCOUNT_LIMITS.FREE.CHAT_QUERIES;
+      
+    setLimitExceeded(count >= limit);
+  };
+  
+  // Add word count check
+  const countWords = (text: string): number => {
+    return text.trim().split(/\s+/).length;
+  };
+
 
   useEffect(() => {
     if (useAsContext) {
@@ -151,7 +208,26 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const userMessage = message.trim()
-    if (!userMessage|| isLoading||isDisabled) return
+    if (!userMessage || isLoading || isDisabled || limitExceeded) return;
+
+    // Check word count limit for non-PRO users
+    if (accountType !== "PRO") {
+      const wordCount = countWords(userMessage);
+      const wordLimit = accountType === "STANDARD" ? 
+                        ACCOUNT_LIMITS.STANDARD.MAX_QUERY_WORDS : 
+                        ACCOUNT_LIMITS.FREE.MAX_QUERY_WORDS;
+                        
+      if (wordCount > wordLimit) {
+        setChatHistory(prev => [
+          ...prev, 
+          { 
+            text: `Your message exceeds the ${wordLimit} word limit for ${accountType} accounts. Please shorten your message.`, 
+            isUser: false 
+          }
+        ]);
+        return;
+      }
+    }
 
     // Add user message to chat history
     setChatHistory((prev) => [...prev, { text: userMessage, isUser: true }])
@@ -268,6 +344,16 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
             { text: "Sorry, received an invalid response from the server.", isUser: false },
           ])
         }
+      }
+
+      // After successful processing, update the count
+      if (userId) {
+        const newCount = queryCount + 1;
+        await accountTypeAPI.updateCountQuery(userId);
+        setQueryCount(newCount);
+        
+        // Check if this query puts user over the limit
+        checkQueryLimit(accountType, newCount);
       }
     } catch (error) {
       console.error("Failed to process message:", error)
@@ -568,6 +654,19 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
+      {/* Daily limit warning - show when user is approaching limit */}
+      {accountType !== "PRO" && queryCount > 0 && (
+        <div className={`${limitExceeded ? "bg-red-50" : "bg-amber-50"} rounded-md p-2 mb-2 mx-4 mt-2 text-sm`}>
+          <p className="text-gray-700 text-xs flex items-center">
+            <AlertCircle className="w-3 h-3 mr-1 text-amber-500" />
+            {limitExceeded 
+              ? `You've reached your daily limit of ${accountType === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES : ACCOUNT_LIMITS.FREE.CHAT_QUERIES} queries for ${accountType} accounts. Upgrade to access more.`
+              : `You've used ${queryCount}/${accountType === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES : ACCOUNT_LIMITS.FREE.CHAT_QUERIES} daily queries.`
+            }
+          </p>
+        </div>
+      )}
+      
       {/* Embedding Status Message - Show when embedding is in progress */}
       {isDisabled && (
         <div className="bg-amber-50 rounded-md p-2 mb-2 mx-4 mt-2 text-sm">
@@ -688,10 +787,11 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t("typeMessage")}
             className="flex-1 bg-white text-black border-gray-300 text-sm"
-            disabled={isLoading}
+            disabled={isLoading || isDisabled || limitExceeded}
           />
           <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white text-sm" disabled={isLoading}>
+            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white text-sm" 
+            disabled={isLoading || isDisabled || limitExceeded}>
               <Send className="w-3.5 h-3.5 mr-1.5" />
               {t("send")}
             </Button>

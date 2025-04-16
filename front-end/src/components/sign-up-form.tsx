@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Loader2 } from "lucide-react"
 
 import { authAPI } from "@/lib/api"
+import { accountTypeAPI } from "@/lib/api"
 
 const formSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters" }),
@@ -45,10 +46,21 @@ export function SignUpForm({ onSuccess }: SignUpFormProps) {
 
     try {
       // Gọi API đăng ký
-      await authAPI.signUp(values.username, values.email, values.password)
+      const signupResponse = await authAPI.signUp(values.username, values.email, values.password)
+      const userId = signupResponse.user_id
 
-      // After successful signup, sign in the user automatically
-      await authAPI.signIn(values.username, values.password)
+      // Create count record for the user
+      if (userId) {
+        try {
+          await accountTypeAPI.createCountWithId(userId)
+          console.log("Count record created for new user")
+        } catch (countError) {
+          console.error("Error creating count record:", countError)
+          // Continue anyway, as the user is already created
+        }
+      } else {
+        console.error("No user_id received from sign-in response")
+      }
 
       // Call the success callback
       onSuccess()

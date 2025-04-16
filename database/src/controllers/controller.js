@@ -20,7 +20,7 @@ const userSchema = new mongoose.Schema({
   password: { type: String, required: true },
   email: { type: String, required: true, unique: true },
   refreshToken: { type: String, default: null },
-  accountType: { type: String, default: "Free" },
+  accountType: { type: String, default: "FREE" },
 });
 
 // Document Collection Schema
@@ -50,6 +50,7 @@ const countSchema = new mongoose.Schema({
 // Models
 const User = mongoose.model("User", userSchema);
 const Document = mongoose.model("Document", documentSchema);
+const Count = mongoose.model("Count", countSchema);
 
 const generateAccessToken = (user) => {
   return jwt.sign(
@@ -67,6 +68,24 @@ const generateRefreshToken = (user) => {
   );
 };
 
+const countResetSchema = new mongoose.Schema({
+  user_id: { type: String, ref: "User", required: true },
+  lastResetDate: { type: String, default: () => new Date().toISOString().split('T')[0] }, // YYYY-MM-DD
+});
+
+const CountReset = mongoose.model("CountReset", countResetSchema);
+
+exports.createCountWithUserId = async (req, res) => {
+  const { user_id } = req.body;
+  try {
+    const count = new Count({ user_id });
+    await count.save();
+    res.status(200).json({ message: "Count created successfully", count });
+  } catch (error) {
+    console.error("Error creating count:", error);
+    res.status(500).json({ message: "Error creating count", error: error.message });
+  }
+};
 // **Sign Up**
 exports.signup = async (req, res) => {
   const { username, email, password } = req.body;
@@ -83,10 +102,18 @@ exports.signup = async (req, res) => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    const newUser = new User({ username, password: hashedPassword, email});
+    const newUser = new User({ username, password: hashedPassword, email });
     await newUser.save();
 
-    res.json({ message: "User registered successfully", user: { user_id: newUser.user_id, username: newUser.username, email: newUser.email } });
+    res.json({ 
+      message: "User registered successfully", 
+      user: { 
+        user_id: newUser.user_id, 
+        username: newUser.username, 
+        email: newUser.email 
+      },
+      user_id: newUser.user_id // Adding user_id to the response
+    });
   } catch (error) {
     res.status(500).json({ message: "Error signing up", error });
   }
@@ -418,7 +445,7 @@ exports.getCountQuery = async (req, res) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    const count = await User.findOne({ user_id });
+    const count = await Count.findOne({ user_id });
     if (!count) {
       return res.status(404).json({ message: "Count data not found" });
     }
@@ -439,7 +466,7 @@ exports.getCountMindmap = async (req, res) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    const count = await User.findOne({ user_id });
+    const count = await Count.findOne({ user_id });
     if (!count) {
       return res.status(404).json({ message: "Count data not found" });
     }
@@ -460,7 +487,7 @@ exports.getCountCheatSheet = async (req, res) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    const count = await User.findOne({ user_id });
+    const count = await Count.findOne({ user_id });
     if (!count) {
       return res.status(404).json({ message: "Count data not found" });
     }
@@ -481,7 +508,7 @@ exports.getCountFlashcard = async (req, res) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    const count = await User.findOne({ user_id });
+    const count = await Count.findOne({ user_id });
     if (!count) {
       return res.status(404).json({ message: "Count data not found" });
     }
@@ -502,7 +529,7 @@ exports.updateCountQuery = async (req, res) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    const count = await User.findOneAndUpdate(
+    const count = await Count.findOneAndUpdate(
       { user_id },
       { $inc: { countQuery: 1 } }, // Tăng countQuery lên 1
       { new: true }
@@ -528,7 +555,7 @@ exports.updateCountMindmap = async (req, res) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    const count = await User.findOneAndUpdate(
+    const count = await Count.findOneAndUpdate(
       { user_id },
       { $inc: { countMindmap: 1 } }, // Tăng countMindmap lên 1
       { new: true }
@@ -554,7 +581,7 @@ exports.updateCountCheatSheet = async (req, res) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    const count = await User.findOneAndUpdate(
+    const count = await Count.findOneAndUpdate(
       { user_id },
       { $inc: { countCheatSheet: 1 } }, // Tăng countCheatSheet lên 1
       { new: true }
@@ -580,7 +607,7 @@ exports.updateCountFlashcard = async (req, res) => {
       return res.status(400).json({ message: "User ID is required" });
     }
 
-    const count = await User.findOneAndUpdate(
+    const count = await Count.findOneAndUpdate(
       { user_id },
       { $inc: { countFlashcard: 1 } }, // Tăng countFlashcard lên 1
       { new: true }
@@ -594,5 +621,118 @@ exports.updateCountFlashcard = async (req, res) => {
   } catch (error) {
     console.error("Error updating countFlashcard:", error);
     res.status(500).json({ message: "Error updating countFlashcard", error: error.message });
+  }
+};
+
+// get user type with user_id
+exports.getAccountType = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    const user = await User.findOne({ user_id });
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ accountType: user.accountType });
+  } catch (error) {
+    console.error("Error getting user type:", error);
+    res.status(500).json({ message: "Error retrieving user type", error: error.message });
+  }
+};
+
+// Add a method to check and reset daily counts
+exports.checkAndResetCounts = async (req, res) => {
+  try {
+    const { user_id } = req.body;
+    
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+    
+    // Get or create reset record
+    let resetRecord = await CountReset.findOne({ user_id });
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    if (!resetRecord) {
+      // First time user, create new record
+      resetRecord = new CountReset({ user_id, lastResetDate: today });
+      await resetRecord.save();
+      
+      return res.json({ 
+        message: "Count reset record created", 
+        wasReset: false,
+        lastResetDate: today
+      });
+    }
+    
+    // Check if we need to reset (different day)
+    if (resetRecord.lastResetDate !== today) {
+      // Update user's counts to 0
+      await User.findOneAndUpdate(
+        { user_id },
+        { 
+          countQuery: 0,
+          countMindmap: 0,
+          countCheatSheet: 0,
+          countFlashcard: 0
+        }
+      );
+      
+      // Update last reset date
+      resetRecord.lastResetDate = today;
+      await resetRecord.save();
+      
+      return res.json({ 
+        message: "Daily counts reset successfully", 
+        wasReset: true,
+        lastResetDate: today 
+      });
+    }
+    
+    // No reset needed
+    return res.json({ 
+      message: "No reset needed", 
+      wasReset: false,
+      lastResetDate: resetRecord.lastResetDate 
+    });
+    
+  } catch (error) {
+    console.error("Error checking/resetting counts:", error);
+    res.status(500).json({ message: "Error checking/resetting counts", error: error.message });
+  }
+};
+
+// Update Account Type
+exports.updateAccountType = async (req, res) => {
+  try {
+    const { user_id, accountType } = req.body;
+
+    if (!user_id) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
+
+    if (!accountType || !["FREE", "STANDARD", "PRO"].includes(accountType)) {
+      return res.status(400).json({ message: "Valid account type (FREE, STANDARD, or PRO) is required" });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { user_id },
+      { accountType },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.json({ message: "Account type updated successfully", accountType: user.accountType });
+  } catch (error) {
+    console.error("Error updating account type:", error);
+    res.status(500).json({ message: "Error updating account type", error: error.message });
   }
 };

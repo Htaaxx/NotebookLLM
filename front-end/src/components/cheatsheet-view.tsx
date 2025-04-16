@@ -20,6 +20,8 @@ import {
 import { Input } from "@/components/ui/input"
 import "../styles/cheatsheet.css"
 import cheatsheetCache from "../lib/cheatsheet-cache"
+import { accountTypeAPI } from "@/lib/api";
+import { ACCOUNT_LIMITS, shouldResetDailyCounts } from "@/lib/account-limits";
 
 interface CheatsheetViewProps {
   initialMarkdown?: string
@@ -93,6 +95,11 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
   const pagesRef = useRef<(HTMLDivElement | null)[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
 
+  const [accountType, setAccountType] = useState<string>("FREE");
+  const [cheatsheetCount, setCheatsheetCount] = useState<number>(0);
+  const [limitExceeded, setLimitExceeded] = useState<boolean>(false);
+
+  
   // Check for mobile view
   useEffect(() => {
     const checkMobileView = () => {
@@ -116,6 +123,46 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
       }
     }
   }, [])
+
+  // Check account type and usage on component mount
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const storedUserId = localStorage.getItem('user_id');
+        if (!storedUserId) return;
+        
+        // Check if we need to reset daily counts
+        if (shouldResetDailyCounts()) {
+          // Reset would happen server-side
+          setCheatsheetCount(0);
+        }
+        
+        // Fetch account type and current count
+        const accountTypeData = await accountTypeAPI.getAccountTypes(storedUserId);
+        setAccountType(accountTypeData.accountType || "FREE");
+        
+        const countData = await accountTypeAPI.getCountCheatSheet(storedUserId);
+        setCheatsheetCount(countData.countCheatSheet || 0);
+        
+        // Check if limit exceeded
+        checkCheatsheetLimit(accountTypeData.accountType || "FREE", countData.countCheatSheet || 0);
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+      }
+    };
+    
+    fetchUserInfo();
+  }, []);
+  
+  // Function to check if user has exceeded their daily limit
+  const checkCheatsheetLimit = (type: string, count: number) => {
+    const limit = 
+      type === "PRO" ? ACCOUNT_LIMITS.PRO.CHEATSHEETS :
+      type === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHEATSHEETS :
+      ACCOUNT_LIMITS.FREE.CHEATSHEETS;
+      
+    setLimitExceeded(count >= limit);
+  };
 
   // Handle fullscreen mode
   useEffect(() => {
@@ -144,6 +191,14 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
   // Fetch cheatsheet data from API based on selected files
   const fetchCheatsheetFromAPI = async (selectedFiles: any[]) => {
     console.log("fetchCheatsheetFromAPI called with files:", selectedFiles)
+
+    // Check if user has exceeded their limit
+    if (limitExceeded && accountType !== "PRO") {
+      setError(`You've reached your daily limit of ${accountType === "STANDARD" ? 
+                ACCOUNT_LIMITS.STANDARD.CHEATSHEETS : ACCOUNT_LIMITS.FREE.CHEATSHEETS} 
+                cheatsheets for ${accountType} accounts. Upgrade to create more.`);
+      return null;
+    }
 
     if (!selectedFiles || selectedFiles.length === 0) {
       console.log("No files selected for cheatsheet generation")
@@ -189,15 +244,17 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
       })
 
       console.log("API response status:", response.status)
-
-      if (!response.ok) {
-        console.error(`API error: ${response.status} ${response.statusText}`)
-        throw new Error(`API error: ${response.status}`)
-      }
-
       const data = await response.text()
-      console.log("Received cheatsheet data length:", data.length)
-      console.log("First 100 chars:", data.substring(0, 100) + "...")
+
+      // After successful response, update count
+      if (userID) {
+        const newCount = cheatsheetCount + 1;
+        await accountTypeAPI.updateCountCheatSheet(userID);
+        setCheatsheetCount(newCount);
+        
+        // Check if this puts user over the limit
+        checkCheatsheetLimit(accountType, newCount);
+      }
 
       // Store the document IDs for future reference
       setLastSelectedFileIds(documentIds)
@@ -1092,6 +1149,15 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
             )}
           </div>
         </div>
+
+        {limitExceeded && accountType !== "PRO" && (
+        <div className="p-4 text-center text-red-500 bg-red-50 rounded-md m-4">
+          <p>You've reached your daily limit of {accountType === "STANDARD" ? 
+             ACCOUNT_LIMITS.STANDARD.CHEATSHEETS : ACCOUNT_LIMITS.FREE.CHEATSHEETS} cheatsheets 
+             for {accountType} accounts.</p>
+          <p>Upgrade your account to create more cheatsheets.</p>
+        </div>
+      )}
 
         <div className="flex items-center space-x-2">
           {/* Page navigation */}

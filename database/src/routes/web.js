@@ -23,6 +23,10 @@ router.post("/updateCountQuery", authController.updateCountQuery);
 router.post("/updateCountMindmap", authController.updateCountMindmap);
 router.post("/updateCountFlashcard", authController.updateCountFlashcard);
 router.post("/updateCountCheatSheet", authController.updateCountCheatSheet);
+router.post("/getAccountType", authController.getAccountType);
+router.post("/checkAndResetCounts", authController.checkAndResetCounts);
+router.post("/updateAccountType", authController.updateAccountType);
+router.post("/createCountWithUserId", authController.createCountWithUserId);
 
 router.get("/dashboard", verifyToken, authController.dashboard);
 router.get("/users", authController.getUsers);

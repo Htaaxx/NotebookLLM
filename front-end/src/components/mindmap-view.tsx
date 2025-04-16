@@ -16,6 +16,8 @@ import "../styles/mindmap.css"
 import { MindMapNodeModal } from "./mindmap-node-modal"
 import { documentAPI } from "@/lib/api"
 import mindMapCache from "@/lib/mindmap-cache"
+import { accountTypeAPI } from "@/lib/api";
+import { ACCOUNT_LIMITS, shouldResetDailyCounts } from "@/lib/account-limits";
 
 // ----------------------------------------------------------------
 // TYPE DEFINITIONS
@@ -107,6 +109,49 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
   const [userID, setUserID] = useState("")
   const [lastSelectedFileIds, setLastSelectedFileIds] = useState<string[]>([])
   const [noFilesSelected, setNoFilesSelected] = useState(true)
+  const [accountType, setAccountType] = useState<string>("FREE");
+  const [mindmapCount, setMindmapCount] = useState<number>(0);
+  const [limitExceeded, setLimitExceeded] = useState<boolean>(false);
+
+  // Check account type and usage on component mount
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const storedUserId = localStorage.getItem('user_id');
+        if (!storedUserId) return;
+        
+        // Check if we need to reset daily counts
+        if (shouldResetDailyCounts()) {
+          // Reset would happen server-side
+          setMindmapCount(0);
+        }
+        
+        // Fetch account type and current count
+        const accountTypeData = await accountTypeAPI.getAccountTypes(storedUserId);
+        setAccountType(accountTypeData.accountType || "FREE");
+        
+        const countData = await accountTypeAPI.getCountMindmap(storedUserId);
+        setMindmapCount(countData.countMindmap || 0);
+        
+        // Check if limit exceeded
+        checkMindmapLimit(accountTypeData.accountType || "FREE", countData.countMindmap || 0);
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+      }
+    };
+    
+    fetchUserInfo();
+  }, []);
+
+  // Function to check if user has exceeded their daily limit
+  const checkMindmapLimit = (type: string, count: number) => {
+    const limit = 
+      type === "PRO" ? ACCOUNT_LIMITS.PRO.MINDMAPS :
+      type === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.MINDMAPS :
+      ACCOUNT_LIMITS.FREE.MINDMAPS;
+      
+    setLimitExceeded(count >= limit);
+  };
 
   // Get the current theme object
   const getThemeObject = (): MindMapTheme => {
@@ -224,6 +269,14 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
       return null
     }
 
+    // Check if user has exceeded their limit
+    if (limitExceeded && accountType !== "PRO") {
+      setError(`You've reached your daily limit of ${accountType === "STANDARD" ? 
+                ACCOUNT_LIMITS.STANDARD.MINDMAPS : ACCOUNT_LIMITS.FREE.MINDMAPS} 
+                mindmaps for ${accountType} accounts. Upgrade to create more.`);
+      return null;
+    }
+
     setNoFilesSelected(false)
     const documentIds = selectedFiles.map((file) => file.id)
 
@@ -278,6 +331,17 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
 
       const data = await response.text()
       console.log("Received mindmap data:", data.substring(0, 100) + "...")
+
+      // After successful response, update count
+      const storedUserId = localStorage.getItem('user_id');
+      if (storedUserId) {
+        const newCount = mindmapCount + 1;
+        await accountTypeAPI.updateCountMindmap(storedUserId);
+        setMindmapCount(newCount);
+        
+        // Check if this puts user over the limit
+        checkMindmapLimit(accountType, newCount);
+      }
 
       // Store the document IDs for future reference
       setLastSelectedFileIds(documentIds)
@@ -945,6 +1009,15 @@ export function MindMapView({ markdownContent, markdownFilePath, className, sele
         searchPaths={mindmap_node_search}
         onRemoveSearchPath={handleRemoveSearchPath}
       />
+
+      {limitExceeded && accountType !== "PRO" && (
+              <div className="p-4 text-center text-red-500 bg-red-50 rounded-md m-4">
+                <p>You've reached your daily limit of {accountType === "STANDARD" ? 
+                  ACCOUNT_LIMITS.STANDARD.MINDMAPS : ACCOUNT_LIMITS.FREE.MINDMAPS} mindmaps 
+                  for {accountType} accounts.</p>
+                <p>Upgrade your account to create more mindmaps.</p>
+              </div>
+            )}
 
       {isLoading ? (
         <div className="p-4 text-center flex-grow flex items-center justify-center">
