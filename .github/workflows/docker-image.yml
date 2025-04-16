@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [api, frontend, database]
+        service: [api, front-end, database]
 
     steps:
       - name: Checkout code
