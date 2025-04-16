@@ -7,14 +7,15 @@ import { ChatBox } from "@/components/chat-box"
 import { RightPanel } from "@/components/right-panel"
 import { RightButtons } from "@/components/right-buttons"
 import type { FileItem } from "@/types/app-types"
+import { EmbeddingProvider, useEmbedding } from "@/components/embedding-context"
 
-export default function DefaultPageContent() {
+// Create a content component that uses the embedding context
+function PageContent() {
   const [selectedFiles, setSelectedFiles] = useState<FileItem[]>([])
   const [activePanel, setActivePanel] = useState<"preview" | "mindmap" | "cheatsheet" | null>(null)
   const [previewFile, setPreviewFile] = useState<FileItem | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [files, setFiles] = useState<FileItem[]>([])
-  // Add a new state for sidebar visibility
   const [sidebarOpen, setSidebarOpen] = useState(true)
 
   const handleFileSelection = useCallback((files: FileItem[]) => {
@@ -24,6 +25,9 @@ export default function DefaultPageContent() {
   const handleViewChange = useCallback((view: "preview" | "mindmap" | "cheatsheet" | null) => {
     setActivePanel((prev) => (prev === view ? null : view))
   }, [])
+
+  const { status: embeddingStatus } = useEmbedding()
+  const isFeatureDisabled = embeddingStatus === "embedding"
 
   // Check for file preview from localStorage on component mount
   useEffect(() => {
@@ -123,6 +127,13 @@ export default function DefaultPageContent() {
   return (
     <main className="min-h-screen flex flex-col bg-white text-black">
       <NavBar />
+      {/* Embedding Progress Notification */}
+      {embeddingStatus === "embedding" && (
+        <div className="bg-amber-50 p-2 text-center text-sm">
+          Processing documents... Please wait before using mindmap or cheatsheet features.
+        </div>
+      )}
+
       <div className="flex flex-1 relative">
         <div className="h-[calc(100vh-64px)] bg-white">
           <FileCollection onFileSelect={handleFileSelection} key={`file-collection-${refreshTrigger}`} />
@@ -130,14 +141,32 @@ export default function DefaultPageContent() {
         <div
           className={`transition-all duration-300 bg-white ${activePanel ? (sidebarOpen ? "w-[42%]" : "w-[50%]") : "flex-1"}`}
         >
-          <ChatBox />
+          <ChatBox isDisabled={isFeatureDisabled} />
         </div>
         {/* Position RightButtons absolutely to prevent layout issues */}
         <div className="absolute right-4 top-1/2 -translate-y-1/2 z-50">
-          <RightButtons onViewChange={handleViewChange} activeView={activePanel} />
+          <RightButtons 
+            onViewChange={handleViewChange} 
+            activeView={activePanel} 
+            isDisabled={isFeatureDisabled} 
+          />
         </div>
-        <RightPanel activePanel={activePanel} selectedFiles={selectedFiles} onViewChange={handleViewChange} />
+        <RightPanel 
+          activePanel={activePanel} 
+          selectedFiles={selectedFiles} 
+          onViewChange={handleViewChange} 
+          isDisabled={isFeatureDisabled}
+        />
       </div>
     </main>
+  )
+}
+
+// Wrap the component with EmbeddingProvider
+export default function DefaultPageContent() {
+  return (
+    <EmbeddingProvider>
+      <PageContent />
+    </EmbeddingProvider>
   )
 }
