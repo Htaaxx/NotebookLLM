@@ -36,4 +36,4 @@ jobs:
           context: ./${{ matrix.service }}
           file: ./${{ matrix.service }}/Dockerfile
           push: true
-          tags: ${{DOCKER_USERNAME}}/noteus-${{ matrix.service }}:latest
+          tags: ${{secrets.DOCKER_USERNAME}}/noteus-${{ matrix.service }}:latest
