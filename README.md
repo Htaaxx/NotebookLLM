@@ -52,7 +52,7 @@ npm install
 npm run dev
 ```
 Runs at http://localhost:3000
-### Back-End detail
+### database detail
 ```
 cd back-end
 npm install
