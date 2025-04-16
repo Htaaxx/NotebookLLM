@@ -18,7 +18,10 @@ from langchain_core.prompts import ChatPromptTemplate
 from sklearn.cluster import KMeans
 from typing import Tuple, List, Dict, Any, Optional  # Thêm Dict, Any, Optional
 
-import pymongo 
+from langchain_google_genai import ChatGoogleGenerativeAI
+import google.generativeai as genai  # Import thư viện gốc của Google
+
+import pymongo
 from pymongo.collection import (
     Collection as MongoCollection,
 )  # <--- Để tránh trùng tên với pymilvus
@@ -43,10 +46,24 @@ MONGO_URI = os.getenv("MONGO_URI")  # <--- Lấy URI MongoDB
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")  # <--- Lấy tên DB
 MONGO_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_NAME")  # <--- Lấy tên Collection
 
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+
+if not GOOGLE_API_KEY:
+    print(
+        "Cảnh báo: GOOGLE_API_KEY chưa được cấu hình trong .env. Không thể sử dụng Gemini."
+    )
+    # Có thể raise lỗi hoặc đặt llm = None tùy logic xử lý của bạn
+else:
+    try:
+        genai.configure(api_key=GOOGLE_API_KEY)
+        print("Đã cấu hình thành công Google API Key.")
+    except Exception as e:
+        print(f"Lỗi khi cấu hình Google API Key: {e}")
+
 hnsw_index_params = {
-    "metric_type": "COSINE", # Phải khớp với embedding của bạn
+    "metric_type": "COSINE",  # Phải khớp với embedding của bạn
     "index_type": "HNSW",
-    "params": {"M": 16, "efConstruction": 200}
+    "params": {"M": 16, "efConstruction": 200},
 }
 
 mongo_client = None
@@ -66,10 +83,9 @@ else:
     )
 
 
-
 def get_mongo_collection() -> Optional[MongoCollection]:
     """Lấy đối tượng collection MongoDB."""
-    if not mongo_client or not MONGO_DB_NAME or not MONGO_COLLECTION_NAME:
+    if mongo_client is None or not MONGO_DB_NAME or not MONGO_COLLECTION_NAME:
         print("Lỗi: Kết nối MongoDB hoặc tên DB/Collection chưa được cấu hình.")
         return None
     try:
@@ -97,7 +113,27 @@ connections.connect(alias="default", uri=ZILLIZ_CLOUD_URI, token=ZILLIZ_CLOUD_TO
 COLLECTION_NAME = "rag_collection"
 
 # Set up LLM
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API_KEY)
+# llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API_KEY)
+
+GEMINI_MODEL_NAME = "gemini-1.5-flash-latest"  # Hoặc "gemini-1.5-pro-latest", etc.
+
+# Khởi tạo LLM (Thay thế ChatOpenAI)
+if GOOGLE_API_KEY:  # Chỉ khởi tạo nếu có API Key
+    try:
+        llm = ChatGoogleGenerativeAI(
+            model=GEMINI_MODEL_NAME,
+            google_api_key=GOOGLE_API_KEY,
+            temperature=0.5,  # Điều chỉnh nhiệt độ nếu cần
+            convert_system_message_to_human=False,  # Model mới hỗ trợ SystemMessage
+            # Thêm các tham số khác nếu cần, ví dụ: safety_settings
+        )
+        print(f"Sử dụng mô hình LLM: Google Gemini ({GEMINI_MODEL_NAME})")
+    except Exception as e:
+        print(f"Lỗi khi khởi tạo ChatGoogleGenerativeAI model {GEMINI_MODEL_NAME}: {e}")
+        llm = None  # Đặt llm là None nếu khởi tạo lỗi
+else:
+    print("Không thể khởi tạo LLM do thiếu GOOGLE_API_KEY.")
+    llm = None
 
 # Prompt from LangChain hub
 prompt = ChatPromptTemplate.from_template(
@@ -132,7 +168,6 @@ CÂU TRẢ LỜI CỦA BẠN:
 )
 
 
-
 # --- Ví dụ: Hàm tạo index IVF_FLAT (bạn cần gọi hàm này sau khi thêm dữ liệu) ---
 def create_ivf_flat_index(user_id: str, nlist_value: int = 1024):
     """Tạo index IVF_FLAT nếu chưa có."""
@@ -146,40 +181,51 @@ def create_ivf_flat_index(user_id: str, nlist_value: int = 1024):
         vector_field_name = "embedding"
 
         if collection.has_index():
-             index_info_list = collection.indexes # Lấy danh sách các index
-             # Kiểm tra xem có index nào trên trường vector chưa
-             vector_index_exists = any(idx.field_name == vector_field_name for idx in index_info_list)
-             if vector_index_exists:
-                  print(f"Index on field '{vector_field_name}' already exists for collection '{collection_name}'.")
-                  # Có thể kiểm tra thêm index_type và params nếu muốn drop và tạo lại
-                  # Ví dụ lấy params của index đầu tiên (cần kiểm tra đúng index)
-                  # current_params = index_info_list[0].params
-                  # print(f"Existing index params: {current_params}")
-                  # collection.release()
-                  # collection.drop_index()
-                  # print("Dropped existing index.")
-                  # --> Đi tiếp để tạo index mới
-                  return # Bỏ qua nếu không muốn tạo lại
+            index_info_list = collection.indexes  # Lấy danh sách các index
+            # Kiểm tra xem có index nào trên trường vector chưa
+            vector_index_exists = any(
+                idx.field_name == vector_field_name for idx in index_info_list
+            )
+            if vector_index_exists:
+                print(
+                    f"Index on field '{vector_field_name}' already exists for collection '{collection_name}'."
+                )
+                # Có thể kiểm tra thêm index_type và params nếu muốn drop và tạo lại
+                # Ví dụ lấy params của index đầu tiên (cần kiểm tra đúng index)
+                # current_params = index_info_list[0].params
+                # print(f"Existing index params: {current_params}")
+                # collection.release()
+                # collection.drop_index()
+                # print("Dropped existing index.")
+                # --> Đi tiếp để tạo index mới
+                return  # Bỏ qua nếu không muốn tạo lại
 
-        print(f"Creating IVF_FLAT index for collection '{collection_name}' with nlist={nlist_value}")
+        print(
+            f"Creating IVF_FLAT index for collection '{collection_name}' with nlist={nlist_value}"
+        )
 
         ivf_flat_index_params = {
             "metric_type": "COSINE",  # QUAN TRỌNG: Phải khớp với embedding của bạn
             "index_type": "IVF_FLAT",
-            "params": {"nlist": nlist_value} # Tham số lúc xây dựng index
+            "params": {"nlist": nlist_value},  # Tham số lúc xây dựng index
         }
 
-        collection.create_index(field_name=vector_field_name, index_params=ivf_flat_index_params)
+        collection.create_index(
+            field_name=vector_field_name, index_params=ivf_flat_index_params
+        )
         collection.flush()
         print(f"Successfully created IVF_FLAT index on '{vector_field_name}'.")
 
         print(f"Loading collection '{collection_name}'...")
-        collection.load() # Load collection để sẵn sàng search
+        collection.load()  # Load collection để sẵn sàng search
         print(f"Collection '{collection_name}' loaded.")
 
     except Exception as e:
-        print(f"Error creating or loading index for collection '{collection_name}': {e}")
+        print(
+            f"Error creating or loading index for collection '{collection_name}': {e}"
+        )
         import traceback
+
         traceback.print_exc()
 
 
@@ -271,7 +317,9 @@ def get_user_milvus_collection(user_id: str) -> Collection:
         return None
     return Collection(collection_name)
 
+
 SUMMARIZATION_KEYWORDS = ["tổng hợp", "tóm tắt", "summarize", "summary"]
+
 
 def check_summarization_intent(question: str) -> bool:
     """Kiểm tra xem câu hỏi có phải là yêu cầu tóm tắt không."""
@@ -284,8 +332,9 @@ def check_summarization_intent(question: str) -> bool:
             return True
     return False
 
+
 SUMMARIZATION_PROMPT_TEMPLATE = ChatPromptTemplate.from_template(
-"""Bạn là một trợ lý AI giỏi tóm tắt văn bản. Dựa vào nội dung dưới đây được trích xuất từ một tài liệu, hãy viết một bản tóm tắt ngắn gọn, nêu bật những ý chính và thông tin quan trọng nhất.
+    """Bạn là một trợ lý AI giỏi tóm tắt văn bản. Dựa vào nội dung dưới đây được trích xuất từ một tài liệu, hãy viết một bản tóm tắt ngắn gọn, nêu bật những ý chính và thông tin quan trọng nhất.
 
 NỘI DUNG TÀI LIỆU:
 ---
@@ -296,7 +345,10 @@ BẢN TÓM TẮT (Ngắn gọn, súc tích):
 """
 )
 
-def get_content_and_filename(user_id: str, doc_id: str) -> Tuple[Optional[str], Optional[str]]:
+
+def get_content_and_filename(
+    user_id: str, doc_id: str
+) -> Tuple[Optional[str], Optional[str]]:
     """Lấy toàn bộ nội dung text và filename của các chunks cho một doc_id."""
     collection = get_user_milvus_collection(user_id)
     if not collection:
@@ -306,154 +358,288 @@ def get_content_and_filename(user_id: str, doc_id: str) -> Tuple[Optional[str], 
         # Yêu cầu trả về cả filename
         results = collection.query(
             expr=f'doc_id == "{doc_id}"',
-            output_fields=["content", "page_number", "chunk_index", "filename"], # Thêm filename
+            output_fields=[
+                "content",
+                "page_number",
+                "chunk_index",
+                "filename",
+            ],  # Thêm filename
         )
         if not results:
             return None, None
 
         # Sắp xếp chunk nếu cần
-        results.sort(key=lambda x: (x.get('page_number', 0), x.get('chunk_index', 0)))
+        results.sort(key=lambda x: (x.get("page_number", 0), x.get("chunk_index", 0)))
 
         # Lấy filename từ kết quả đầu tiên (giả định filename là nhất quán)
         filename = results[0].get("filename") if results else None
 
         # Ghép nối nội dung
         full_content = "\n\n".join([res.get("content", "") for res in results])
-        return full_content, filename # Trả về cả hai
+        return full_content, filename  # Trả về cả hai
     except Exception as e:
-        print(f"Error retrieving content/filename for doc_id '{doc_id}', user '{user_id}': {e}")
+        print(
+            f"Error retrieving content/filename for doc_id '{doc_id}', user '{user_id}': {e}"
+        )
         return None, None
 
 
-def ask_question(user_id: str, question: str, headers: List[str] = []) -> str:
-    """Trả lời câu hỏi DỰA TRÊN CÁC DOCUMENT ĐÃ CHỌN của user."""
-    # ===== BƯỚC 1+2: KIỂM TRA INTENT VÀ XÁC ĐỊNH TARGET =====
+def ask_question(
+    user_id: str, question: str, headers: List[str] = []
+) -> Dict[str, Any]:
+    """Trả lời câu hỏi DỰA TRÊN CÁC DOCUMENT ĐÃ CHỌN của user, trả về cấu trúc dữ liệu cho citation."""
+
+    if not llm:
+        return {
+            "answer": "Lỗi: LLM chưa được khởi tạo. Vui lòng kiểm tra cấu hình.",
+            "citations": {},
+        }
+
+    # ===== KIỂM TRA INTENT SUMMARIZATION =====
     if check_summarization_intent(question):
         print(f"Detected summarization intent for query: '{question}'")
         mongo_collection = get_mongo_collection()
+        if not mongo_collection:
+            return {
+                "answer": "Lỗi kết nối cơ sở dữ liệu để kiểm tra tài liệu.",
+                "citations": {},
+            }
+
         selected_ids = get_selected_document_ids(user_id, mongo_collection)
 
         if not selected_ids:
-            return "Vui lòng chọn một tài liệu để tóm tắt."
+            # Trả về cấu trúc dict
+            return {"answer": "Vui lòng chọn một tài liệu để tóm tắt.", "citations": {}}
         elif len(selected_ids) > 1:
-            # Tạm thời chỉ tóm tắt file đầu tiên, hoặc yêu cầu người dùng làm rõ
-            print(f"Multiple documents selected ({len(selected_ids)}). Summarizing the first one: {selected_ids[0]}")
-            target_doc_id = selected_ids[0]
-            return f"Bạn đang chọn nhiều tài liệu ({len(selected_ids)}). Vui lòng chỉ chọn một tài liệu hoặc chỉ định tên file bạn muốn tóm tắt."
+            # Trả về cấu trúc dict
+            doc_list_str = ", ".join(selected_ids[:3]) + (
+                "..." if len(selected_ids) > 3 else ""
+            )
+            return {
+                "answer": f"Bạn đang chọn nhiều tài liệu ({len(selected_ids)}): {doc_list_str}. Vui lòng chỉ chọn một tài liệu hoặc chỉ định tên file bạn muốn tóm tắt.",
+                "citations": {},
+            }
         else:
             target_doc_id = selected_ids[0]
             print(f"Target document for summarization: {target_doc_id}")
 
-        # ===== BƯỚC 3: LẤY NỘI DUNG =====
         full_content, target_filename = get_content_and_filename(user_id, target_doc_id)
 
         if not full_content:
-            # Vẫn có thể dùng ID nếu không lấy được filename
-            return f"Không thể lấy được nội dung của tài liệu ID '{target_doc_id}' để tóm tắt."
+            # Trả về cấu trúc dict
+            return {
+                "answer": f"Không thể lấy được nội dung của tài liệu ID '{target_doc_id}' để tóm tắt.",
+                "citations": {},
+            }
 
-        # Quyết định tên hiển thị: Ưu tiên filename, nếu không có thì dùng ID
-        display_name = f"'{target_filename}'" if target_filename else f"ID {target_doc_id}"
+        display_name = (
+            f"'{target_filename}'" if target_filename else f"ID {target_doc_id}"
+        )
 
-        # ===== BƯỚC 4: GỌI LLM TÓM TẮT =====
         try:
-            # ... (Gọi LLM) ...
-            messages = SUMMARIZATION_PROMPT_TEMPLATE.invoke({"document_content": full_content})
+            messages = SUMMARIZATION_PROMPT_TEMPLATE.invoke(
+                {"document_content": full_content}
+            )
             summary_response = llm.invoke(messages)
-
-            # Sử dụng display_name thay vì target_doc_id
-            return f"**Tóm tắt cho tài liệu {display_name}:**\n\n{summary_response.content}"
+            # Trả về cấu trúc dict
+            return {
+                "answer": f"**Tóm tắt cho tài liệu {display_name}:**\n\n{summary_response.content}",
+                "citations": {},
+            }
         except Exception as e:
-            # ... (Xử lý lỗi) ...
-            # Cũng có thể dùng display_name trong thông báo lỗi
-            return f"Đã xảy ra lỗi trong quá trình tóm tắt tài liệu {display_name}."
+            print(f"Lỗi khi gọi LLM tóm tắt: {e}")
+            # Trả về cấu trúc dict
+            return {
+                "answer": f"Đã xảy ra lỗi trong quá trình tóm tắt tài liệu {display_name}.",
+                "citations": {},
+            }
 
-
+    # ===== LUỒNG RAG CHÍNH =====
     else:
         vector_store = get_user_vector_store(user_id)
-        if len(headers) > 0:
-            final_content = "\n".join(headers) + "\n" + question
-        else:
-            final_content = question
+        # Không cần final_content nếu không dùng headers nữa
 
-        # --- TASK 3: Kết nối MongoDB và lấy Doc ID đã chọn ---
         mongo_collection = get_mongo_collection()
-        selected_ids = get_selected_document_ids(user_id, mongo_collection)
-        # -----------------------------------------------------
-
-        search_filter_expr = None  # Khởi tạo filter là None
-        if not selected_ids:
-            print(
-                f"Không có document nào được chọn cho user {user_id}. Không thực hiện tìm kiếm."
-            )
-            return "Vui lòng chọn ít nhất một tài liệu để thực hiện tìm kiếm trong đó."
-        else:
-            search_filter_expr = f"doc_id in {selected_ids}"
-            print(f"Thực hiện tìm kiếm với Milvus filter: {search_filter_expr}")
-        try:
-            nprobe_value = 64 
-            search_params_config = {
-                "metric_type": "COSINE", # Phải khớp metric lúc tạo index
-                "params": {
-                    "nprobe": nprobe_value # Tham số tìm kiếm chính cho IVF_FLAT
-                }
+        if mongo_collection is None:
+            return {
+                "answer": "Lỗi kết nối cơ sở dữ liệu để kiểm tra tài liệu.",
+                "citations": {},
             }
-            search_kwargs = {"search_params": search_params_config}
-            if search_filter_expr:
-                search_kwargs["expr"] = search_filter_expr
-            
-            k_value = 15
+        selected_ids = get_selected_document_ids(user_id, mongo_collection)
+
+        search_filter_expr = None
+        if not selected_ids:
+            # Trả về cấu trúc dict
+            return {
+                "answer": "Vui lòng chọn ít nhất một tài liệu để thực hiện tìm kiếm trong đó.",
+                "citations": {},
+            }
+        else:
+            # Format list ID thành chuỗi cho Milvus 'in' operator
+            selected_ids_str = ", ".join([f'"{id_}"' for id_ in selected_ids])
+            search_filter_expr = (
+                f"doc_id in [{selected_ids_str}]"  # Format đúng cho Milvus
+            )
+            print(f"Thực hiện tìm kiếm với Milvus filter: {search_filter_expr}")
+
+        try:
+            # Cấu hình search_kwargs - bỏ search_params nếu không dùng IVF_FLAT hoặc index có params khác
+            search_kwargs = {"expr": search_filter_expr}
+            # Ví dụ nếu dùng IVF_FLAT:
+            # nprobe_value = 64
+            # search_params_config = {"metric_type": "COSINE", "params": {"nprobe": nprobe_value}}
+            # search_kwargs["search_params"] = search_params_config
+
+            k_value = 10  # Số lượng chunk lấy về
             retrieved_docs = vector_store.similarity_search(
-                query=question,
-                k=k_value,
-                search_kwargs=search_kwargs 
+                query=question, k=k_value, search_kwargs=search_kwargs
             )
         except Exception as e:
-            print(f"Lỗi trong quá trình similarity search (có thể do filter): {e}")
-            return f"Đã xảy ra lỗi trong quá trình tìm kiếm tài liệu: {e}"
+            print(f"Lỗi trong quá trình similarity search: {e}")
+            import traceback
+
+            traceback.print_exc()
+            # Trả về cấu trúc dict
+            return {
+                "answer": f"Đã xảy ra lỗi trong quá trình tìm kiếm tài liệu: {e}",
+                "citations": {},
+            }
 
         if not retrieved_docs:
-            if selected_ids:
-                return "Không tìm thấy thông tin liên quan trong các tài liệu bạn đã chọn."
-            else:
-                return (
-                    "Không tìm thấy thông tin liên quan trong bất kỳ tài liệu nào của bạn."
-                )
-        docs_for_context = retrieved_docs[:10]
+            # Trả về cấu trúc dict
+            return {
+                "answer": "Không tìm thấy thông tin liên quan trong các tài liệu bạn đã chọn.",
+                "citations": {},
+            }
 
-        citations = format_citations(docs_for_context)
+        # --- Bước 1: Chuẩn bị Context và Lưu Mapping ---
+        docs_for_context = retrieved_docs  # Sử dụng các docs đã lấy
         context_parts = []
+        source_mapping = {}  # Dict để map index trong context -> thông tin gốc
+
+        print(f"Chuẩn bị context từ {len(docs_for_context)} tài liệu retrieved.")
         for idx, doc in enumerate(docs_for_context, 1):
-                filename = doc.metadata.get("filename", "N/A")
-                page_number = doc.metadata.get("page_number", "N/A")
-                context_parts.append(
-                    f"[DOCUMENT {idx}]\nFile: {filename}\nPage: {page_number}\nContent: {doc.page_content[:300]}..."
+            metadata = doc.metadata
+            filename = metadata.get("filename", "N/A")
+            # Đảm bảo page_number là int, xử lý None hoặc string
+            page_number_raw = metadata.get("page_number")
+            page_number = -1  # Mặc định nếu không hợp lệ
+            try:
+                if page_number_raw is not None:
+                    page_number = int(page_number_raw)
+            except (ValueError, TypeError):
+                print(
+                    f"Cảnh báo: Không thể chuyển đổi page_number '{page_number_raw}' thành số nguyên cho chunk {metadata.get('chunk_id', 'N/A')}."
+                )
+                pass  # Giữ giá trị mặc định -1
+
+            doc_id = metadata.get("doc_id", "N/A")
+            chunk_id = metadata.get("chunk_id", None)  # Lấy chunk_id nếu có
+            content = doc.page_content
+
+            if not chunk_id:
+                print(
+                    f"Cảnh báo: Thiếu 'chunk_id' trong metadata cho doc_id {doc_id}, page {page_number}. Citation có thể không chính xác."
+                )
+
+            # Tạo context cho LLM
+            context_parts.append(
+                f"[DOCUMENT {idx}]\nFile: {filename}\nPage: {page_number}\nContent: {content[:400]}..."  # Tăng nhẹ preview
             )
 
-        # Gọi LLM với context đã lọc (hoặc không lọc nếu selected_ids rỗng và bạn chọn tìm tất cả)
-        # Sử dụng prompt đã được sửa đổi để xử lý câu hỏi vô nghĩa
-        messages = prompt.invoke(
-            {"question": question, "context": "\n\n".join(context_parts)}
-        )
-        response = llm.invoke(messages)
-        # references_text = "\n\nREFERENCES:\n"
-        # for num, cit_data in citations.items():
-        #         # Lấy nội dung preview ngắn gọn hơn từ full_content nếu cần
-        #         content_preview = cit_data.get("full_content", "")[:100] + "..."
-        #         references_text += f"[{num}] File: \"{cit_data['file']}\", Trang: {cit_data['page']}, Nội dung: \"{content_preview}\"\n"
+            # Lưu thông tin chi tiết để map lại sau này
+            source_mapping[idx] = {
+                "doc_id": doc_id,
+                "chunk_id": chunk_id,  # Có thể là None
+                "page_number": page_number,
+                "filename": filename,
+                "content_preview": content[:200]
+                + "...",  # Preview ngắn hơn cho frontend
+            }
 
-        # Chỉ thêm references nếu có citations được dùng trong response (cần logic kiểm tra phức tạp hơn)
-        # Hoặc đơn giản là luôn thêm nếu có citations được trả về
-        # if citations:
-        #         final_response = response.content + references_text
-        # else:
-        #         final_response = response.content
+        context_string = "\n\n".join(context_parts)
 
-        return response.content
+        # --- Bước 2: Gọi LLM ---
+        try:
+            print("Đang gọi LLM để tạo câu trả lời...")
+            messages = prompt.invoke({"question": question, "context": context_string})
+            llm_response = llm.invoke(messages)
+            llm_response_content = llm_response.content
+            print("LLM đã phản hồi.")
+        except Exception as e:
+            print(f"Lỗi khi gọi LLM: {e}")
+            import traceback
+
+            traceback.print_exc()
+            return {"answer": f"Lỗi khi tạo câu trả lời từ LLM: {e}", "citations": {}}
+
+        # --- Bước 3: Phân tích Kết quả LLM và Tạo Cấu trúc Trả về ---
+        answer_text = llm_response_content
+        references_section = ""
+        citations_details = {}  # Format: {"1": {...}, "2": {...}}
+
+        # Tìm vị trí "REFERENCES:" (không phân biệt hoa thường, tìm từ cuối lên để tránh trùng trong text)
+        ref_marker = "REFERENCES:"
+        ref_pos = llm_response_content.upper().rfind(ref_marker.upper())
+
+        if ref_pos != -1:
+            answer_text = llm_response_content[:ref_pos].strip()
+            # Lấy phần sau marker, bỏ qua marker và khoảng trắng/newline
+            references_section = llm_response_content[
+                ref_pos + len(ref_marker) :
+            ].strip()
+            print(
+                f"Đã tách phần REFERENCES:\n{references_section[:200]}..."
+            )  # Log phần đầu references
+
+            # Phân tích từng dòng trong REFERENCES:
+            # Pattern: Bắt đầu bằng [số], theo sau là bất kỳ ký tự nào
+            ref_line_pattern = re.compile(r"^\s*\[(\d+)\]\s*(.*)$")
+            parsed_citations = set()  # Tránh xử lý trùng lặp nếu LLM lặp lại số
+
+            for line in references_section.splitlines():
+                match = ref_line_pattern.match(line)
+                if match:
+                    try:
+                        citation_number_str = match.group(1)
+                        citation_number_int = int(citation_number_str)
+                        # reference_content_llm = match.group(2).strip() # Nội dung LLM viết cho reference này (ít dùng)
+
+                        if citation_number_int not in parsed_citations:
+                            # Lấy thông tin gốc từ mapping
+                            original_source = source_mapping.get(citation_number_int)
+
+                            if original_source:
+                                # Lưu vào dict kết quả, key là số citation dạng string
+                                citations_details[citation_number_str] = original_source
+                                parsed_citations.add(citation_number_int)
+                                # print(f"Đã map citation [{citation_number_str}] tới chunk: {original_source.get('chunk_id', 'N/A')}")
+                            else:
+                                print(
+                                    f"Cảnh báo: Không tìm thấy source gốc cho citation số {citation_number_int} trong mapping (có {len(source_mapping)} sources)."
+                                )
+
+                    except (ValueError, IndexError) as parse_err:
+                        print(
+                            f"Lỗi khi phân tích dòng reference: '{line}'. Lỗi: {parse_err}"
+                        )
+        else:
+            # Nếu không tìm thấy "REFERENCES:", toàn bộ là câu trả lời
+            print(
+                "Cảnh báo: Không tìm thấy phần 'REFERENCES:' trong phản hồi của LLM. Trả về toàn bộ nội dung."
+            )
+            answer_text = llm_response_content.strip()  # Vẫn trả về answer text
+
+        print(f"Trả về {len(citations_details)} chi tiết citation.")
+        # Trả về dictionary hoàn chỉnh
+        return {"answer": answer_text, "citations": citations_details}
 
 
 """
 CITATION FORMATTING
 """
+
+
 def validate_citations(response: str, citations: dict):
     # Kiểm tra mọi citation trong response đều có trong references
     used_citations = set(re.findall(r"\[(\d+)\]", response))
@@ -830,18 +1016,20 @@ async def process_and_store_file(  # Đổi tên hàm và thêm content_type
         )
 
         # --- BƯỚC 5: KIỂM TRA/TẠO INDEX SAU KHI THÊM DATA ---
-        if num_added > 0: # Chỉ chạy nếu thực sự có thêm dữ liệu mới
+        if num_added > 0:  # Chỉ chạy nếu thực sự có thêm dữ liệu mới
             try:
                 print(f"Bắt đầu kiểm tra/tạo index IVF_FLAT cho user {user_id}...")
                 # **QUAN TRỌNG**: Chọn giá trị nlist phù hợp.
                 # Giá trị này nên ổn định cho mỗi user hoặc lấy từ cấu hình.
-                nlist_for_index = 1024 # Ví dụ, bạn cần xác định giá trị này
+                nlist_for_index = 1024  # Ví dụ, bạn cần xác định giá trị này
                 # Chạy hàm đồng bộ create_ivf_flat_index trong một thread riêng
                 await asyncio.to_thread(create_ivf_flat_index, user_id, nlist_for_index)
                 print(f"Hoàn tất kiểm tra/tạo index cho user {user_id}.")
             except Exception as index_err:
                 # Ghi log lỗi nhưng không nên dừng toàn bộ quá trình xử lý file
-                print(f"LỖI trong quá trình kiểm tra/tạo index cho user {user_id}: {index_err}")
+                print(
+                    f"LỖI trong quá trình kiểm tra/tạo index cho user {user_id}: {index_err}"
+                )
                 traceback.print_exc()
 
         return num_added
@@ -1092,10 +1280,12 @@ def extract_all_headers(text: str) -> str:
     for line in lines:
         stripped_line = line.strip()
         if stripped_line.startswith("#"):
-            header_text += "#" + stripped_line + "\n" 
-        else :
+            header_text += "#" + stripped_line + "\n"
+        else:
             header_text += stripped_line + "\n"
     return header_text
+
+
 def add_hashtag_to_header(text: str) -> str:
     """Adds # to lines starting with #, ##, ### while preserving relative order."""
     header_text = ""
@@ -1103,11 +1293,11 @@ def add_hashtag_to_header(text: str) -> str:
     for line in lines:
         stripped_line = line.strip()
         if stripped_line.startswith("#"):
-            header_text += "#" + stripped_line + "\n" 
-        else :
+            header_text += "#" + stripped_line + "\n"
+        else:
             header_text += stripped_line + "\n"
     return header_text
-    
+
 
 # (Optional) Function to write content to a file, ensure correct encoding
 def write_to_file(file_path: str, content: str):
