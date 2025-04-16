@@ -84,12 +84,12 @@ export function HeroSection({ onGetStarted, onSeeDemo }: HeroSectionProps) {
               <video
                 ref={videoRef}
                 className="w-full h-auto rounded-lg"
-                poster="/placeholder.svg?height=500&width=600"
+                poster="/NoteUS.jpg"
                 controls={isPlaying}
                 onEnded={() => setIsPlaying(false)}
                 playsInline
               >
-                <source src="/demo-video.mp4" type="video/mp4" />
+                <source src="/noteUS_demo.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>
@@ -104,10 +104,6 @@ export function HeroSection({ onGetStarted, onSeeDemo }: HeroSectionProps) {
       <motion.div
         className="absolute bottom-20 right-10 w-32 h-32 bg-blue-200 rounded-full opacity-20"
         variants={slideIn("up", "spring", 0.4, 1)}
-      />
-      <motion.div
-        className="absolute top-1/3 right-1/4 w-16 h-16 bg-yellow-200 rounded-full opacity-20"
-        variants={zoomIn(0.6, 1)}
       />
     </motion.div>
   )
