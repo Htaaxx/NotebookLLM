@@ -12,29 +12,27 @@ import {
   Search,
   X,
   Trash2,
-  MoreVertical,
-  Eye,
   Check,
+  Map,
+  Globe,
+  AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useLanguage } from "@/lib/language-context"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import { fadeIn, buttonAnimation } from "@/lib/motion-utils"
 import ReactMarkdown from "react-markdown"
 import { Switch } from "@/components/ui/switch"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator,
-} from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import UrlContext from "../components/url-context"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 
-export function ChatBox() {
+interface ChatBoxProps {
+  isDisabled?: boolean
+}
+
+export function ChatBox({ isDisabled = false }: ChatBoxProps) {
   const [showSettings, setShowSettings] = useState(false)
   const [showUrlSettings, setShowUrlSettings] = useState(false)
   const [message, setMessage] = useState("")
@@ -51,9 +49,43 @@ export function ChatBox() {
   const [expandedPaths, setExpandedPaths] = useState(false)
   const [activeRecallSession, setActiveRecallSession] = useState<string | null>(null)
 
-    // URL context state
-    const [useUrlContext, setUseUrlContext] = useState(false)
-    const [urls, setUrls] = useState<string[]>([])
+  // New state for the context collapsible
+  const [isContextOpen, setIsContextOpen] = useState(false)
+
+  // URL context state
+  const [url, setUrl] = useState("")
+  const [urlSearchQuery, setUrlSearchQuery] = useState("")
+  const [urls, setUrls] = useState<string[]>([])
+  const [useUrlContext, setUseUrlContext] = useState(false)
+
+  // URL context functions
+  const handleAddUrl = () => {
+    if (url && !urls.includes(url)) {
+      setUrls([...urls, url])
+      setUrl("")
+    }
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault()
+      handleAddUrl()
+    }
+  }
+
+  const isYoutubeUrl = (url: string) => {
+    return url.includes("youtube.com") || url.includes("youtu.be")
+  }
+
+  const handleClearUrls = () => {
+    setUrls([])
+  }
+
+  // Filter URLs based on search query
+  const filteredUrls = urls.filter((url) => {
+    if (!urlSearchQuery) return true
+    return url.toLowerCase().includes(urlSearchQuery.toLowerCase())
+  })
 
   useEffect(() => {
     if (useAsContext) {
@@ -76,6 +108,9 @@ export function ChatBox() {
 
       // Automatically expand paths when new ones are added
       setExpandedPaths(true)
+
+      // Open the context panel when new paths are added
+      setIsContextOpen(true)
     }
 
     // Add event listener
@@ -116,7 +151,7 @@ export function ChatBox() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const userMessage = message.trim()
-    if (!userMessage) return
+    if (!userMessage|| isLoading||isDisabled) return
 
     // Add user message to chat history
     setChatHistory((prev) => [...prev, { text: userMessage, isUser: true }])
@@ -341,11 +376,190 @@ export function ChatBox() {
     }
   }, [])
 
-  const handleAddUrl = (url: string) => {
-    if (url && !urls.includes(url)) {
-      setUrls([...urls, url])
-    }
-  }
+  const renderMindMapPaths = () => (
+    <div className="px-2 py-1">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Map className="w-4 h-4 text-green-600" />
+          <span className="font-medium text-sm">Mind Map Paths</span>
+          {searchPaths.length > 0 && (
+            <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
+              {searchPaths.length}
+            </Badge>
+          )}
+        </div>
+        <Switch checked={useAsContext} onCheckedChange={setUseAsContext} className="scale-75" />
+      </div>
+
+      {/* Search input */}
+      {searchPaths.length > 0 && (
+        <div className="relative mb-2">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+          <Input
+            placeholder="Search path..."
+            className="pl-7 h-7 text-xs"
+            value={pathSearchQuery}
+            onChange={(e) => setPathSearchQuery(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* Path list */}
+      {searchPaths.length > 0 ? (
+        <div>
+          <div className="max-h-32 overflow-y-auto mb-2 rounded-md border">
+            {filteredPaths.map((path, index) => (
+              <TooltipProvider key={index}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-between p-1.5 hover:bg-gray-50 border-b last:border-b-0">
+                      <div className="flex items-center gap-1">
+                        {useAsContext ? (
+                          <Check className="h-3 w-3 text-green-500" />
+                        ) : (
+                          <div className="h-3 w-3 border border-gray-300 rounded-sm" />
+                        )}
+                        <span className="text-xs truncate max-w-[200px]">{getFinalNode(path)}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0"
+                        onClick={() => {
+                          setSearchPaths((prev) => prev.filter((_, i) => i !== index))
+                        }}
+                      >
+                        <X className="h-3 w-3 text-gray-500" />
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">{getFullPathString(path)}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+
+          {/* Clear all button */}
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs h-6"
+              onClick={handleClearSearchPaths}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Clear All
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-2 text-xs text-gray-500">No mind map paths selected.</div>
+      )}
+    </div>
+  )
+
+  // Render the URL Context section
+  const renderUrlContext = () => (
+    <div className="px-2 py-1">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <Globe className="w-4 h-4 text-blue-600" />
+          <span className="font-medium text-sm">URL Context</span>
+          {urls.length > 0 && (
+            <Badge variant="outline" className="bg-blue-50 text-blue-700 text-xs">
+              {urls.length}
+            </Badge>
+          )}
+        </div>
+        <Switch checked={useUrlContext} onCheckedChange={setUseUrlContext} className="scale-75" />
+      </div>
+
+      {/* URL input */}
+      <div className="relative mb-2">
+        <Input
+          placeholder="Add URL..."
+          className="h-7 text-xs"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={handleKeyDown}
+        />
+      </div>
+
+      {/* Search input */}
+      {urls.length > 0 && (
+        <div className="relative mb-2">
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+          <Input
+            placeholder="Search URLs..."
+            className="pl-7 h-7 text-xs"
+            value={urlSearchQuery}
+            onChange={(e) => setUrlSearchQuery(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* URL list */}
+      {urls.length > 0 ? (
+        <div>
+          <div className="max-h-32 overflow-y-auto mb-2 rounded-md border">
+            {filteredUrls.map((url, index) => (
+              <TooltipProvider key={index}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center justify-between p-1.5 hover:bg-gray-50 border-b last:border-b-0">
+                      <div className="flex items-center gap-1">
+                        {useUrlContext ? (
+                          <Check className="h-3 w-3 text-blue-500" />
+                        ) : (
+                          <div className="h-3 w-3 border border-gray-300 rounded-sm" />
+                        )}
+                        {isYoutubeUrl(url) ? (
+                          <div className="text-red-500 text-xs">YT</div>
+                        ) : (
+                          <Globe className="h-3 w-3 text-blue-500" />
+                        )}
+                        <span className="text-xs truncate max-w-[200px]">{url}</span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0"
+                        onClick={() => {
+                          setUrls((prev) => prev.filter((_, i) => i !== index))
+                        }}
+                      >
+                        <X className="h-3 w-3 text-gray-500" />
+                      </Button>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p className="text-xs">{url}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+
+          {/* Clear all button */}
+          <div className="flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs h-6"
+              onClick={handleClearUrls}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Clear All
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-2 text-xs text-gray-500">No URLs added.</div>
+      )}
+    </div>
+  )
 
   return (
     <motion.div
@@ -354,15 +568,20 @@ export function ChatBox() {
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
     >
-      {/* Disclaimer and Recall Mode Toggle - smaller size, no border */}
-      <div className="rounded-md p-2 mb-2 flex justify-between items-center bg-[#CEFFC9] text-sm">
-        <p className="text-gray-700 text-xs">
-          NoteUS có thể đưa ra thông tin không chính xác, hãy kiểm tra câu trả lời mà bạn nhận được
-        </p>
-        <div className="flex items-center gap-1 ml-2">
-          <span className="text-green-600 text-xs leading-tight">
-            Recall<br />active<br />mode
-          </span>
+      {/* Embedding Status Message - Show when embedding is in progress */}
+      {isDisabled && (
+        <div className="bg-amber-50 rounded-md p-2 mb-2 mx-4 mt-2 text-sm">
+          <p className="text-gray-700 text-xs flex items-center">
+            <AlertCircle className="w-3 h-3 mr-1 text-amber-500" />
+            Document processing in progress. Chat will be available soon.
+          </p>
+        </div>
+      )}
+
+      {/* Recall Mode Toggle - Simplified */}
+      <div className="px-3 py-1.5 flex justify-end items-center">
+        <div className="flex items-center gap-1">
+          <span className="text-xs font-medium text-green-600">Recall mode</span>
           <Switch
             checked={!!activeRecallSession}
             onCheckedChange={(checked) => {
@@ -383,40 +602,43 @@ export function ChatBox() {
         </div>
       </div>
 
-      {/* Chat Messages */}
+      {/* Chat Messages - Reduced font size */}
       <motion.div className="flex-1 p-4 overflow-y-auto" variants={fadeIn("down", 0.2)} initial="hidden" animate="show">
         {chatHistory.map((msg, index) => (
           <motion.div
             key={index}
-            className={`flex ${msg.isUser ? "justify-end" : "justify-start"} mb-4`}
+            className={`flex ${msg.isUser ? "justify-end" : "justify-start"} mb-3`}
             initial={{ opacity: 0, y: 20, x: msg.isUser ? 20 : -20 }}
             animate={{ opacity: 1, y: 0, x: 0 }}
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
             <div
-              className={`prose prose-sm max-w-none p-3 rounded-2xl ${msg.isUser
+              className={`prose prose-xs max-w-none p-2.5 rounded-2xl ${
+                msg.isUser
                   ? "bg-green-500 text-white rounded-tr-none prose-invert"
                   : "bg-gray-100 text-black rounded-tl-none"
-                }`}
+              }`}
             >
-              <ReactMarkdown>{msg.text}</ReactMarkdown>
+              <div className="text-xs">
+                <ReactMarkdown>{msg.text}</ReactMarkdown>
+              </div>
             </div>
           </motion.div>
         ))}
         {isLoading && (
-          <motion.div className="flex justify-start mb-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <div className="bg-gray-100 text-black p-3 rounded-2xl rounded-tl-none max-w-[80%]">
+          <motion.div className="flex justify-start mb-3" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <div className="bg-gray-100 text-black p-2.5 rounded-2xl rounded-tl-none max-w-[80%]">
               <div className="flex space-x-2">
                 <div
-                  className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce"
                   style={{ animationDelay: "0ms" }}
                 ></div>
                 <div
-                  className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce"
                   style={{ animationDelay: "150ms" }}
                 ></div>
                 <div
-                  className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+                  className="w-1.5 h-1.5 rounded-full bg-gray-400 animate-bounce"
                   style={{ animationDelay: "300ms" }}
                 ></div>
               </div>
@@ -426,152 +648,51 @@ export function ChatBox() {
         <div ref={chatEndRef} />
       </motion.div>
 
-      {/* Chat Input */}
-      <motion.div className="border-t p-4 bg-white" variants={fadeIn("up", 0.3)} initial="hidden" animate="show">
-        {/* Mind Map Paths Section */}
-        <div className="mb-4">
-          <div
-            className="flex items-center justify-between cursor-pointer p-2 rounded-md hover:bg-gray-50"
-            onClick={() => setShowSettings(!showSettings)}
-          >
+      {/* Chat Input with Context Collapsible */}
+      <motion.div className="border-t bg-white" variants={fadeIn("up", 0.3)} initial="hidden" animate="show">
+        {/* Combined Context Collapsible */}
+        <Collapsible
+          open={isContextOpen}
+          onOpenChange={setIsContextOpen}
+          className="mx-4 mt-2 border rounded-md overflow-hidden"
+        >
+          <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-gray-50">
             <div className="flex items-center gap-2">
               <Settings className="w-4 h-4 text-gray-500" />
-              <span className="font-medium text-sm">Mind Map Paths</span>
-              {searchPaths.length > 0 && (
-                <Badge variant="outline" className="bg-green-50 text-green-700 text-xs">
-                  {searchPaths.length}
+              <span className="font-medium text-sm">Context</span>
+              {(searchPaths.length > 0 || urls.length > 0) && (
+                <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs">
+                  {searchPaths.length + urls.length}
                 </Badge>
               )}
             </div>
-            <div className="flex items-center gap-2">
-              <Switch checked={useAsContext} onCheckedChange={setUseAsContext} className="mr-2" />
-              <span className="text-xs text-gray-500 mr-2">Use as context</span>
-              {showSettings ? (
+            <div>
+              {isContextOpen ? (
                 <ChevronUp className="h-4 w-4 text-gray-500" />
               ) : (
                 <ChevronDown className="h-4 w-4 text-gray-500" />
               )}
             </div>
-          </div>
+          </CollapsibleTrigger>
 
-          <AnimatePresence>
-            {showSettings && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                className="overflow-hidden"
-              >
-                <div className="pt-2 px-2">
-                  {/* Search input */}
-                  <div className="relative mb-2">
-                    <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      placeholder="Search path..."
-                      className="pl-8 h-8 text-sm"
-                      value={pathSearchQuery}
-                      onChange={(e) => setPathSearchQuery(e.target.value)}
-                    />
-                  </div>
+          <CollapsibleContent>
+            <div className="border-t">{renderMindMapPaths()}</div>
+            <div className="border-t">{renderUrlContext()}</div>
+          </CollapsibleContent>
+        </Collapsible>
 
-                  {/* Path list */}
-                  {searchPaths.length > 0 ? (
-                    <div>
-                      <div className="max-h-40 overflow-y-auto mb-2 rounded-md border">
-                        {filteredPaths.map((path, index) => (
-                          <TooltipProvider key={index}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="flex items-center justify-between p-2 hover:bg-gray-50 border-b last:border-b-0">
-                                  <div className="flex items-center gap-2">
-                                    {useAsContext ? (
-                                      <Check className="h-4 w-4 text-green-500" />
-                                    ) : (
-                                      <div className="h-4 w-4 border border-gray-300 rounded-sm" />
-                                    )}
-                                    <span className="text-sm truncate max-w-[200px]">{getFinalNode(path)}</span>
-                                  </div>
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
-                                        <MoreVertical className="h-4 w-4 text-gray-500" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48">
-                                      <DropdownMenuItem className="flex items-center">
-                                        <Eye className="mr-2 h-4 w-4" />
-                                        <span>View full path</span>
-                                      </DropdownMenuItem>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="flex items-center text-red-500"
-                                        onClick={() => {
-                                          setSearchPaths((prev) => prev.filter((_, i) => i !== index))
-                                        }}
-                                      >
-                                        <X className="mr-2 h-4 w-4" />
-                                        <span>Remove path</span>
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p className="text-xs">{getFullPathString(path)}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        ))}
-                      </div>
-
-                      {/* Clear all button */}
-                      <div className="flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-500 hover:text-red-700 hover:bg-red-50 text-xs h-7"
-                          onClick={handleClearSearchPaths}
-                        >
-                          <Trash2 className="h-3 w-3 mr-1" />
-                          Clear All
-                        </Button>
-                      </div>
-
-                      {/* Latest added node notification */}
-                      {latestSearchNode && (
-                        <div className="text-xs text-gray-500 mt-1 italic">Added: "{latestSearchNode.topic}"</div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="text-center py-4 text-sm text-gray-500">No mind map paths selected.</div>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* URL Context Section */}
-        <UrlContext
-          useAsContext={useUrlContext}
-          onToggleUseAsContext={setUseUrlContext}
-          showSettings={showUrlSettings}
-          onToggleShowSettings={() => setShowUrlSettings(!showUrlSettings)}
-          onAddUrl={handleAddUrl}
-        />
-
-        <form onSubmit={handleSubmit} className="flex gap-2 max-w-3xl mx-auto">
+        {/* Message input form */}
+        <form onSubmit={handleSubmit} className="flex gap-2 p-4">
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t("typeMessage")}
-            className="flex-1 bg-white text-black border-gray-300"
+            className="flex-1 bg-white text-black border-gray-300 text-sm"
             disabled={isLoading}
           />
           <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white" disabled={isLoading}>
-              <Send className="w-4 h-4 mr-2" />
+            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white text-sm" disabled={isLoading}>
+              <Send className="w-3.5 h-3.5 mr-1.5" />
               {t("send")}
             </Button>
           </motion.div>
@@ -579,15 +700,23 @@ export function ChatBox() {
             <Button
               type="button"
               variant="outline"
-              className="border-gray-300 text-black"
+              className="border-gray-300 text-black text-sm"
               onClick={regenerateLastResponse}
               disabled={isLoading || chatHistory.length === 0}
             >
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <RefreshCw className="w-3.5 h-3.5 mr-1.5" />
               {t("regenerate")}
             </Button>
           </motion.div>
         </form>
+
+        {/* Disclaimer in footer */}
+        <div className="px-4 pb-2 text-center">
+          <p className="text-xs text-gray-500 flex items-center justify-center">
+            <AlertCircle className="w-3 h-3 mr-1 text-gray-400" />
+            NoteUS có thể đưa ra thông tin không chính xác, hãy kiểm tra câu trả lời mà bạn nhận được
+          </p>
+        </div>
       </motion.div>
     </motion.div>
   )

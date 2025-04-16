@@ -12,6 +12,7 @@ import { useLanguage } from "@/lib/language-context"
 import { searchFiles, searchChats } from "@/lib/search-utils"
 import type { FileItem, Folder as FolderType, ChatItem, DragItem } from "../types/app-types"
 import "../styles/file-collection.css"
+import { useEmbedding } from "@/components/embedding-context"
 
 interface FileCollectionProps {
   onFileSelect: (files: FileItem[]) => void
@@ -89,6 +90,8 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     })
     return fileIds
   }
+
+  const { startEmbedding } = useEmbedding()
 
   // useEffect để reset trạng thái file khi tải lần đầu
   useEffect(() => {
@@ -481,7 +484,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     const mainUploadFormData = new FormData()
     mainUploadFormData.append("file", file)
     mainUploadFormData.append("document_id", documentId) // Giả sử /user/upload cần
-
+  
     try {
       // Upload file to server (/user/upload)
       const uploadResponse = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL + "/user/upload", {
@@ -524,11 +527,25 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           // --- KẾT THÚC ĐIỀU CHỈNH ---
 
           if (embeddingsResponse.ok) {
-            // ... (xử lý kết quả embedding thành công giữ nguyên) ...
-            console.log("Embedding API call successful:", await embeddingsResponse.json())
+            console.log("Embedding API call successful")
+            const responseData = await embeddingsResponse.json()
+            console.log("Embedding API response:", responseData)
+            
+            // Start tracking embedding progress after successful embedding API call
+            startEmbedding(documentId)
+            
+            // Display a notification to the user
+            const event = new CustomEvent("notification", {
+              detail: {
+                message: "Document processing started. Some features will be disabled until processing completes.",
+                type: "info"
+              }
+            })
+            window.dispatchEvent(event)
           } else {
-            // ... (xử lý lỗi embedding giữ nguyên) ...
-            console.warn("Embedding API call failed:", embeddingsResponse.status, await embeddingsResponse.text())
+            console.warn("Embedding API call failed:", embeddingsResponse.status)
+            const errorText = await embeddingsResponse.text()
+            console.warn("Embedding error details:", errorText)
           }
         } catch (err) {
           // ... (xử lý lỗi mạng giữ nguyên) ...
@@ -554,6 +571,16 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       }
     } catch (error) {
       console.error("Error in main upload process:", error)
+
+      // Notify the user about the error
+      const event = new CustomEvent("notification", {
+        detail: {
+          message: "File upload failed. Please try again.",
+          type: "error"
+        }
+      })
+      window.dispatchEvent(event)
+      
       return null
     }
   }

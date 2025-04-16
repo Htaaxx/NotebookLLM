@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useMemo } from "react"
-import { ZoomIn, ZoomOut, Highlighter } from "lucide-react"
+import { ZoomIn, ZoomOut, Highlighter, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { MindMapView } from "@/components/mindmap-view"
 import { useLanguage } from "@/lib/language-context"
@@ -35,9 +35,10 @@ interface RightPanelProps {
   activePanel: "preview" | "mindmap" | "cheatsheet" | null
   selectedFiles: FileItem[]
   onViewChange: (view: "preview" | "mindmap" | "cheatsheet" | null) => void
+  isDisabled?: boolean;
 }
 
-export function RightPanel({ activePanel, selectedFiles, onViewChange }: RightPanelProps) {
+export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisabled = false }: RightPanelProps) {
   const [scale, setScale] = useState(1.0)
   const [error, setError] = useState<string | null>(null)
   const [annotations, setAnnotations] = useState<Annotation[]>([])
@@ -106,6 +107,12 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange }: RightPa
 
   useEffect(() => {
     if (activePanel === "mindmap" || activePanel === "cheatsheet") {
+      // Don't trigger fetch if disabled
+      if (isDisabled) {
+        setError("Document processing in progress. Please wait before using this feature.")
+        return
+      }
+
       console.log(`${activePanel} panel active, triggering refresh if needed`)
 
       // Đảm bảo reset error state
@@ -146,7 +153,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange }: RightPa
           })
       }
     }
-  }, [activePanel, selectedMarkdownFile])
+  }, [activePanel, selectedMarkdownFile, isDisabled])
 
   const handleHighlightText = () => {
     if (selectedPage === null) return
@@ -200,6 +207,23 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange }: RightPa
   const handleZoomIn = () => setScale((prevScale) => Math.min(prevScale + 0.1, 2))
   const handleZoomOut = () => setScale((prevScale) => Math.max(prevScale - 0.1, 0.5))
 
+  // Render the disabled overlay for mindmap and cheatsheet
+  const renderDisabledOverlay = () => {
+    if (!isDisabled || activePanel === "preview") return null;
+    
+    return (
+      <div className="absolute inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center">
+        <div className="bg-amber-50 p-4 rounded-lg max-w-md text-center">
+          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
+          <h3 className="font-medium text-amber-800 mb-2">Document Processing in Progress</h3>
+          <p className="text-amber-700 text-sm">
+            Please wait for document processing to complete before using {activePanel === "mindmap" ? "Mind Map" : "Cheatsheet"} features.
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <motion.div
       className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black overflow-hidden relative`}
@@ -208,6 +232,8 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange }: RightPa
       exit={{ opacity: 0, x: 20 }}
       transition={{ duration: 0.3 }}
     >
+      {renderDisabledOverlay()}
+      
       <AnimatePresence mode="wait">
         {activePanel === "preview" && (
           <motion.div
