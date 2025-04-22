@@ -28,12 +28,13 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@v4'
 
-      # Authenticate to Google Cloud using Workload Identity Federation
+      # Authenticate to Google Cloud using the service account credentials
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v2'
         with:
-          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'  # Store the JSON credentials file as a secret
+          project_id: '${{ env.PROJECT_ID }}'  # Pass project ID explicitly
 
       # Authenticate Docker to Google Cloud Artifact Registry
       - name: 'Docker Auth'
