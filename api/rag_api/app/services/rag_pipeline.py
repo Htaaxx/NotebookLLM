@@ -649,10 +649,6 @@ def ask_question(
             # Cấu hình search_kwargs - bỏ search_params nếu không dùng IVF_FLAT hoặc index có params khác
             search_kwargs = {"expr": search_filter_expr}
             # Ví dụ nếu dùng IVF_FLAT:
-            # nprobe_value = 64
-            # search_params_config = {"metric_type": "COSINE", "params": {"nprobe": nprobe_value}}
-            # search_kwargs["search_params"] = search_params_config
-
             k_value = 10  # Số lượng chunk lấy về
             retrieved_docs = vector_store.similarity_search(
                 query=question, k=k_value, search_kwargs=search_kwargs
@@ -1563,8 +1559,6 @@ async def get_smaller_branches_from_docs(
     combined_chunks = combine_chunks(all_chunks_content, kmeans_predictions)
     result = "# root\n"
     for i in range(actual_num_clusters):
-        print(f" combine chunks {i} for user {user_id}")
-        print(f" cluster {i} content: {combined_chunks[i]}")
         if i not in combined_chunks:
             continue
         print("you passed")
