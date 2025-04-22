@@ -3,19 +3,12 @@ from fastapi import APIRouter, UploadFile, File, HTTPException, Query, Depends, 
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field
 
-# --- Đường dẫn import CẦN CẬP NHẬT ---
-# process_and_store_file vẫn ở rag_pipeline.py gốc trong services
-from ..services.rag_pipeline import process_and_store_file
-
-# Các hàm này đã chuyển vào các module con trong rag_logic
-from ..services.rag_logic.processing.indexing import (  # <<< Đường dẫn mới
+from ..services.rag_pipeline import (
+    process_and_store_file,
     delete_embeddings,
     get_document_embeddings,
-    # get_embedding_count_for_doc_id # Có thể cần nếu dùng
-)
-from ..services.rag_logic.generation.analysis import (
     get_smaller_branches_from_docs,
-)  # <<< Đường dẫn mới
+)
 
 
 class EmbeddingResponse(BaseModel):
