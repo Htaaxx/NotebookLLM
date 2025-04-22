@@ -28,7 +28,7 @@ export default function Home() {
     >
       <NavBar onNavClick={handleNavClick} onSignUp={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />
 
-      <HeroSection onGetStarted={() => setShowAuth(true)} onSeeDemo={() => setShowAuth(true)} />
+      <HeroSection onGetStarted={() => setShowAuth(true)} onSeeDemo={() => setShowAuth(false)} />
 
       <FeaturesSection />
 

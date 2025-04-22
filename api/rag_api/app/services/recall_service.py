@@ -1,5 +1,9 @@
 import os
-from .rag_pipeline import llm, get_user_vector_store  # THAY ĐỔI
+from .rag_logic.core.connections import (
+    llm,
+    get_user_vector_store,
+)  # <<< Đường dẫn mới chính xác
+
 from langchain_core.prompts import ChatPromptTemplate
 from typing import List, Dict, Optional
 

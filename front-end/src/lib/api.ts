@@ -128,7 +128,7 @@ export const authAPI = {
       throw error;
     }
   },
-  
+
 };
 
 // Các phương thức API cho tài liệu
@@ -174,5 +174,71 @@ export const documentAPI = {
   },
   
 };
+
+
+// Các phương thức API cho accountType
+export const accountTypeAPI = {
+  getAccountTypes: async (user_id: string) => {
+    const response = await api.post('/getAccountType', { user_id });
+    return response.data;
+  },
+
+  getCountQuery: async (user_id: string) => {
+    const response = await api.post('/getCountQuery', { user_id });
+    return response.data;
+  },
+
+  getCountMindmap: async (user_id: string) => {
+    const response = await api.post('/getCountMindmap', { user_id });
+    return response.data;
+  },
+
+  getCountCheatSheet: async (user_id: string) => {
+    const response = await api.post('/getCountCheatSheet', { user_id });
+    return response.data;
+  },
+
+  getCountFlashcard: async (user_id: string) => {
+    const response = await api.post('/getCountFlashcard', { user_id });
+    return response.data;
+  },
+
+  updateCountQuery: async (user_id: string) => {
+    const response = await api.post('/updateCountQuery', { user_id });
+    return response.data;
+  },
+
+  updateCountMindmap: async (user_id: string) => {
+    const response = await api.post('/updateCountMindmap', { user_id });
+    return response.data;
+  },
+
+  updateCountCheatSheet: async (user_id: string) => {
+    const response = await api.post('/updateCountCheatSheet', { user_id });
+    return response.data;
+  },
+
+  updateCountFlashcard: async (user_id: string) => {
+    const response = await api.post('/updateCountFlashcard', { user_id });
+    return response.data;
+  },
+
+  checkAndResetCounts: async (user_id: string) => {
+    const response = await api.post('/checkAndResetCounts', { user_id });
+    return response.data;
+  },
+
+  updateAccountType: async (user_id: string, accountType: string) => {
+    const response = await api.post('/updateAccountType', { user_id, accountType });
+    return response.data;
+  },
+
+  createCountWithId : async (user_id: string) => {
+    const response = await api.post('/createCountWithUserId', { user_id });
+    return response.data;
+  }
+
+};
+
 
 export default api;

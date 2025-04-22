@@ -6,6 +6,8 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { accountTypeAPI } from "@/lib/api";
+import { ACCOUNT_LIMITS, shouldResetDailyCounts } from "@/lib/account-limits";
 import {
   Plus,
   ChevronLeft,
@@ -23,6 +25,7 @@ import {
   FileText,
   Upload,
   X,
+  AlertCircle,
 } from "lucide-react"
 import { useLanguage } from "@/lib/language-context"
 import {
@@ -71,6 +74,9 @@ export default function FlashcardPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const { t } = useLanguage()
+  const [accountType, setAccountType] = useState<string>("FREE");
+  const [flashcardCount, setFlashcardCount] = useState<number>(0);
+  const [limitExceeded, setLimitExceeded] = useState<boolean>(false);
 
   // Sample decks
   const [decks, setDecks] = useState<Deck[]>([])
@@ -84,6 +90,45 @@ export default function FlashcardPage() {
       }
     }
   }, [])
+
+  // Check account type and usage on component mount
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      if (!userId) return;
+      
+      try {
+        // Check if we need to reset daily counts
+        if (shouldResetDailyCounts()) {
+          // Reset would happen server-side
+          setFlashcardCount(0);
+        }
+        
+        // Fetch account type and current count
+        const accountTypeData = await accountTypeAPI.getAccountTypes(userId);
+        setAccountType(accountTypeData.accountType || "FREE");
+        
+        const countData = await accountTypeAPI.getCountFlashcard(userId);
+        setFlashcardCount(countData.countFlashcard || 0);
+        
+        // Check if limit exceeded
+        checkFlashcardLimit(accountTypeData.accountType || "FREE", countData.countFlashcard || 0);
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+      }
+    };
+    
+    fetchUserInfo();
+  }, [userId]);
+  
+  // Function to check if user has exceeded their daily limit
+  const checkFlashcardLimit = (type: string, count: number) => {
+    const limit = 
+      type === "PRO" ? ACCOUNT_LIMITS.PRO.FLASHCARDS :
+      type === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.FLASHCARDS :
+      ACCOUNT_LIMITS.FREE.FLASHCARDS;
+      
+    setLimitExceeded(count >= limit);
+  };
 
   // Fetch user files when userId is available
   useEffect(() => {
@@ -289,6 +334,14 @@ export default function FlashcardPage() {
   const addCard = () => {
     if (!newFront.trim() || !newBack.trim() || !activeDeck) return
 
+    // Check if user has exceeded their limit
+    if (limitExceeded && accountType !== "PRO") {
+      alert(`You've reached your daily limit of ${accountType === "STANDARD" ? 
+            ACCOUNT_LIMITS.STANDARD.FLASHCARDS : ACCOUNT_LIMITS.FREE.FLASHCARDS} 
+            flashcards for ${accountType} accounts. Upgrade to create more.`);
+      return;
+    }
+
     const newCard: Flashcard = {
       id: Math.random().toString(36).substr(2, 9),
       front: newFront,
@@ -303,6 +356,17 @@ export default function FlashcardPage() {
     // Update card count in the deck
     setDecks(decks.map((deck) => (deck.id === activeDeck ? { ...deck, cardCount: deck.cardCount + 1 } : deck)))
 
+    // Update the flashcard count
+    if (userId) {
+      const newCount = flashcardCount + 1;
+      accountTypeAPI.updateCountFlashcard(userId)
+        .then(() => {
+          setFlashcardCount(newCount);
+          checkFlashcardLimit(accountType, newCount);
+        })
+        .catch(error => console.error("Error updating flashcard count:", error));
+    }
+  
     setNewFront("")
     setNewBack("")
   }
@@ -429,6 +493,17 @@ export default function FlashcardPage() {
     <div className="min-h-screen flex flex-col bg-white text-black">
       <NavBar />
       <main className="container mx-auto p-6 flex-grow">
+      {limitExceeded && accountType !== "PRO" && (
+          <div className="bg-red-50 rounded-md p-3 mb-4 mx-auto max-w-6xl">
+            <p className="text-red-700 text-sm flex items-center">
+              <AlertCircle className="w-4 h-4 mr-2 text-red-500" />
+              You've reached your daily limit of {accountType === "STANDARD" ? 
+              ACCOUNT_LIMITS.STANDARD.FLASHCARDS : ACCOUNT_LIMITS.FREE.FLASHCARDS} 
+              flashcards for {accountType} accounts. Upgrade to create more.
+            </p>
+          </div>
+        )}
+
         <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <div className="flex justify-between items-center mb-6">
@@ -863,6 +938,11 @@ export default function FlashcardPage() {
                 {activeDeck ? (
                   <Card>
                     <CardContent className="p-6">
+                    {limitExceeded && accountType !== "PRO" && (
+                        <div className="mb-4 p-2 text-sm text-red-700 bg-red-50 rounded">
+                          Daily limit reached. Upgrade your account to create more flashcards.
+                        </div>
+                      )}
                       <div className="space-y-6">
                         <div className="space-y-2">
                           <label className="font-medium">Front Side</label>
@@ -897,7 +977,7 @@ export default function FlashcardPage() {
                           </Button>
                           <Button
                             onClick={addCard}
-                            disabled={!newFront.trim() || !newBack.trim()}
+                            disabled={!newFront.trim() || !newBack.trim()|| limitExceeded}
                             className="bg-green-600 hover:bg-green-700"
                           >
                             <Plus className="w-4 h-4 mr-2" />

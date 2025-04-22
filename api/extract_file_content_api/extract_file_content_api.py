@@ -200,7 +200,6 @@ def extract_text(file_content: str, filename: str):
     try:
         if file_extension == "pdf":
             chunks_with_metadata = extract_text_from_pdf(file_path)
-            print(chunks_with_metadata)
         elif file_extension == "docx":
             chunks_with_metadata = extract_text_from_docx(file_path)
         elif file_extension == "txt":

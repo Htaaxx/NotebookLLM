@@ -47,9 +47,9 @@ export function AppScreenshotSection() {
           </div>
 
           <div className="relative">
-            <div className="aspect-[4/3] bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200">
+            <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200  w-full md:w-[700px] ">
               <img
-                src="/placeholder.svg?height=600&width=800"
+                src="/NoteUS.jpg"
                 alt="NoteUS Interface"
                 className="w-full h-full object-cover"
               />
