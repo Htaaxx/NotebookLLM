@@ -49,6 +49,7 @@ jobs:
         with:
           cluster_name: '${{ env.GKE_CLUSTER }}'
           location: '${{ env.GKE_ZONE }}'
+          project_id: '${{ env.PROJECT_ID }}'  # Add this line to specify the project ID
 
       # Build and push Docker containers for all three services
       - name: 'Build and push Docker containers'
