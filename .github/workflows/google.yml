@@ -45,8 +45,8 @@ jobs:
           password: '${{ steps.auth.outputs.auth_token }}'  # Ensure this outputs the correct token
           registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
 
-      # Set up GKE credentials
-      - name: 'Set up GKE credentials'
+      # Set up GKE credentials and Install the gke-gcloud-auth-plugin for Kubernetes authentication
+      - name: 'Set up GKE credentials and Install GKE gcloud auth plugin'
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
           cluster_name: '${{ env.GKE_CLUSTER }}'
@@ -57,10 +57,6 @@ jobs:
       - run: |
           set -x  # Enable command tracing for debugging
           gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
-          
-      # Install the gke-gcloud-auth-plugin for Kubernetes authentication
-      - name: 'Install GKE gcloud auth plugin'
-        run: |
           gcloud components update
           gcloud components install gke-gcloud-auth-plugin
           
