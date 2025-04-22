@@ -122,6 +122,7 @@ jobs:
           sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:.*|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}|g' k8s/base/deployment.yaml
           
           # Apply the Kubernetes manifests directly
+          kubectl apply -f k8s/base/config.yaml
           kubectl apply -f k8s/base/deployment.yaml
           kubectl apply -f k8s/base/service.yaml
       
