@@ -14,7 +14,7 @@ import { useLanguage } from "@/lib/language-context"
 import { plans } from "@/lib/stripe"
 import { motion } from "framer-motion"
 import { fadeIn, staggerContainer, buttonAnimation, cardHoverEffect } from "@/lib/motion-utils"
-
+import { accountTypeAPI} from "@/lib/api"
 // Replace the getPlanLevel function with this improved version that handles null/undefined values
 const getPlanLevel = (planName: string | null): number => {
   if (!planName) return 1 // Default to Free level if no plan is provided
@@ -41,9 +41,33 @@ export default function PricingPage() {
   const isVietnamese = language === "vi"
   const router = useRouter()
 
+  
+
   // Check authentication status
   useEffect(() => {
-    // Simulate some loading time
+    const fetchAccountType = async () => {
+      // Load user data
+      const storedUsername = localStorage.getItem("username")
+      const storedUserID = localStorage.getItem("user_id")
+
+      if (storedUsername) {
+        setUserName(storedUsername)
+      }
+
+      if (storedUserID) {
+        try {
+          const storedPlan = await accountTypeAPI.getAccountTypes(storedUserID);
+          setCurrentPlan(storedPlan.accountType);
+        } catch (error) {
+          console.error("Error fetching account types:", error);
+        }
+      } else {
+        console.error("User ID is null, cannot fetch account types.");
+      }      
+    }
+
+    fetchAccountType()
+
     const loadingTimer = setTimeout(() => {
       const token = localStorage.getItem("accessToken")
       const storedUsername = localStorage.getItem("username")
@@ -52,13 +76,6 @@ export default function PricingPage() {
         setIsAuthenticated(true)
         setUserName(storedUsername)
 
-        // Get current plan from localStorage
-        const userPlan = localStorage.getItem("currentPlan")
-        if (userPlan) {
-          setCurrentPlan(userPlan)
-        } else {
-          setCurrentPlan("Free") // Default to Free if no plan is stored
-        }
       }
 
       setIsLoading(false)
