@@ -590,7 +590,7 @@ export default function FlashcardPage() {
         ? {
             ...c,
             lastReviewed: new Date().toISOString().split("T")[0],
-            status: rating < 3 ? "learning" : rating >= 4 ? "mastered" : "review" as "new" | "learning" | "review" | "mastered",
+            status: rating < 3 ? "learning" : rating >= 4 ? "mastered" : "review",
             review: {
               ...c.review,
               due_date: newDueDate,
@@ -603,7 +603,12 @@ export default function FlashcardPage() {
         : c,
     )
 
-    setCards(updatedCards)
+    setCards(
+      updatedCards.map((card) => ({
+        ...card,
+        status: card.status as "learning" | "mastered" | "review" | "new",
+      }))
+    )
 
     // Move to next review card
     if (currentReviewCard < reviewCards.length - 1) {
@@ -992,6 +997,7 @@ export default function FlashcardPage() {
                 </div>
               )}
             </TabsContent>
+            // Add this JSX after the "Study Tab" TabsContent // Replace the existing Study Tab content with this:
             <TabsContent value="study" className="mt-0">
               {activeDeck ? (
                 <>
@@ -1056,42 +1062,43 @@ export default function FlashcardPage() {
                               <div className="mt-6 p-4 bg-gray-50 rounded-md">
                                 <p className="text-lg text-center">{reviewCards[currentReviewCard].back}</p>
                               </div>
-
+                              // Find the review rating buttons in the Review Mode UI section and replace them with
+                              this:
                               <div className="mt-6">
                                 <h4 className="text-sm font-medium text-center mb-3">
                                   How well did you remember this?
                                 </h4>
-                                <div className="flex justify-center gap-2">
+                                <div className="flex justify-center gap-3">
                                   <Button
                                     variant="outline"
-                                    className="border-red-500 text-red-500 hover:bg-red-50 flex-col py-3"
+                                    className="border-red-500 text-red-500 hover:bg-red-50 flex-col py-4 px-6"
                                     onClick={() => submitReviewRating(reviewCards[currentReviewCard].id, 0)}
                                   >
-                                    <span className="text-xl mb-1">😵</span>
-                                    <span className="text-xs">Forgot</span>
+                                    <span className="text-2xl mb-2">😵</span>
+                                    <span className="text-xs font-medium">Forgot</span>
                                   </Button>
                                   <Button
                                     variant="outline"
-                                    className="border-yellow-500 text-yellow-500 hover:bg-yellow-50 flex-col py-3"
+                                    className="border-yellow-500 text-yellow-500 hover:bg-yellow-50 flex-col py-4 px-6"
                                     onClick={() => submitReviewRating(reviewCards[currentReviewCard].id, 1)}
                                   >
-                                    <span className="text-xl mb-1">😕</span>
-                                    <span className="text-xs">Hard</span>
+                                    <span className="text-2xl mb-2">😕</span>
+                                    <span className="text-xs font-medium">Hard</span>
                                   </Button>
                                   <Button
                                     variant="outline"
-                                    className="border-blue-500 text-blue-500 hover:bg-blue-50 flex-col py-3"
+                                    className="border-blue-500 text-blue-500 hover:bg-blue-50 flex-col py-4 px-6"
                                     onClick={() => submitReviewRating(reviewCards[currentReviewCard].id, 3)}
                                   >
-                                    <span className="text-xl mb-1">🙂</span>
-                                    <span className="text-xs">Good</span>
+                                    <span className="text-2xl mb-2">🙂</span>
+                                    <span className="text-xs font-medium">Good</span>
                                   </Button>
                                   <Button
-                                    className="bg-green-600 hover:bg-green-700 flex-col py-3"
+                                    className="bg-green-600 hover:bg-green-700 flex-col py-4 px-6"
                                     onClick={() => submitReviewRating(reviewCards[currentReviewCard].id, 5)}
                                   >
-                                    <span className="text-xl mb-1">😎</span>
-                                    <span className="text-xs">Easy</span>
+                                    <span className="text-2xl mb-2">😎</span>
+                                    <span className="text-xs font-medium">Easy</span>
                                   </Button>
                                 </div>
                               </div>
