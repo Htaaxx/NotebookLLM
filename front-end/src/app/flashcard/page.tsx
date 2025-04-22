@@ -997,7 +997,6 @@ export default function FlashcardPage() {
                 </div>
               )}
             </TabsContent>
-            // Add this JSX after the "Study Tab" TabsContent // Replace the existing Study Tab content with this:
             <TabsContent value="study" className="mt-0">
               {activeDeck ? (
                 <>

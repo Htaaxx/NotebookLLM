@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { CreditCard, Plus, Trash2, CheckCircle, AlertCircle } from "lucide-react"
 import { useRouter } from "next/navigation"
+import {accountTypeAPI} from "@/lib/api"
 
 interface PaymentCard {
   id: string
@@ -25,6 +26,7 @@ export function PaymentMethod() {
   const [currentPlan, setCurrentPlan] = useState("Free")
   const [userName, setUserName] = useState("")
   const [userEmail, setUserEmail] = useState("")
+  const [userID, setUserID] = useState<string | null>(null)
 
   // Sample saved cards
   const [savedCards, setSavedCards] = useState<PaymentCard[]>([
@@ -46,15 +48,32 @@ export function PaymentMethod() {
   })
 
   useEffect(() => {
-    // Load user data
-    const storedUsername = localStorage.getItem("username")
-    if (storedUsername) {
-      setUserName(storedUsername)
+    const fetchAccountType = async () => {
+      // Load user data
+      const storedUsername = localStorage.getItem("username")
+      const storedUserID = localStorage.getItem("user_id")
+
+      if (storedUserID) {
+        setUserID(storedUserID)
+      }
+
+      if (storedUsername) {
+        setUserName(storedUsername)
+      }
+
+      if (storedUserID) {
+        try {
+          const storedPlan = await accountTypeAPI.getAccountTypes(storedUserID);
+          setCurrentPlan(storedPlan.accountType);
+        } catch (error) {
+          console.error("Error fetching account types:", error);
+        }
+      } else {
+        console.error("User ID is null, cannot fetch account types.");
+      }      
     }
 
-    // In a real app, you would fetch the user's current plan from your backend
-    // For now, we'll just use a placeholder
-    setCurrentPlan("Free")
+    fetchAccountType()
   }, [])
 
   const handleCardInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -301,9 +320,9 @@ export function PaymentMethod() {
                 <div>
                   <p className="font-medium">{currentPlan} Plan</p>
                   <p className="text-sm text-gray-500">
-                    {currentPlan === "Free"
+                    {currentPlan === "FREE"
                       ? "Upgrade to access premium features"
-                      : currentPlan === "Standard"
+                      : currentPlan === "STANDARD"
                         ? "Upgrade to Pro for all features"
                         : "You're on our highest tier plan"}
                   </p>
