@@ -12,7 +12,9 @@ jobs:
       GAR_LOCATION: 'asia-southeast2'  # TODO: update to your region
       GKE_CLUSTER: 'noteus-cluster'  # TODO: update to your cluster name
       GKE_ZONE: 'asia-southeast1-a'  # TODO: update to your cluster zone
-      DEPLOYMENT_NAME: 'noteus-deployment'  # TODO: update to your deployment name
+      DEPLOYMENT_NAME_1: 'noteus-api'  # TODO: update to your deployment name
+      DEPLOYMENT_NAME_2: 'noteus-frontend'  # TODO: update to your deployment name
+      DEPLOYMENT_NAME_3: 'noteus-database'  # TODO: update to your deployment name
       REPOSITORY: 'noteus-repo'  # TODO: update to your Artifact Registry docker repository name
       WORKLOAD_IDENTITY_PROVIDER: 'projects/669663908735/locations/global/workloadIdentityPools/github-action-pool/providers/github'  # TODO: update to your workload identity provider
 
@@ -124,7 +126,9 @@ jobs:
           kubectl apply -f k8s/base/service.yaml
       
           # Wait for the deployment to complete
-          kubectl rollout status deployment/$DEPLOYMENT_NAME
+          kubectl rollout status deployment/$DEPLOYMENT_NAME_1
+          kubectl rollout status deployment/$DEPLOYMENT_NAME_2
+          kubectl rollout status deployment/$DEPLOYMENT_NAME_3
       
           # Check the status of services
           kubectl get services -o wide
