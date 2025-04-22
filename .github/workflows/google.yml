@@ -117,9 +117,9 @@ jobs:
       - name: 'Deploy to GKE'
         run: |-
           # Set the image tag with the commit SHA directly in the Kubernetes manifest files
-          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:.*|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}|g' k8s/base/deployment.yaml
-          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:.*|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}|g' k8s/base/deployment.yaml
-          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:.*|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}|g' k8s/base/deployment.yaml
+          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}|g' k8s/base/deployment.yaml
+          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}|g' k8s/base/deployment.yaml
+          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}|g' k8s/base/deployment.yaml
           
           # Apply the Kubernetes manifests directly
           kubectl apply -f k8s/base/config.yaml
