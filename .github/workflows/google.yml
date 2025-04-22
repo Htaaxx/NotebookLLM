@@ -64,7 +64,7 @@ jobs:
           API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}"
 
           # Build frontend container (located in frontend/ directory)
-          docker build -f frontend/Dockerfile --tag "${FRONTEND_TAG}" --build-arg GITHUB_SHA="${GITHUB_SHA}" frontend/
+          docker build -f front-end/Dockerfile --tag "${FRONTEND_TAG}" --build-arg GITHUB_SHA="${GITHUB_SHA}" frontend/
           docker push "${FRONTEND_TAG}"
 
           # Build database container (located in database/ directory)
