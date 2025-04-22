@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: noteus-frontend
+spec:
+  selector:
+    app: noteus-frontend
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 3000
+  type: LoadBalancer  # This exposes the service externally with an external IP address
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: noteus-database
+spec:
+  selector:
+    app: noteus-database
+  ports:
+    - protocol: TCP
+      port: 5000  # Port used by the database
+      targetPort: 5000
+  type: ClusterIP  # Exposes the service only inside the cluster
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: noteus-api
+spec:
+  selector:
+    app: noteus-api
+  ports:
+    - protocol: TCP
+      port: 8000  # Port the API is exposed on internally
+      targetPort: 8000
+  type: ClusterIP  # Exposes the service only inside the cluster
