@@ -33,7 +33,7 @@ jobs:
         name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v2'
         with:
-          credentials_json: '${{ secrets.GCP_CREDENTIALS }}'  # Store the JSON credentials file as a secret
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'  # Store the JSON credentials file as a secret
           project_id: '${{ env.PROJECT_ID }}'  # Pass project ID explicitly
 
       # Authenticate Docker to Google Cloud Artifact Registry
