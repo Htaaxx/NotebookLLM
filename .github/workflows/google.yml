@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - 'main'
+
 jobs:
   setup-build-publish-deploy:
     env:
@@ -24,6 +25,7 @@ jobs:
       id-token: 'write'
 
     steps:
+      # Checkout the code from GitHub
       - name: 'Checkout'
         uses: 'actions/checkout@v4'
 
@@ -33,7 +35,13 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
-          service_account: 'github-wif@neat-striker-455607-i3.iam.gserviceaccount.com'
+          service_account: 'github-wif@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
+
+      # Install the gke-gcloud-auth-plugin for Kubernetes authentication
+      - name: 'Install GKE gcloud auth plugin'
+        run: |
+          gcloud components update
+          gcloud components install gke-gcloud-auth-plugin
 
       # Authenticate Docker to Google Cloud Artifact Registry
       - name: 'Docker Auth'
@@ -78,12 +86,8 @@ jobs:
           docker build -f api/Dockerfile --tag "${API_TAG}" api/
           docker push "${API_TAG}"
 
-      # Set up Kustomize for Kubernetes deployments
-      - name: 'Set up Kustomize'
-        run: |-
-          curl -sfLo kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
-          chmod u+x ./kustomize
-      - name: Create Kubernetes Secret
+      # Create Kubernetes Secret from GitHub secrets
+      - name: 'Create Kubernetes Secret'
         run: |
           kubectl create secret generic secrets \
             --from-literal=GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
@@ -106,7 +110,7 @@ jobs:
             --from-literal=HUGGINGFACE_TOKEN="${{ secrets.HUGGINGFACE_TOKEN }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      # Deploy to GKE using kustomize
+      # Deploy to GKE (without using Kustomize)
       - name: 'Deploy to GKE'
         run: |-
           # Set the image tag with the commit SHA directly in the Kubernetes manifest files
