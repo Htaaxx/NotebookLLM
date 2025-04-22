@@ -83,12 +83,43 @@ jobs:
         run: |-
           curl -sfLo kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
           chmod u+x ./kustomize
+      - name: Create Kubernetes Secret
+        run: |
+          kubectl create secret generic secrets \
+            --from-literal=GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
+            --from-literal=GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
+            --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
+            --from-literal=STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
+            --from-literal=NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}" \
+            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
+            --from-literal=CLOUDINARY_CLOUD_NAME="${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
+            --from-literal=CLOUDINARY_API_KEY="${{ secrets.CLOUDINARY_API_KEY }}" \
+            --from-literal=CLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" \
+            --from-literal=GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}" \
+            --from-literal=MONGO_URI="${{ secrets.MONGO_URI }}" \
+            --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
+            --from-literal=ZILLIZ_CLOUD_URI="${{ secrets.ZILLIZ_CLOUD_URI }}" \
+            --from-literal=ZILLIZ_CLOUD_TOKEN="${{ secrets.ZILLIZ_CLOUD_TOKEN }}" \
+            --from-literal=LANGCHAIN_API_KEY="${{ secrets.LANGCHAIN_API_KEY }}" \
+            --from-literal=LANGCHAIN_ENDPOINT="${{ secrets.LANGCHAIN_ENDPOINT }}" \
+            --from-literal=USER_AGENT="${{ secrets.USER_AGENT }}" \
+            --from-literal=HUGGINGFACE_TOKEN="${{ secrets.HUGGINGFACE_TOKEN }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
 
       # Deploy to GKE using kustomize
       - name: 'Deploy to GKE'
         run: |-
-          # Replacing the image name in the k8s template
-          ./kustomize edit set image LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY/IMAGE:TAG=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE:$GITHUB_SHA
-          ./kustomize build . | kubectl apply -f -
+          # Set the image tag with the commit SHA directly in the Kubernetes manifest files
+          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:.*|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}|g' k8s/base/deployment.yaml
+          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:.*|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}|g' k8s/base/deployment.yaml
+          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:.*|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}|g' k8s/base/deployment.yaml
+          
+          # Apply the Kubernetes manifests directly
+          kubectl apply -f k8s/base/deployment.yaml
+          kubectl apply -f k8s/base/service.yaml
+      
+          # Wait for the deployment to complete
           kubectl rollout status deployment/$DEPLOYMENT_NAME
+      
+          # Check the status of services
           kubectl get services -o wide
