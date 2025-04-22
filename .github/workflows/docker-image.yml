@@ -2,7 +2,7 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: [main]
+    branches: [dev]
     paths:
       - 'api/**'
       - 'front-end/**'
@@ -15,7 +15,7 @@ jobs:
 
     strategy:
       matrix:
-        service: [api, frontend, database]
+        service: [api, front-end, database]
 
     steps:
       - name: Checkout code
@@ -27,7 +27,7 @@ jobs:
       - name: Log in to DockerHub
         uses: docker/login-action@v2
         with:
-          username: ${{ secrets.DOCKER_USERNAME }}
+          username: ${{ secrets.DOCKER_USERNAME }}@gmail.com
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Build and push ${{ matrix.service }} image
@@ -36,4 +36,4 @@ jobs:
           context: ./${{ matrix.service }}
           file: ./${{ matrix.service }}/Dockerfile
           push: true
-          tags: ${{DOCKER_USERNAME}}/noteus-${{ matrix.service }}:latest
+          tags: ${{secrets.DOCKER_USERNAME}}/noteus-${{ matrix.service }}:latest
