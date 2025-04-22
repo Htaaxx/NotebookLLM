@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: config
+data:
+  NEXT_PUBLIC_APP_URL: "http://noteus-frontend:80"  
+  NEXT_PUBLIC_BACKEND_API_URL: "http://noteus-api:8000"  
+  NEXTAUTH_URL: "http://noteus-frontend:80"  
+  NEXT_PUBLIC_BACKEND_DB_URL: "http://noteus-database:5000"  
+  FRONTEND_API_URL: "http://noteus-frontend:80"  
+  PORT_BACKEND: "5000"  
