@@ -6,13 +6,13 @@ on:
       - 'main'
 
 env:
-  PROJECT_ID: 'neat-striker-455607-i3' # TODO: update to your Google Cloud project ID
-  GAR_LOCATION: 'asia-southeast2' # TODO: update to your region
-  GKE_CLUSTER: 'noteus-cluster' # TODO: update to your cluster name
-  GKE_ZONE: 'asia-southeast1-a' # TODO: update to your cluster zone
-  DEPLOYMENT_NAME: 'noteus-deployment' # TODO: update to your deployment name
-  REPOSITORY: 'noteus-repo' # TODO: update to your Artifact Registry docker repository name
-  WORKLOAD_IDENTITY_PROVIDER: 'projects/669663908735/locations/global/workloadIdentityPools/github-action-pool/providers/github' # TODO: update to your workload identity provider
+  PROJECT_ID: 'neat-striker-455607-i3'  # TODO: update to your Google Cloud project ID
+  GAR_LOCATION: 'asia-southeast2'  # TODO: update to your region
+  GKE_CLUSTER: 'noteus-cluster'  # TODO: update to your cluster name
+  GKE_ZONE: 'asia-southeast1-a'  # TODO: update to your cluster zone
+  DEPLOYMENT_NAME: 'noteus-deployment'  # TODO: update to your deployment name
+  REPOSITORY: 'noteus-repo'  # TODO: update to your Artifact Registry docker repository name
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/669663908735/locations/global/workloadIdentityPools/github-action-pool/providers/github'  # TODO: update to your workload identity provider
 
 jobs:
   setup-build-publish-deploy:
@@ -28,7 +28,7 @@ jobs:
       - name: 'Checkout'
         uses: 'actions/checkout@v4'
 
-      # Authenticate to Google Cloud
+      # Authenticate to Google Cloud using Workload Identity Federation
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v2'
@@ -43,13 +43,18 @@ jobs:
           password: '${{ steps.auth.outputs.auth_token }}'
           registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
 
-      # Get the GKE credentials
+      # Set up GKE credentials
       - name: 'Set up GKE credentials'
         uses: 'google-github-actions/get-gke-credentials@v2'
         with:
           cluster_name: '${{ env.GKE_CLUSTER }}'
           location: '${{ env.GKE_ZONE }}'
-          project_id: '${{ env.PROJECT_ID }}'  # Add this line to specify the project ID
+          project_id: '${{ env.PROJECT_ID }}'
+
+      # Enable command tracing for debugging
+      - run: |
+          set -x  # Enable command tracing for debugging
+          gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
 
       # Build and push Docker containers for all three services
       - name: 'Build and push Docker containers'
@@ -64,3 +69,23 @@ jobs:
 
           # Build database container (located in database/ directory)
           docker build -f database/Dockerfile --tag "${DATABASE_TAG}" --build-arg GITHUB_SHA="${GITHUB_SHA}" database/
+          docker push "${DATABASE_TAG}"
+
+          # Build API container (located in api/ directory)
+          docker build -f api/Dockerfile --tag "${API_TAG}" --build-arg GITHUB_SHA="${GITHUB_SHA}" api/
+          docker push "${API_TAG}"
+
+      # Set up Kustomize for Kubernetes deployments
+      - name: 'Set up Kustomize'
+        run: |-
+          curl -sfLo kustomize https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.3/kustomize_v5.4.3_linux_amd64.tar.gz
+          chmod u+x ./kustomize
+
+      # Deploy to GKE using kustomize
+      - name: 'Deploy to GKE'
+        run: |-
+          # Replacing the image name in the k8s template
+          ./kustomize edit set image LOCATION-docker.pkg.dev/PROJECT_ID/REPOSITORY/IMAGE:TAG=$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/$IMAGE:$GITHUB_SHA
+          ./kustomize build . | kubectl apply -f -
+          kubectl rollout status deployment/$DEPLOYMENT_NAME
+          kubectl get services -o wide
