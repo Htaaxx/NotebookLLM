@@ -37,12 +37,6 @@ jobs:
           workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
           service_account: 'github-wif@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
 
-      # Install the gke-gcloud-auth-plugin for Kubernetes authentication
-      - name: 'Install GKE gcloud auth plugin'
-        run: |
-          gcloud components update
-          gcloud components install gke-gcloud-auth-plugin
-
       # Authenticate Docker to Google Cloud Artifact Registry
       - name: 'Docker Auth'
         uses: 'docker/login-action@v3'
@@ -63,7 +57,13 @@ jobs:
       - run: |
           set -x  # Enable command tracing for debugging
           gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
-
+          
+      # Install the gke-gcloud-auth-plugin for Kubernetes authentication
+      - name: 'Install GKE gcloud auth plugin'
+        run: |
+          gcloud components update
+          gcloud components install gke-gcloud-auth-plugin
+          
       # Build and push Docker containers for all three services
       - name: 'Build and push Docker containers'
         run: |-
