@@ -20,27 +20,27 @@ export default function Home() {
   }
 
   return (
-    <motion.main
-      className="min-h-screen relative bg-white overflow-hidden"
-      initial="hidden"
-      animate="show"
-      variants={staggerContainer(0.2, 0.1)}
-    >
+    <div className="min-h-screen relative bg-white overflow-hidden">
       <NavBar onNavClick={handleNavClick} onSignUp={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />
 
-      <HeroSection onGetStarted={() => setShowAuth(true)} onSeeDemo={() => setShowAuth(false)} />
+      <motion.main
+        className="min-h-screen relative bg-white overflow-hidden pt-16" // Added pt-16 for padding-top
+        initial="hidden"
+        animate="show"
+        variants={staggerContainer(0.2, 0.1)}
+      >
+        <HeroSection onGetStarted={() => setShowAuth(true)} onSeeDemo={() => setShowAuth(false)} />
 
-      <FeaturesSection />
+        <FeaturesSection />
 
-      <AppScreenshotSection />
+        <AppScreenshotSection />
 
-      <TestimonialsSection />
+        <TestimonialsSection />
 
-      <CTASection onGetStarted={() => setShowAuth(true)} />
+        <CTASection onGetStarted={() => setShowAuth(true)} />
 
-      {/* IntegrationSection removed as requested */}
-
-      <Footer onNavClick={handleNavClick} />
+        <Footer onNavClick={handleNavClick} />
+      </motion.main>
 
       {/* Auth Modal Overlay */}
       {showAuth && (
@@ -70,7 +70,6 @@ export default function Home() {
           </motion.div>
         </div>
       )}
-    </motion.main>
+    </div>
   )
 }
-
