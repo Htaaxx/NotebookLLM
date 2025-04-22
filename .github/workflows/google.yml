@@ -4,18 +4,17 @@ on:
   push:
     branches:
       - 'main'
-
-env:
-  PROJECT_ID: 'neat-striker-455607-i3'  # TODO: update to your Google Cloud project ID
-  GAR_LOCATION: 'asia-southeast2'  # TODO: update to your region
-  GKE_CLUSTER: 'noteus-cluster'  # TODO: update to your cluster name
-  GKE_ZONE: 'asia-southeast1-a'  # TODO: update to your cluster zone
-  DEPLOYMENT_NAME: 'noteus-deployment'  # TODO: update to your deployment name
-  REPOSITORY: 'noteus-repo'  # TODO: update to your Artifact Registry docker repository name
-  WORKLOAD_IDENTITY_PROVIDER: 'projects/669663908735/locations/global/workloadIdentityPools/github-action-pool/providers/github'  # TODO: update to your workload identity provider
-
 jobs:
   setup-build-publish-deploy:
+    env:
+      PROJECT_ID: 'neat-striker-455607-i3'  # TODO: update to your Google Cloud project ID
+      GAR_LOCATION: 'asia-southeast2'  # TODO: update to your region
+      GKE_CLUSTER: 'noteus-cluster'  # TODO: update to your cluster name
+      GKE_ZONE: 'asia-southeast1-a'  # TODO: update to your cluster zone
+      DEPLOYMENT_NAME: 'noteus-deployment'  # TODO: update to your deployment name
+      REPOSITORY: 'noteus-repo'  # TODO: update to your Artifact Registry docker repository name
+      WORKLOAD_IDENTITY_PROVIDER: 'projects/669663908735/locations/global/workloadIdentityPools/github-action-pool/providers/github'  # TODO: update to your workload identity provider
+
     name: 'Setup, Build, Publish, and Deploy'
     runs-on: 'ubuntu-latest'
     environment: 'production'
