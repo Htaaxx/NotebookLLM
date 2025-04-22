@@ -59,7 +59,7 @@ jobs:
       # Build and push Docker containers for all three services
       - name: 'Build and push Docker containers'
         run: |-
-          gcloud auth configure-docker \ asia-southeast2-docker.pkg.dev
+          gcloud auth configure-docker asia-southeast2-docker.pkg.dev
           export DOCKER_BUILDKIT=1
           export BUILDKIT_PROGRESS=plain
           FRONTEND_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}"
