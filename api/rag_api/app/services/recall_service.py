@@ -1,5 +1,5 @@
 import os
-from .rag_logic.core.connections import (
+from ..services.rag_pipeline import (
     llm,
     get_user_vector_store,
 )
