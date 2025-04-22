@@ -46,9 +46,9 @@ function CheckoutForm({
   }, [])
 
   useEffect(() => {
-     if (!useStoredCard) {
-        setIsPaymentElementReady(false);
-     }
+    if (!useStoredCard) {
+      setIsPaymentElementReady(false);
+    }
   }, [useStoredCard]);
 
 
@@ -69,9 +69,9 @@ function CheckoutForm({
       if (useStoredCard) {
         // --- Saved Card Payment Logic ---
         if (!savedCard?.paymentMethodId) {
-           setErrorMessage("Saved card information is incomplete or missing Payment Method ID.")
-           setIsLoading(false)
-           return
+          setErrorMessage("Saved card information is incomplete or missing Payment Method ID.")
+          setIsLoading(false)
+          return
         }
         console.log("Attempting confirmation with saved PaymentMethod:", savedCard.paymentMethodId);
         confirmResult = await stripe.confirmPayment({
@@ -89,11 +89,11 @@ function CheckoutForm({
           setIsLoading(false)
           return
         }
-         if (!isPaymentElementReady) {
-             setErrorMessage("Payment form is not ready yet. Please wait.");
-             setIsLoading(false);
-             return;
-         }
+        if (!isPaymentElementReady) {
+          setErrorMessage("Payment form is not ready yet. Please wait.");
+          setIsLoading(false);
+          return;
+        }
 
         console.log("Attempting confirmation with Payment Element");
         confirmResult = await stripe.confirmPayment({
@@ -109,8 +109,8 @@ function CheckoutForm({
       const { error, paymentIntent } = confirmResult;
 
       if (error) {
-         console.error("Stripe confirmation error:", error);
-         // Provide more specific errors if available
+        console.error("Stripe confirmation error:", error);
+        // Provide more specific errors if available
         setErrorMessage(error.message || "An error occurred with your payment")
       } else if (paymentIntent && paymentIntent.status === "succeeded") {
         console.log("Payment succeeded:", paymentIntent);
@@ -128,9 +128,9 @@ function CheckoutForm({
         // }
         onSuccess()
       } else if (paymentIntent) {
-         // Handle other statuses like 'requires_action', 'processing' if needed
-         console.warn("PaymentIntent status:", paymentIntent.status);
-         setErrorMessage(`Payment status: ${paymentIntent.status}. Please follow any instructions or wait.`);
+        // Handle other statuses like 'requires_action', 'processing' if needed
+        console.warn("PaymentIntent status:", paymentIntent.status);
+        setErrorMessage(`Payment status: ${paymentIntent.status}. Please follow any instructions or wait.`);
       }
 
     } catch (error: any) {
@@ -158,9 +158,9 @@ function CheckoutForm({
               id="use-saved-card"
               checked={useStoredCard}
               onCheckedChange={(checked) => {
-                 const isChecked = checked === true;
-                 setUseStoredCard(isChecked);
-                 setErrorMessage(null); // Clear errors on change
+                const isChecked = checked === true;
+                setUseStoredCard(isChecked);
+                setErrorMessage(null); // Clear errors on change
               }}
             />
             <Label htmlFor="use-saved-card" className="cursor-pointer">
@@ -173,22 +173,22 @@ function CheckoutForm({
       {/* Conditionally render PaymentElement */}
       {/* Add a key to force remount if needed, e.g., when options change */}
       {!useStoredCard && (
-         <div className={isPaymentElementReady ? '' : 'opacity-50'}> {/* Optional: visual feedback */}
-             <PaymentElement
-                key={clientSecret} // Force remount if clientSecret changes
-                onReady={() => {
-                   console.log("PaymentElement Ready");
-                   setIsPaymentElementReady(true);
-                }}
-                // onChange={(event) => { // Handle validation errors, etc.
-                //   if (event.error) {
-                //     setErrorMessage(event.error.message);
-                //   } else {
-                //     setErrorMessage(null);
-                //   }
-                // }}
-             />
-         </div>
+        <div className={isPaymentElementReady ? '' : 'opacity-50'}> {/* Optional: visual feedback */}
+          <PaymentElement
+            key={clientSecret} // Force remount if clientSecret changes
+            onReady={() => {
+              console.log("PaymentElement Ready");
+              setIsPaymentElementReady(true);
+            }}
+          // onChange={(event) => { // Handle validation errors, etc.
+          //   if (event.error) {
+          //     setErrorMessage(event.error.message);
+          //   } else {
+          //     setErrorMessage(null);
+          //   }
+          // }}
+          />
+        </div>
       )}
 
       {errorMessage && <div className="p-3 text-sm text-red-500 bg-red-100 rounded-md border border-red-200">{errorMessage}</div>}
@@ -250,17 +250,17 @@ export default function PaymentPage() {
     let resolvedPlan = null;
 
     if (planId) {
-       resolvedPlan = plans.find((p) => p.id === planId)
-       if(resolvedPlan) {
-          localStorage.setItem("selectedPlan", JSON.stringify(resolvedPlan)); // Store the selected plan object
-          console.log("Plan found from URL:", resolvedPlan.name);
-       }
+      resolvedPlan = plans.find((p) => p.id === planId)
+      if (resolvedPlan) {
+        localStorage.setItem("selectedPlan", JSON.stringify(resolvedPlan)); // Store the selected plan object
+        console.log("Plan found from URL:", resolvedPlan.name);
+      }
     } else {
-       const storedPlanJson = localStorage.getItem("selectedPlan")
-       if (storedPlanJson) {
-          resolvedPlan = JSON.parse(storedPlanJson);
-          console.log("Plan found from localStorage:", resolvedPlan.name);
-       }
+      const storedPlanJson = localStorage.getItem("selectedPlan")
+      if (storedPlanJson) {
+        resolvedPlan = JSON.parse(storedPlanJson);
+        console.log("Plan found from localStorage:", resolvedPlan.name);
+      }
     }
 
     if (resolvedPlan) {
@@ -290,16 +290,16 @@ export default function PaymentPage() {
           setIsLoading(false) // Hide loading even on error
         })
     } else if (selectedPlan && selectedPlan.price === 0) {
-       console.log("Selected plan is free, skipping Payment Intent.");
+      console.log("Selected plan is free, skipping Payment Intent.");
       // Free plan doesn't need payment intent or loading state for PI
       setIsLoading(false)
     }
-     // If !selectedPlan or !isAuthenticated, loading might remain true from initial state
-     // or might be set false if price === 0. Ensure loading is eventually false.
-     else if (!selectedPlan) {
-         // This case should ideally be handled by the first useEffect redirecting
-         console.log("Waiting for plan selection...");
-     }
+    // If !selectedPlan or !isAuthenticated, loading might remain true from initial state
+    // or might be set false if price === 0. Ensure loading is eventually false.
+    else if (!selectedPlan) {
+      // This case should ideally be handled by the first useEffect redirecting
+      console.log("Waiting for plan selection...");
+    }
 
   }, [selectedPlan, isAuthenticated]) // Runs when plan or auth state changes
 
@@ -311,21 +311,20 @@ export default function PaymentPage() {
     // based on successful payment confirmation (ideally via webhooks).
 
     const userID = localStorage.getItem("user_id")
-    // Client-side update is for UI feedback only.
+    
     localStorage.setItem("currentPlan", selectedPlan?.name || 'Unknown') // Update UI state
+
     if (selectedPlan.name === "Pro") {
       if (userID) {
         const update = accountTypeAPI.updateAccountType(userID, "PRO");
-      } else {
-      if (userID) {
-        const update = accountTypeAPI.updateAccountType(userID, "STANDARD");
-      } else {
-        console.error("User ID is null. Cannot update account type.");
-      }
       }
     }
-    // Consider removing sensitive items after success:
-    // localStorage.removeItem("selectedPlan");
+    if (selectedPlan.name === "Standard") {
+        if (userID) {
+          const update = accountTypeAPI.updateAccountType(userID, "STANDARD");
+        }
+      }
+
     router.push("/payment/success") // Redirect to success page
   }
 
@@ -357,25 +356,25 @@ export default function PaymentPage() {
     )
   }
 
-   // Error State During Payment Intent Creation
-   if (paymentError) {
-     return (
-       <div className="min-h-screen flex flex-col bg-white">
-         <NavBar />
-         <main className="flex-1 container mx-auto px-4 py-12 flex items-center justify-center">
-           <div className="max-w-md mx-auto text-center p-6 border border-red-200 bg-red-50 rounded-md">
-              <CardTitle className="text-red-600 mb-3">Payment Error</CardTitle>
-              <p className="text-red-700 mb-4">{paymentError}</p>
-              <Button variant="outline" onClick={() => router.push("/pricing")}>
-                 Go Back to Plans
-              </Button>
-           </div>
-         </main>
-       </div>
-     );
-   }
+  // Error State During Payment Intent Creation
+  if (paymentError) {
+    return (
+      <div className="min-h-screen flex flex-col bg-white">
+        <NavBar />
+        <main className="flex-1 container mx-auto px-4 py-12 flex items-center justify-center">
+          <div className="max-w-md mx-auto text-center p-6 border border-red-200 bg-red-50 rounded-md">
+            <CardTitle className="text-red-600 mb-3">Payment Error</CardTitle>
+            <p className="text-red-700 mb-4">{paymentError}</p>
+            <Button variant="outline" onClick={() => router.push("/pricing")}>
+              Go Back to Plans
+            </Button>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-   // Main Content Render
+  // Main Content Render
   return (
     <div className="min-h-screen flex flex-col bg-white">
       <NavBar />
@@ -393,15 +392,15 @@ export default function PaymentPage() {
                 {selectedPlan?.price > 0 && clientSecret // Ensure clientSecret exists for paid plans here
                   ? `You're subscribing to the ${selectedPlan?.name} plan for $${selectedPlan?.price}/month`
                   : selectedPlan
-                  ? `You're activating the ${selectedPlan?.name} plan`
-                  : "Loading plan details..." // Fallback description
-                 }
+                    ? `You're activating the ${selectedPlan?.name} plan`
+                    : "Loading plan details..." // Fallback description
+                }
               </CardDescription>
             </CardHeader>
             <CardContent>
               {/* Paid Plan Checkout */}
               {selectedPlan?.price > 0 && clientSecret && stripePromise ? (
-                 // Pass clientSecret via options for Elements provider
+                // Pass clientSecret via options for Elements provider
                 <Elements stripe={stripePromise} options={{ clientSecret, appearance: { theme: "stripe" } }}>
                   <CheckoutForm
                     clientSecret={clientSecret} // Pass for potential use within CheckoutForm if needed e.g saved card flow.
@@ -411,25 +410,25 @@ export default function PaymentPage() {
                   />
                 </Elements>
               ) : /* Free Plan Activation */
-              selectedPlan?.price === 0 ? (
-                <div className="space-y-6">
-                  <div className="p-4 bg-green-50 text-green-800 rounded-md border border-green-200 flex items-start">
-                    <Check className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0 text-green-600" />
-                    <div>
-                      <p className="font-medium">Free Plan</p>
-                      <p className="text-sm">This plan doesn't require payment. Click below to activate it instantly.</p>
+                selectedPlan?.price === 0 ? (
+                  <div className="space-y-6">
+                    <div className="p-4 bg-green-50 text-green-800 rounded-md border border-green-200 flex items-start">
+                      <Check className="h-5 w-5 mr-3 mt-0.5 flex-shrink-0 text-green-600" />
+                      <div>
+                        <p className="font-medium">Free Plan</p>
+                        <p className="text-sm">This plan doesn't require payment. Click below to activate it instantly.</p>
+                      </div>
                     </div>
+                    <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleFreePlanActivation}>
+                      Activate Free Plan
+                    </Button>
                   </div>
-                  <Button className="w-full bg-green-600 hover:bg-green-700" onClick={handleFreePlanActivation}>
-                    Activate Free Plan
-                  </Button>
-                </div>
-              ) : /* Fallback/Error if no plan matches conditions */ (
-                <div className="text-center py-4">
-                  <p className="text-gray-500">Select a plan to proceed.</p>
-                  {/* This state should ideally not be reached due to redirects */}
-                </div>
-              )}
+                ) : /* Fallback/Error if no plan matches conditions */ (
+                  <div className="text-center py-4">
+                    <p className="text-gray-500">Select a plan to proceed.</p>
+                    {/* This state should ideally not be reached due to redirects */}
+                  </div>
+                )}
             </CardContent>
           </Card>
         </div>
