@@ -104,6 +104,7 @@ jobs:
             --from-literal=CLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" \
             --from-literal=GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}" \
             --from-literal=MONGO_URI="${{ secrets.MONGO_URI }}" \
+            --from-literal=MONGO_DB_NAME="${{ secrets.MONGO_DB_NAME }}" \
             --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
             --from-literal=ZILLIZ_CLOUD_URI="${{ secrets.ZILLIZ_CLOUD_URI }}" \
             --from-literal=ZILLIZ_CLOUD_TOKEN="${{ secrets.ZILLIZ_CLOUD_TOKEN }}" \
