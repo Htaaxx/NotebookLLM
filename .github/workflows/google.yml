@@ -68,26 +68,26 @@ jobs:
           gcloud components install gke-gcloud-auth-plugin
           
       # Build and push Docker containers for all three services
-      # - name: 'Build and push Docker containers'
-      #   run: |-
-      #     gcloud auth configure-docker asia-southeast2-docker.pkg.dev
-      #     export DOCKER_BUILDKIT=1
-      #     export BUILDKIT_PROGRESS=plain
-      #     FRONTEND_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}"
-      #     DATABASE_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}"
-      #     API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}"
+      - name: 'Build and push Docker containers'
+        run: |-
+          gcloud auth configure-docker asia-southeast2-docker.pkg.dev
+          export DOCKER_BUILDKIT=1
+          export BUILDKIT_PROGRESS=plain
+          FRONTEND_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}"
+          DATABASE_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}"
+          API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}"
       
-      #     echo "Building frontend container: $FRONTEND_TAG"
-      #     docker build -f front-end/Dockerfile --tag "${FRONTEND_TAG}" front-end/
-      #     docker push "${FRONTEND_TAG}"
+          echo "Building frontend container: $FRONTEND_TAG"
+          docker build -f front-end/Dockerfile --tag "${FRONTEND_TAG}" front-end/
+          docker push "${FRONTEND_TAG}"
       
-      #     echo "Building database container: $DATABASE_TAG"
-      #     docker build -f database/Dockerfile --tag "${DATABASE_TAG}" database/
-      #     docker push "${DATABASE_TAG}"
+          echo "Building database container: $DATABASE_TAG"
+          docker build -f database/Dockerfile --tag "${DATABASE_TAG}" database/
+          docker push "${DATABASE_TAG}"
       
-      #     echo "Building API container: $API_TAG"
-      #     docker build -f api/Dockerfile --tag "${API_TAG}" api/
-      #     docker push "${API_TAG}"
+          echo "Building API container: $API_TAG"
+          docker build -f api/Dockerfile --tag "${API_TAG}" api/
+          docker push "${API_TAG}"
 
       # Create Kubernetes Secret from GitHub secrets
       - name: 'Create Kubernetes Secret'
@@ -114,12 +114,17 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
       # Deploy to GKE (without using Kustomize)
+      - name: 'Debug image tags'
+        run: |
+          echo "GITHUB_SHA: ${GITHUB_SHA}"
+          echo "PROJECT_ID: ${PROJECT_ID}"
+          echo "REPOSITORY: ${REPOSITORY}"
       - name: 'Deploy to GKE'
         run: |-
           # Set the image tag with the commit SHA directly in the Kubernetes manifest files
-          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}|g' k8s/base/deployment.yaml
-          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}|g' k8s/base/deployment.yaml
-          sed -i 's|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}|g' k8s/base/deployment.yaml
+          sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}|g" k8s/base/deployment.yaml
+          sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}|g" k8s/base/deployment.yaml
+          sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}|g" k8s/base/deployment.yaml
           
           # Apply the Kubernetes manifests directly
           kubectl apply -f k8s/base/config.yaml
