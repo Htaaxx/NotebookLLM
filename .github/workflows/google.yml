@@ -77,14 +77,24 @@ jobs:
           DATABASE_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}"
           API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}"
       
+          # Set your build arguments
+          BUILD_ARGS=(
+            --build-arg NEXT_PUBLIC_APP_URL="http://noteus-frontend:80"
+            --build-arg NEXT_PUBLIC_BACKEND_API_URL="http://noteus-api:8000"
+            --build-arg NEXTAUTH_URL="http://noteus-frontend:80"
+            --build-arg NEXT_PUBLIC_BACKEND_DB_URL="http://noteus-database:5000"
+            --build-arg FRONTEND_API_URL="http://noteus-frontend:80"
+            --build-arg PORT_BACKEND="5000"
+          )
+
           echo "Building frontend container: $FRONTEND_TAG"
-          docker build -f front-end/Dockerfile --tag "${FRONTEND_TAG}" front-end/
+          docker build "${BUILD_ARGS[@]}" -f front-end/Dockerfile --tag "${FRONTEND_TAG}" front-end/
           docker push "${FRONTEND_TAG}"
-      
+
           echo "Building database container: $DATABASE_TAG"
           docker build -f database/Dockerfile --tag "${DATABASE_TAG}" database/
           docker push "${DATABASE_TAG}"
-      
+
           echo "Building API container: $API_TAG"
           docker build -f api/Dockerfile --tag "${API_TAG}" api/
           docker push "${API_TAG}"
