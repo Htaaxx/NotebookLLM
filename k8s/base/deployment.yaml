@@ -148,47 +148,47 @@ spec:
             - name: ZILLIZ_CLOUD_URI
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: ZILLIZ_CLOUD_URI
             - name: ZILLIZ_CLOUD_TOKEN
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: ZILLIZ_CLOUD_TOKEN
             - name: LANGCHAIN_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: LANGCHAIN_API_KEY
             - name: LANGCHAIN_ENDPOINT
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: LANGCHAIN_ENDPOINT
             - name: USER_AGENT
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: USER_AGENT
             - name: MONGO_URI
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: MONGO_URI
             - name: MONGO_DB_NAME
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: MONGO_DB_NAME
             - name: MONGO_COLLECTION_NAME
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: MONGO_COLLECTION_NAME
             - name: GOOGLE_API_KEY
               valueFrom:
                 secretKeyRef:
-                  name: noteus-api-secrets
+                  name: secrets
                   key: GOOGLE_API_KEY
           resources:
             requests:
