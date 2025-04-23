@@ -96,8 +96,8 @@ jobs:
           docker push "${DATABASE_TAG}"
 
           echo "Building API container: $API_TAG"
-          docker build -f api/Dockerfile --tag "${API_TAG}" api/
-          docker push "${API_TAG}"
+          # docker build -f api/Dockerfile --tag "${API_TAG}" api/
+          # docker push "${API_TAG}"
 
       # Create Kubernetes Secret from GitHub secrets
       - name: 'Create Kubernetes Secret'
@@ -134,7 +134,7 @@ jobs:
       - name: 'Deploy to GKE'
         run: |-
           # Set the image tag with the commit SHA directly in the Kubernetes manifest files
-          sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}|g" k8s/base/deployment.yaml
+          # sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}|g" k8s/base/deployment.yaml
           sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}|g" k8s/base/deployment.yaml
           sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}|g" k8s/base/deployment.yaml
           
@@ -146,7 +146,7 @@ jobs:
           # Wait for the deployment to complete
           kubectl rollout status deployment/$DEPLOYMENT_NAME_3
           kubectl rollout status deployment/$DEPLOYMENT_NAME_2
-          kubectl rollout status deployment/$DEPLOYMENT_NAME_1
+          # kubectl rollout status deployment/$DEPLOYMENT_NAME_1
           
           # Check the status of services
           kubectl get services -o wide
