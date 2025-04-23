@@ -9,7 +9,8 @@ const api = axios.create({
     'Content-Type': 'application/json',
   },
 });
-
+// console log api
+console.log('API instance:', api);
 // Thêm interceptor để gắn token xác thực vào headers
 api.interceptors.request.use(
   (config) => {
@@ -69,6 +70,8 @@ api.interceptors.response.use(
 // Các phương thức API xác thực
 export const authAPI = {
   signIn: async (username: string, password: string) => {
+    // console log url 
+    console.log('URL:', api.defaults.baseURL + '/signin');
     const response = await api.post('/signin', { username, password });
     localStorage.setItem('accessToken', response.data.accessToken);
     localStorage.setItem('refreshToken', response.data.refreshToken);
