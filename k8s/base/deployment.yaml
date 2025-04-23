@@ -141,7 +141,7 @@ spec:
     spec:
       containers:
         - name: noteus-api
-          image: asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:v1
+          image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-api:v1
           ports:
             - containerPort: 8000
           env:
