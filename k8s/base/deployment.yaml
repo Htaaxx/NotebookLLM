@@ -15,6 +15,7 @@ spec:
       containers:
         - name: noteus-frontend
           image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-frontend:v1
+          imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 3000
           env:
@@ -81,6 +82,7 @@ spec:
       containers:
         - name: noteus-database
           image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-database:v1
+          imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 5000
           env:
@@ -142,6 +144,7 @@ spec:
       containers:
         - name: noteus-api
           image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-api:v1
+          imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 8000
           env:
@@ -192,8 +195,8 @@ spec:
                   key: GOOGLE_API_KEY
           resources:
             requests:
-              memory: "256Mi"      # Minimum memory requested
-              cpu: "250m"          # Minimum CPU requested
+              memory: "256Mi"
+              cpu: "250m"
             limits:
-              memory: "512Mi"      # Maximum memory allowed
-              cpu: "500m"          # Maximum CPU allowed
+              memory: "512Mi"
+              cpu: "500m"
