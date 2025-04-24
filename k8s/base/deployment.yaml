@@ -193,10 +193,3 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: GOOGLE_API_KEY
-          resources:
-            requests:
-              memory: "256Mi"
-              cpu: "250m"
-            limits:
-              memory: "512Mi"
-              cpu: "500m"
