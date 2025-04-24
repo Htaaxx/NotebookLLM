@@ -18,52 +18,11 @@ spec:
           imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 3000
-          env:
-            - name: NEXT_PUBLIC_APP_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: config
-                  key: NEXT_PUBLIC_APP_URL
-            - name: NEXT_PUBLIC_BACKEND_DB_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: config
-                  key: NEXT_PUBLIC_BACKEND_DB_URL
-            - name: NEXT_PUBLIC_BACKEND_API_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: config
-                  key: NEXT_PUBLIC_BACKEND_API_URL
-            - name: NEXTAUTH_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: config
-                  key: NEXTAUTH_URL
-            - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-            - name: GOOGLE_CLIENT_ID
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: GOOGLE_CLIENT_ID
-            - name: GOOGLE_CLIENT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: GOOGLE_CLIENT_SECRET
-            - name: NEXTAUTH_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: NEXTAUTH_SECRET
-            - name: STRIPE_SECRET_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: STRIPE_SECRET_KEY
+          envFrom:
+            - secretRef:
+                name: secrets
+            - configMapRef:
+                name: config
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -85,47 +44,11 @@ spec:
           imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 5000
-          env:
-            - name: JWT_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: JWT_SECRET
-            - name: CLOUDINARY_CLOUD_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: CLOUDINARY_CLOUD_NAME
-            - name: CLOUDINARY_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: CLOUDINARY_API_KEY
-            - name: CLOUDINARY_API_SECRET
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: CLOUDINARY_API_SECRET
-            - name: GOOGLE_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: GOOGLE_API_KEY
-            - name: MONGO_URI
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: MONGO_URI
-            - name: PORT_BACKEND
-              valueFrom:
-                configMapKeyRef:
-                  name: config
-                  key: PORT_BACKEND
-            - name: FRONTEND_API_URL
-              valueFrom:
-                configMapKeyRef:
-                  name: config
-                  key: FRONTEND_API_URL
+          envFrom:
+            - secretRef:
+                name: secrets
+            - configMapRef:
+                name: config
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -147,49 +70,8 @@ spec:
           imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 8000
-          env:
-            - name: ZILLIZ_CLOUD_URI
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: ZILLIZ_CLOUD_URI
-            - name: ZILLIZ_CLOUD_TOKEN
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: ZILLIZ_CLOUD_TOKEN
-            - name: LANGCHAIN_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: LANGCHAIN_API_KEY
-            - name: LANGCHAIN_ENDPOINT
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: LANGCHAIN_ENDPOINT
-            - name: USER_AGENT
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: USER_AGENT
-            - name: MONGO_URI
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: MONGO_URI
-            - name: MONGO_DB_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: MONGO_DB_NAME
-            - name: MONGO_COLLECTION_NAME
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: MONGO_COLLECTION_NAME
-            - name: OPENAI_API_KEY
-              valueFrom:
-                secretKeyRef:
-                  name: secrets
-                  key: OPENAI_API_KEY
+          envFrom:
+            - secretRef:
+                name: secrets
+            - configMapRef:
+                name: config
