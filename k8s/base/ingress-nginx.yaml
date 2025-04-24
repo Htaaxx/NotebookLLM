@@ -9,14 +9,14 @@ spec:
   rules:
     - http:
         paths:
-          - path: /database/?(.*)
+          - path: /noteus-database/?(.*)
             pathType: Prefix
             backend:
               service:
                 name: noteus-database
                 port:
                   number: 5000
-          - path: /api/?(.*)
+          - path: /noteus-api/?(.*)
             pathType: Prefix
             backend:
               service:
