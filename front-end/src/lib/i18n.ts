@@ -4,14 +4,14 @@ export type Language = "en" | "vi"
 // Define the translation keys structure
 export interface Translations {
   // Navigation
-  chatbox: string
-  files: string
-  flashcard: string
-  profile: string
+  CHATBOX: string
+  FILES: string
+  FLASHCARD: string
+  Profile: string
 
   // User menu
-  language: string
-  signOut: string
+  Language: string
+  SignOut: string
 
   // File collection
   searchAll: string
@@ -100,14 +100,14 @@ export interface Translations {
 export const translations: Record<Language, Translations> = {
   en: {
     // Navigation
-    chatbox: "CHATBOX",
-    files: "FILES",
-    flashcard: "FLASHCARD",
-    profile: "PROFILE",
+    CHATBOX: "CHATBOX",
+    FILES: "FILES",
+    FLASHCARD: "FLASHCARD",
+    Profile: "PROFILE",
 
     // User menu
-    language: "Language",
-    signOut: "Sign Out",
+    Language: "Language",
+    SignOut: "Sign Out",
 
     // File collection
     searchAll: "Search All",
@@ -193,14 +193,14 @@ export const translations: Record<Language, Translations> = {
   },
   vi: {
     // Navigation
-    chatbox: "HỘP CHAT",
-    files: "TỆP",
-    flashcard: "THẺ GHI NHỚ",
-    profile: "HỒ SƠ",
+    CHATBOX: "HỘP CHAT",
+    FILES: "TỆP",
+    FLASHCARD: "THẺ GHI NHỚ",
+    Profile: "HỒ SƠ",
 
     // User menu
-    language: "Ngôn ngữ",
-    signOut: "Đăng Xuất",
+    Language: "Ngôn ngữ",
+    SignOut: "Đăng Xuất",
 
     // File collection
     searchAll: "Tìm kiếm tất cả",

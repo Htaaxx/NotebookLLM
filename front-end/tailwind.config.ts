@@ -61,6 +61,10 @@ const config = {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      fontFamily: {
+        quicksand: ["Quicksand", "sans-serif"],
+        anton: ["Anton", "sans-serif"],
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 0.25rem)",
