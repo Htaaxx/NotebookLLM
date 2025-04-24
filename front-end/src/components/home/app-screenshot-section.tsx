@@ -1,65 +1,107 @@
-import { FileUp, MessageSquare, Brain } from "lucide-react"
+import { FileUp, MessageSquare, Brain } from "lucide-react";
+import { Anton } from "next/font/google";
+
+// Initialize Anton font
+const anton = Anton({ 
+  weight: "400", 
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export function AppScreenshotSection() {
   return (
-    <section className="py-20 px-6 bg-gradient-to-b from-white to-green-50">
-      <div className="max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-2 gap-12 items-center">
-          <div>
-            <h2 className="text-3xl font-bold mb-6">See NoteUS in Action</h2>
-            <p className="text-xl text-gray-600 mb-8">
-              Our intuitive interface makes it easy to organize your thoughts and boost your productivity.
-            </p>
-
-            <div className="space-y-6">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <FileUp className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Upload Any File</h3>
-                  <p className="text-gray-600">
-                    Import PDFs, images, and documents to extract and organize information.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <MessageSquare className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Chat with Your Notes</h3>
-                  <p className="text-gray-600">Ask questions about your content and get accurate answers instantly.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Brain className="h-5 w-5 text-green-600" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-lg">Generate Mind Maps</h3>
-                  <p className="text-gray-600">Visualize connections between concepts for better understanding.</p>
-                </div>
+    <section className="py-28 px-6 bg-[#86AB5D] relative">
+      <div className="max-w-[1400px] mx-auto relative h-[800px]">
+        {/* Container 1: Title and Description - Positioned independently */}
+        <div 
+          className="absolute bg-[#F2F5DA] rounded-t-3xl rounded-b-xl px-10 py-20 flex flex-col justify-center"
+          style={{
+            top: "20px",
+            left: "20px",
+            width: "500px",
+            height: "580px"
+          }}
+        >
+          <h2 className={`${anton.className} text-7xl text-[#E48D44] font-bold leading-tight mb-6`}>
+            See NoteUS 
+            <br />in Action
+          </h2>
+          <p className="text-gray-700 text-2xl">
+            Our intuitive interface makes it easy 
+            <br />to organize your thoughts and 
+            <br />boost your productivity.
+          </p>
+        </div>
+        
+        {/* Container 2: Video/Image - Positioned independently */}
+        <div 
+          className="absolute bg-[#F2F5DA] rounded-3xl px-10 py-12 flex items-center justify-center"
+          style={{
+            top: "20px",
+            right: "-30px",
+            width: "880px",
+            height: "480px"
+          }}
+        >
+          <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 w-full">
+            <img
+              src="/NoteUS.jpg"
+              alt="NoteUS Interface"
+              className="w-full h-auto object-cover"
+            />
+            {/* Optionally add a play button if it's a video */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 bg-white bg-opacity-80 rounded-full flex items-center justify-center cursor-pointer hover:bg-opacity-90 transition-all">
+                <div className="w-0 h-0 border-t-8 border-t-transparent border-l-16 border-l-[#D86018] border-b-8 border-b-transparent ml-1"></div>
               </div>
             </div>
           </div>
-
-          <div className="relative">
-            <div className="bg-white rounded-xl shadow-xl overflow-hidden border border-gray-200  w-full md:w-[700px] ">
-              <img
-                src="/NoteUS.jpg"
-                alt="NoteUS Interface"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div className="absolute -z-10 -bottom-6 -right-6 w-64 h-64 bg-green-200 rounded-full blur-3xl opacity-50"></div>
-            <div className="absolute -z-10 -top-6 -left-6 w-64 h-64 bg-blue-200 rounded-full blur-3xl opacity-50"></div>
+          <div className="absolute -z-10 -bottom-8 -right-8 w-80 h-80 bg-green-200 rounded-full blur-3xl opacity-50" />
+        </div>
+        
+        {/* Container 3: Feature boxes - Positioned independently */}
+        <div 
+          className="absolute bg-[#F2F5DA] rounded-3xl px-10 py-12"
+          style={{
+            top: "535px",
+            bottom: "50px",
+            left: "20px",
+            width: "1410px",
+            height: "300px"
+          }}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 h-full">
+            {[
+              {
+                icon: <FileUp className="h-6 w-6 text-green-600" />,
+                title: "Upload Any File",
+                desc: "Import PDFs, images, and documents to extract and organize information.",
+              },
+              {
+                icon: <MessageSquare className="h-6 w-6 text-green-600" />,
+                title: "Chat with Your Notes",
+                desc: "Ask questions about your content and get accurate answers instantly.",
+              },
+              {
+                icon: <Brain className="h-6 w-6 text-green-600" />,
+                title: "Generate Mind Maps",
+                desc: "Visualize connections between concepts for better understanding.",
+              },
+            ].map(({ icon, title, desc }, index) => (
+              <div
+                key={index}
+                className="bg-[#457A4D] rounded-2xl p-6 text-white text-center hover:scale-105 hover:shadow-xl transition-all duration-300 h-full flex flex-col items-center justify-start"
+              >
+                <div className="w-12 h-12 mb-4 bg-green-100 rounded-full flex items-center justify-center">
+                  {icon}
+                </div>
+                <h3 className={`${anton.className} text-xl font-semibold mb-3`}>{title}</h3>
+                <p className="text-base text-[#E9EACF]">{desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
     </section>
-  )
+  );
 }
-
