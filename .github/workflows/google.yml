@@ -79,12 +79,12 @@ jobs:
       
           # Set your build arguments
           BUILD_ARGS=(
-            --build-arg NEXT_PUBLIC_APP_URL="http://noteus-frontend:80"
-            --build-arg NEXT_PUBLIC_BACKEND_API_URL="http://noteus-api:8000"
-            --build-arg NEXTAUTH_URL="http://noteus-frontend:80"
-            --build-arg NEXT_PUBLIC_BACKEND_DB_URL="http://noteus-database:5000"
-            --build-arg FRONTEND_API_URL="http://noteus-frontend:80"
-            --build-arg PORT_BACKEND="5000"
+            --build-arg NEXT_PUBLIC_APP_URL="${{ vars.config.NEXT_PUBLIC_APP_URL }}"
+            --build-arg NEXT_PUBLIC_BACKEND_API_URL="${{ vars.config.NEXT_PUBLIC_BACKEND_API_URL }}"
+            --build-arg NEXTAUTH_URL="${{ vars.config.NEXTAUTH_URL }}"
+            --build-arg NEXT_PUBLIC_BACKEND_DB_URL="${{ vars.config.NEXT_PUBLIC_BACKEND_DB_URL }}"
+            --build-arg FRONTEND_API_URL="${{ vars.config.FRONTEND_API_URL }}"
+            --build-arg PORT_BACKEND="${{ vars.config.PORT_BACKEND }}"
           )
 
           echo "Building frontend container: $FRONTEND_TAG"
@@ -100,7 +100,7 @@ jobs:
           # docker push "${API_TAG}"
 
       # Create Kubernetes Secret from GitHub secrets
-      - name: 'Create Kubernetes Secret'
+      - name: 'Create Kubernetes Secret/Config '
         run: |
           kubectl create secret generic secrets \
             --from-literal=GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
@@ -125,6 +125,14 @@ jobs:
             --from-literal=HUGGINGFACE_TOKEN="${{ secrets.HUGGINGFACE_TOKEN }}" \
             --dry-run=client -o yaml | kubectl apply -f -
 
+          kubectl create configmap config \
+            --from-literal=NEXT_PUBLIC_APP_URL="${{ vars.config.NEXT_PUBLIC_APP_URL }}" \
+            --from-literal=NEXT_PUBLIC_BACKEND_API_URL="${{ vars.config.NEXT_PUBLIC_BACKEND_API_URL }}" \
+            --from-literal=NEXTAUTH_URL="${{ vars.config.NEXTAUTH_URL }}" \
+            --from-literal=NEXT_PUBLIC_BACKEND_DB_URL="${{ vars.config.NEXT_PUBLIC_BACKEND_DB_URL }}" \
+            --from-literal=FRONTEND_API_URL="${{ vars.config.FRONTEND_API_URL }}" \
+            --from-literal=PORT_BACKEND="${{ vars.config.PORT_BACKEND }}" \
+            --dry-run=client -o yaml | kubectl apply -f -
       # Deploy to GKE (without using Kustomize)
       - name: 'Debug image tags'
         run: |
@@ -134,7 +142,6 @@ jobs:
       - name: 'Deploy to GKE'
         run: |-
           # Apply the Kubernetes manifests directly
-          kubectl apply -f k8s/base/config.yaml
           kubectl apply -f k8s/base/deployment.yaml
           kubectl apply -f k8s/base/service.yaml
           kubectl apply -f k8s/base/ingress-nginx.yaml
