@@ -125,7 +125,7 @@ function PageContent() {
   }, [])
 
   return (
-    <main className="min-h-screen flex flex-col bg-[#518650] text-white">
+    <main className="min-h-screen flex flex-col bg-[#86AB5D] text-white">
       <NavBar />
       {/* Embedding Progress Notification */}
       {embeddingStatus === "embedding" && (
@@ -135,11 +135,11 @@ function PageContent() {
       )}
   
       <div className="flex flex-1 relative">
-        <div className="h-[calc(100vh-64px)] bg-[#518650]">
+        <div className="h-[calc(100vh-64px)] bg-[#86AB5D]">
           <FileCollection onFileSelect={handleFileSelection} key={`file-collection-${refreshTrigger}`} />
         </div>
         <div
-          className={`transition-all duration-300 bg-[#518650] ${activePanel ? (sidebarOpen ? "w-[42%]" : "w-[50%]") : "flex-1"}`}
+          className={`transition-all duration-300 bg-[#86AB5D] ${activePanel ? (sidebarOpen ? "w-[42%]" : "w-[50%]") : "flex-1"}`}
         >
           <ChatBox isDisabled={isFeatureDisabled} />
         </div>

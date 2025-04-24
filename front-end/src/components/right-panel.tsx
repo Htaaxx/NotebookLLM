@@ -193,7 +193,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
   if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap")) {
     return (
       <motion.div
-        className="w-[42%] border-l border-[#86AB5D] h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-[#F2F5DA] text-[#518650] rounded-r-xl transform scale-[0.95]"
+        className="w-[42%] border-l border-[#518650] h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-[#F2F5DA] text-[#518650] rounded-r-xl transform scale-[0.95]"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 20 }}
@@ -214,7 +214,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
 
     return (
       <div className="absolute inset-0 bg-[#F2F5DA] bg-opacity-80 z-50 flex items-center justify-center">
-        <div className="bg-[#E7E7C9] p-4 rounded-xl max-w-md text-center border border-[#86AB5D]">
+        <div className="bg-[#E7E7C9] p-4 rounded-xl max-w-md text-center border border-[#518650]">
           <AlertCircle className="w-8 h-8 text-[#E48D44] mx-auto mb-2" />
           <h3 className="font-medium text-[#518650] mb-2">Document Processing in Progress</h3>
           <p className="text-[#518650] text-sm">
@@ -228,7 +228,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
 
   return (
     <motion.div
-    className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l border-[#86AB5D] h-[calc(100vh-64px)] p-4 flex flex-col bg-[#518650] text-white overflow-hidden relative rounded-r-xl`}
+    className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l border-[#86AB5D] h-[calc(100vh-64px)] p-4 flex flex-col bg-[#86AB5D] text-white overflow-hidden relative rounded-r-xl`}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
@@ -350,7 +350,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
             transition={{ duration: 0.3 }}
           >
             <motion.div
-              className="flex items-center mb-4 bg-[#86AB5D] text-[#F2F5DA] py-2 px-4 rounded-xl"
+              className="flex items-center mb-4 bg-[#518650] text-[#F2F5DA] py-2 px-4 rounded-t-xl rounded-b-none"
               variants={fadeIn("down", 0.1)}
               initial="hidden"
               animate="show"
