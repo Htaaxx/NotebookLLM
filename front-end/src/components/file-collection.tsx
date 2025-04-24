@@ -514,7 +514,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
         embedFormData.append("user_id", userID)
 
         // URL của API embedding (Đảm bảo đúng URL backend của bạn)
-        const embeddingsUrl = process.env.NEXT_PUBLIC_BACKEND_DB_URL + "/embed/"
+        const embeddingsUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL + "/embed/"
         console.log("Calling Embedding API:", embeddingsUrl)
         // Cập nhật log để thấy cả user_id
         console.log("Sending FormData with keys:", Array.from(embedFormData.keys())) // Log keys: file, doc_id, user_id
