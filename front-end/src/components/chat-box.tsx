@@ -27,8 +27,8 @@ import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
-import { accountTypeAPI } from "@/lib/api";
-import { ACCOUNT_LIMITS, shouldResetDailyCounts } from "@/lib/account-limits";
+import { accountTypeAPI } from "@/lib/api"
+import { ACCOUNT_LIMITS, shouldResetDailyCounts } from "@/lib/account-limits"
 
 interface ChatBoxProps {
   isDisabled?: boolean
@@ -59,10 +59,10 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
   const [useUrlContext, setUseUrlContext] = useState(false)
 
   // account type
-  const [accountType, setAccountType] = useState<string>("FREE");
-  const [queryCount, setQueryCount] = useState<number>(0);
-  const [limitExceeded, setLimitExceeded] = useState<boolean>(false);
-  const [userId, setUserId] = useState<string | null>(null);
+  const [accountType, setAccountType] = useState<string>("FREE")
+  const [queryCount, setQueryCount] = useState<number>(0)
+  const [limitExceeded, setLimitExceeded] = useState<boolean>(false)
+  const [userId, setUserId] = useState<string | null>(null)
 
   // URL context functions
   const handleAddUrl = () => {
@@ -97,43 +97,45 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
   useEffect(() => {
     const fetchUserInfo = async () => {
       try {
-        const storedUserId = localStorage.getItem('user_id');
-        if (!storedUserId) return;
-        setUserId(storedUserId);
+        const storedUserId = localStorage.getItem("user_id")
+        if (!storedUserId) return
+        setUserId(storedUserId)
         // Check if we need to reset daily counts
         if (shouldResetDailyCounts()) {
-          console.log("Resetting daily counts");
+          console.log("Resetting daily counts")
           // You would implement server-side reset here
           // For now, we'll just update our local state
-          setQueryCount(0);
+          setQueryCount(0)
         }
         // Fetch account type
-        const accountTypeData = await accountTypeAPI.getAccountTypes(storedUserId);
-        setAccountType(accountTypeData.accountType || "FREE");
+        const accountTypeData = await accountTypeAPI.getAccountTypes(storedUserId)
+        setAccountType(accountTypeData.accountType || "FREE")
         // Fetch query count
-        const countData = await accountTypeAPI.getCountQuery(storedUserId);
-        setQueryCount(countData.countQuery || 0);
+        const countData = await accountTypeAPI.getCountQuery(storedUserId)
+        setQueryCount(countData.countQuery || 0)
         // Check if limit exceeded
-        checkQueryLimit(accountTypeData.accountType || "FREE", countData.countQuery || 0);
+        checkQueryLimit(accountTypeData.accountType || "FREE", countData.countQuery || 0)
       } catch (error) {
-        console.error("Error fetching user info:", error);
+        console.error("Error fetching user info:", error)
       }
-    };
-    fetchUserInfo();
-  }, []);
+    }
+    fetchUserInfo()
+  }, [])
 
   // Add this function to check if user has exceeded their daily limit
   const checkQueryLimit = (type: string, count: number) => {
-    const limit = 
-      type === "PRO" ? ACCOUNT_LIMITS.PRO.CHAT_QUERIES :
-      type === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES :
-      ACCOUNT_LIMITS.FREE.CHAT_QUERIES;
-    setLimitExceeded(count >= limit);
+    const limit =
+      type === "PRO"
+        ? ACCOUNT_LIMITS.PRO.CHAT_QUERIES
+        : type === "STANDARD"
+          ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES
+          : ACCOUNT_LIMITS.FREE.CHAT_QUERIES
+    setLimitExceeded(count >= limit)
   }
   // Add word count check
   const countWords = (text: string): number => {
-    return text.trim().split(/\s+/).length;
-  };
+    return text.trim().split(/\s+/).length
+  }
 
   useEffect(() => {
     if (useAsContext) {
@@ -199,23 +201,22 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     const userMessage = message.trim()
-    if (!userMessage || isLoading || isDisabled || limitExceeded) return;
+    if (!userMessage || isLoading || isDisabled || limitExceeded) return
 
     // Check word count limit for non-PRO users
     if (accountType !== "PRO") {
-      const wordCount = countWords(userMessage);
-      const wordLimit = accountType === "STANDARD" ? 
-                        ACCOUNT_LIMITS.STANDARD.MAX_QUERY_WORDS : 
-                        ACCOUNT_LIMITS.FREE.MAX_QUERY_WORDS;
+      const wordCount = countWords(userMessage)
+      const wordLimit =
+        accountType === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.MAX_QUERY_WORDS : ACCOUNT_LIMITS.FREE.MAX_QUERY_WORDS
       if (wordCount > wordLimit) {
-        setChatHistory(prev => [
-          ...prev, 
-          { 
-            text: `Your message exceeds the ${wordLimit} word limit for ${accountType} accounts. Please shorten your message.`, 
-            isUser: false 
-          }
-        ]);
-        return;
+        setChatHistory((prev) => [
+          ...prev,
+          {
+            text: `Your message exceeds the ${wordLimit} word limit for ${accountType} accounts. Please shorten your message.`,
+            isUser: false,
+          },
+        ])
+        return
       }
     }
 
@@ -338,11 +339,11 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
 
       // After successful processing, update the count
       if (userId) {
-        const newCount = queryCount + 1;
-        await accountTypeAPI.updateCountQuery(userId);
-        setQueryCount(newCount);
+        const newCount = queryCount + 1
+        await accountTypeAPI.updateCountQuery(userId)
+        setQueryCount(newCount)
         // Check if this query puts user over the limit
-        checkQueryLimit(accountType, newCount);
+        checkQueryLimit(accountType, newCount)
       }
     } catch (error) {
       console.error("Failed to process message:", error)
@@ -469,10 +470,10 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
       {/* Search input */}
       {searchPaths.length > 0 && (
         <div className="relative mb-2">
-          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+          <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-sidebar" />
           <Input
             placeholder="Search path..."
-            className="pl-7 h-7 text-xs"
+            className="pl-7 h-8 text-xs rounded-lg border-[#D5D8B5] focus:border-primary focus:ring-primary"
             value={pathSearchQuery}
             onChange={(e) => setPathSearchQuery(e.target.value)}
           />
@@ -638,7 +639,7 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
 
   return (
     <motion.div
-      className="flex flex-col h-[calc(100vh-64px)] bg-white text-black"
+    className="flex flex-col h-[calc(100vh-64px)] bg-[#F2F5DA] text-[#518650] rounded-xl transform scale-[0.95]"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -651,10 +652,10 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
             [10, 20, 30, 40, ACCOUNT_LIMITS[accountType === "STANDARD" ? "STANDARD" : "FREE"].CHAT_QUERIES].includes(
               queryCount,
             ) && (
-              <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-md p-3 mb-2 mx-4 mt-2 border border-amber-200">
-                <p className="text-amber-800 text-sm flex items-center">
-                  <AlertCircle className="w-4 h-4 mr-2 text-amber-500" />
-                  You've used {queryCount}/
+              <div className="bg-gradient-to-r from-cream to-[#E9EBC7] rounded-xl p-3 mb-3 mx-4 mt-3 border border-[#D5D8B5] shadow-sm">
+                <p className="text-sidebar text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-2 text-primary" /> // Changed to primary (orange) You've used{" "}
+                  {queryCount}/
                   {accountType === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES : ACCOUNT_LIMITS.FREE.CHAT_QUERIES}{" "}
                   daily queries.
                 </p>
@@ -694,9 +695,9 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
       )}
 
       {/* Recall Mode Toggle - Simplified */}
-      <div className="px-3 py-1.5 flex justify-end items-center">
-        <div className="flex items-center gap-1">
-          <span className="text-xs font-medium text-green-600">Recall mode</span>
+      <div className="px-4 py-2 flex justify-end items-center">
+        <div className="flex items-center gap-2 bg-[#F2F5DA] px-3 py-1.5 rounded-full border border-[#86AB5D]">
+          <span className="text-sm font-medium text-[#518650]">Recall mode</span>
           <Switch
             checked={!!activeRecallSession}
             onCheckedChange={(checked) => {
@@ -712,7 +713,7 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
                 ])
               }
             }}
-            className={`${activeRecallSession ? "bg-green-600" : "bg-gray-300"} scale-75`}
+            className={`${activeRecallSession ? "bg-[#86AB5D]" : "bg-[#E7E7C9]"} scale-75`}
           />
         </div>
       </div>
@@ -728,10 +729,11 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
             transition={{ duration: 0.3, delay: index * 0.1 }}
           >
             <div
-              className={`prose prose-xs max-w-none p-2.5 rounded-2xl ${
+              className={`prose prose-sm max-w-none p-3 rounded-2xl shadow-md ${
+                // Added shadow-md
                 msg.isUser
-                  ? "bg-green-500 text-white rounded-tr-none prose-invert"
-                  : "bg-gray-100 text-black rounded-tl-none"
+                  ? "bg-[#86AB5D] text-[#F2F5DA] rounded-tr-none prose-invert" // Changed from bg-green-500
+                  : "bg-[#E7E7C9] text-[#518650] rounded-tl-none" // Changed from bg-gray-100 text-black
               }`}
             >
               <div className="text-xs">
@@ -769,14 +771,14 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
         <Collapsible
           open={isContextOpen}
           onOpenChange={setIsContextOpen}
-          className="mx-4 mt-2 border rounded-md overflow-hidden"
+          className="mx-4 mt-2 border rounded-xl overflow-hidden bg-white shadow-sm"
         >
-          <CollapsibleTrigger className="flex items-center justify-between w-full p-2 hover:bg-gray-50">
+          <CollapsibleTrigger className="flex items-center justify-between w-full p-3 hover:bg-gray-50">
             <div className="flex items-center gap-2">
-              <Settings className="w-4 h-4 text-gray-500" />
-              <span className="font-medium text-sm">Context</span>
+              <Settings className="w-4 h-4 text-sidebar" />
+              <span className="font-medium text-sm text-darkText">Context</span>
               {(searchPaths.length > 0 || urls.length > 0) && (
-                <Badge variant="outline" className="bg-gray-50 text-gray-700 text-xs">
+                <Badge variant="outline" className="bg-cream text-sidebar text-xs">
                   {searchPaths.length + urls.length}
                 </Badge>
               )}
@@ -797,17 +799,23 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
         </Collapsible>
 
         {/* Message input form */}
-        <form onSubmit={handleSubmit} className="flex gap-2 p-4">
+        <form
+          onSubmit={handleSubmit}
+          className="flex gap-3 p-5 bg-[#F2F5DA] rounded-3xl border-2 border-[#86AB5D] mx-4 mb-4"
+        >
           <Input
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder={t("typeMessage")}
-            className="flex-1 bg-white text-black border-gray-300 text-sm"
+            className="flex-1 bg-[#F2F5DA] text-[#518650] border-[#86AB5D] text-sm focus:ring-[#86AB5D] focus:border-[#86AB5D] rounded-3xl"
             disabled={isLoading || isDisabled || limitExceeded}
           />
           <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-            <Button type="submit" className="bg-green-600 hover:bg-green-700 text-white text-sm" 
-            disabled={isLoading || isDisabled || limitExceeded}>
+            <Button
+              type="submit"
+              className="bg-[#E48D44] hover:bg-[#d47d34] text-[#F2F5DA] text-sm rounded-xl shadow-md transition-all duration-200 hover:shadow-lg transform hover:scale-105"
+              disabled={isLoading || isDisabled || limitExceeded}
+            >
               <Send className="w-3.5 h-3.5 mr-1.5" />
               {t("send")}
             </Button>
@@ -816,7 +824,7 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
             <Button
               type="button"
               variant="outline"
-              className="border-gray-300 text-black text-sm"
+              className="border-[#86AB5D] text-[#518650] text-sm rounded-xl shadow-sm hover:shadow-md transition-all duration-200 transform hover:scale-105 hover:bg-[#E7E7C9]"
               onClick={regenerateLastResponse}
               disabled={isLoading || chatHistory.length === 0}
             >
@@ -827,9 +835,9 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
         </form>
 
         {/* Disclaimer in footer */}
-        <div className="px-4 pb-2 text-center">
-          <p className="text-xs text-gray-500 flex items-center justify-center">
-            <AlertCircle className="w-3 h-3 mr-1 text-gray-400" />
+        <div className="px-4 pb-3 pt-1 text-center bg-[#F2F5DA] rounded-t-xl">
+          <p className="text-xs text-[#518650] flex items-center justify-center">
+            <AlertCircle className="w-3 h-3 mr-1 text-[#86AB5D]" />
             NoteUS có thể đưa ra thông tin không chính xác, hãy kiểm tra câu trả lời mà bạn nhận được
           </p>
         </div>

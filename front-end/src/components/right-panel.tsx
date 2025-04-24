@@ -35,7 +35,7 @@ interface RightPanelProps {
   activePanel: "preview" | "mindmap" | "cheatsheet" | null
   selectedFiles: FileItem[]
   onViewChange: (view: "preview" | "mindmap" | "cheatsheet" | null) => void
-  isDisabled?: boolean;
+  isDisabled?: boolean
 }
 
 export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisabled = false }: RightPanelProps) {
@@ -193,7 +193,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
   if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap")) {
     return (
       <motion.div
-        className="w-[42%] border-l h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-white text-black"
+        className="w-[42%] border-l border-[#86AB5D] h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-[#F2F5DA] text-[#518650] rounded-r-xl transform scale-[0.95]"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 20 }}
@@ -201,6 +201,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
       >
         <p className="text-lg text-gray-500">{t("noChosenFile")}</p>
       </motion.div>
+
     )
   }
 
@@ -209,31 +210,32 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
 
   // Render the disabled overlay for mindmap and cheatsheet
   const renderDisabledOverlay = () => {
-    if (!isDisabled || activePanel === "preview") return null;
-    
+    if (!isDisabled || activePanel === "preview") return null
+
     return (
-      <div className="absolute inset-0 bg-white bg-opacity-80 z-50 flex items-center justify-center">
-        <div className="bg-amber-50 p-4 rounded-lg max-w-md text-center">
-          <AlertCircle className="w-8 h-8 text-amber-500 mx-auto mb-2" />
-          <h3 className="font-medium text-amber-800 mb-2">Document Processing in Progress</h3>
-          <p className="text-amber-700 text-sm">
-            Please wait for document processing to complete before using {activePanel === "mindmap" ? "Mind Map" : "Cheatsheet"} features.
+      <div className="absolute inset-0 bg-[#F2F5DA] bg-opacity-80 z-50 flex items-center justify-center">
+        <div className="bg-[#E7E7C9] p-4 rounded-xl max-w-md text-center border border-[#86AB5D]">
+          <AlertCircle className="w-8 h-8 text-[#E48D44] mx-auto mb-2" />
+          <h3 className="font-medium text-[#518650] mb-2">Document Processing in Progress</h3>
+          <p className="text-[#518650] text-sm">
+            Please wait for document processing to complete before using{" "}
+            {activePanel === "mindmap" ? "Mind Map" : "Cheatsheet"} features.
           </p>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <motion.div
-      className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l h-[calc(100vh-64px)] p-4 flex flex-col bg-white text-black overflow-hidden relative`}
+    className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l border-[#86AB5D] h-[calc(100vh-64px)] p-4 flex flex-col bg-[#518650] text-white overflow-hidden relative rounded-r-xl`}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
       transition={{ duration: 0.3 }}
     >
       {renderDisabledOverlay()}
-      
+
       <AnimatePresence mode="wait">
         {activePanel === "preview" && (
           <motion.div
@@ -248,12 +250,20 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
               {!selectedPdf && (
                 <div className="flex gap-2">
                   <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-                    <Button onClick={handleZoomOut} size="sm" className="bg-white text-black hover:bg-gray-100">
+                    <Button
+                      onClick={handleZoomOut}
+                      size="sm"
+                      className="bg-[#F2F5DA] text-[#518650] hover:bg-[#E7E7C9] border border-[#86AB5D] rounded-xl"
+                    >
                       <ZoomOut className="w-4 h-4" />
                     </Button>
                   </motion.div>
                   <motion.div whileHover="hover" whileTap="tap" variants={buttonAnimation}>
-                    <Button onClick={handleZoomIn} size="sm" className="bg-white text-black hover:bg-gray-100">
+                    <Button
+                      onClick={handleZoomIn}
+                      size="sm"
+                      className="bg-[#F2F5DA] text-[#518650] hover:bg-[#E7E7C9] border border-[#86AB5D] rounded-xl"
+                    >
                       <ZoomIn className="w-4 h-4" />
                     </Button>
                   </motion.div>
@@ -262,7 +272,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
                       onClick={handleHighlightText}
                       size="sm"
                       title="Highlight Selected Text"
-                      className="bg-white text-black hover:bg-gray-100"
+                      className="bg-[#F2F5DA] text-[#518650] hover:bg-[#E7E7C9] border border-[#86AB5D] rounded-xl"
                     >
                       <Highlighter className="w-4 h-4" />
                     </Button>
@@ -340,7 +350,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
             transition={{ duration: 0.3 }}
           >
             <motion.div
-              className="flex items-center mb-4 bg-green-500 text-black py-2 px-4 rounded-md"
+              className="flex items-center mb-4 bg-[#86AB5D] text-[#F2F5DA] py-2 px-4 rounded-xl"
               variants={fadeIn("down", 0.1)}
               initial="hidden"
               animate="show"

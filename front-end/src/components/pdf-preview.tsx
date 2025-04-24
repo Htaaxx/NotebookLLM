@@ -8,6 +8,11 @@ import { motion } from "framer-motion"
 import { buttonAnimation } from "@/lib/motion-utils"
 import "react-pdf/dist/esm/Page/TextLayer.css"
 import "react-pdf/dist/esm/Page/AnnotationLayer.css"
+import { 
+  FileSearch,       // PDF Review icon - thể hiện tìm kiếm trong file
+  BrainCircuit,     // Mind Map icon - thể hiện kết nối thông tin
+  ClipboardList     // Cheatsheet icon - thể hiện danh sách tóm tắt
+} from "lucide-react"
 
 // Set worker options for PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`

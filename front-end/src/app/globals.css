@@ -1,47 +1,197 @@
-@import url("https://fonts.googleapis.com/css2?family=Anton&family=Quicksand:wght@400;500;600;700&display=swap");
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 @layer base {
   :root {
-    /* Fixed light theme variables - no dark mode */
-    --background: #ffffff;
-    --foreground: #171717;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 142.1 76.2% 36.3%;
-    --radius: 0.5rem;
-    --foreground-rgb: 0, 0, 0;
-    --background-start-rgb: 242, 245, 218;
-    --background-end-rgb: 242, 245, 218;
+    /* Main color palette */
+    --background: 65 67 86; /* #F2F5DA - light cream background */
+    --foreground: 81 134 80; /* #518650 - dark green text */
 
-    /* Additional variables for components */
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 142.1 76.2% 36.3%;
-    --primary-foreground: 355.7 100% 97.3%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-  }
+    /* Component colors */
+    --card: 231 231 201; /* #E7E7C9 - light green */
+    --card-foreground: 81 134 80; /* #518650 - dark green */
 
-  * {
-    border-color: hsl(var(--border));
+    --popover: 242 245 218; /* #F2F5DA - light cream */
+    --popover-foreground: 81 134 80; /* #518650 - dark green */
+
+    --primary: 134 171 93; /* #86AB5D - medium green */
+    --primary-foreground: 242 245 218; /* #F2F5DA - light cream */
+
+    --secondary: 231 231 201; /* #E7E7C9 - light green */
+    --secondary-foreground: 81 134 80; /* #518650 - dark green */
+
+    --accent: 228 141 68; /* #E48D44 - orange */
+    --accent-foreground: 242 245 218; /* #F2F5DA - light cream */
+
+    --muted: 231 231 201; /* #E7E7C9 - light green */
+    --muted-foreground: 134 171 93; /* #86AB5D - medium green */
+
+    --destructive: 228 141 68; /* #E48D44 - orange */
+    --destructive-foreground: 242 245 218; /* #F2F5DA - light cream */
+
+    --border: 134 171 93; /* #86AB5D - medium green */
+    --input: 231 231 201; /* #E7E7C9 - light green */
+    --ring: 134 171 93; /* #86AB5D - medium green */
+
+    --radius: 1.5rem; /* Increased border radius */
   }
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Quicksand", sans-serif;
+  background-color: #518650;
+  color: #518650;
+}
+
+/* Custom component styles */
+.noteus-container {
+  background-color: #86ab5d;
+  border-radius: 1.5rem;
+  padding: 1.5rem;
+  margin: 1rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.noteus-card {
+  background-color: #f2f5da;
+  border-radius: 1.2rem;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.noteus-sidebar {
+  background-color: #f2f5da;
+  border-radius: 1.2rem;
+  padding: 1rem;
+}
+
+.noteus-header {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #518650;
+  margin-bottom: 0.75rem;
+}
+
+.noteus-input {
+  background-color: #f2f5da;
+  border: 2px solid #86ab5d;
+  border-radius: 1.2rem;
+  padding: 0.5rem 1rem;
+  color: #518650;
+}
+
+.noteus-input::placeholder {
+  color: #86ab5d;
+  opacity: 0.7;
+}
+
+.noteus-button {
+  background-color: #e48d44;
+  color: #f2f5da;
+  border-radius: 1.2rem;
+  padding: 0.5rem 1.5rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.noteus-button:hover {
+  background-color: #d47d34;
+  transform: translateY(-2px);
+}
+
+.noteus-nav {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  padding: 0.5rem;
+}
+
+.noteus-nav-item {
+  color: #f2f5da;
+  font-weight: 600;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.noteus-file-item {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: #518650;
+  font-size: 0.9rem;
+}
+
+.noteus-file-item:hover {
+  background-color: #e7e7c9;
+}
+
+.noteus-chat-item {
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.25rem;
+  color: #518650;
+  font-size: 0.9rem;
+}
+
+.noteus-chat-item:hover {
+  background-color: #e7e7c9;
+}
+
+.noteus-message-input {
+  background-color: #f2f5da;
+  border: 2px solid #86ab5d;
+  border-radius: 2rem;
+  padding: 0.75rem 1.5rem;
+  width: 100%;
+  color: #518650;
+}
+
+.noteus-toggle {
+  background-color: #86ab5d;
+  border-radius: 1rem;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+}
+
+.noteus-toggle-thumb {
+  background-color: #e48d44;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.noteus-right-button {
+  background-color: #e48d44;
+  color: #f2f5da;
+  border-radius: 1.2rem;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  text-align: center;
+  transition: all 0.2s ease;
+}
+
+.noteus-right-button:hover {
+  background-color: #d47d34;
+  transform: translateY(-2px);
+}
+
+/* Animation classes */
+.fade-in {
+  animation: fadeIn 0.5s ease-in-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* Grid pattern background utility */

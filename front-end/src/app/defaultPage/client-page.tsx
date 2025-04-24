@@ -12,10 +12,10 @@ const DefaultPageContent = dynamic(
 // Simple loading component
 function Loading() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-[#518650]">
       <div className="text-center">
-        <div className="w-16 h-16 border-4 border-green-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-        <p className="text-gray-600">Loading...</p>
+        <div className="w-16 h-16 border-4 border-[#F2F5DA] border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+        <p className="text-[#F2F5DA]">Loading...</p>
       </div>
     </div>
   )

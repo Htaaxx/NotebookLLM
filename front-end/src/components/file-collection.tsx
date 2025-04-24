@@ -484,7 +484,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
     const mainUploadFormData = new FormData()
     mainUploadFormData.append("file", file)
     mainUploadFormData.append("document_id", documentId) // Giả sử /user/upload cần
-  
+
     try {
       // Upload file to server (/user/upload)
       const uploadResponse = await fetch(process.env.NEXT_PUBLIC_BACKEND_DB_URL + "/user/upload", {
@@ -530,16 +530,16 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             console.log("Embedding API call successful")
             const responseData = await embeddingsResponse.json()
             console.log("Embedding API response:", responseData)
-            
+
             // Start tracking embedding progress after successful embedding API call
             startEmbedding(documentId)
-            
+
             // Display a notification to the user
             const event = new CustomEvent("notification", {
               detail: {
                 message: "Document processing started. Some features will be disabled until processing completes.",
-                type: "info"
-              }
+                type: "info",
+              },
             })
             window.dispatchEvent(event)
           } else {
@@ -576,11 +576,11 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       const event = new CustomEvent("notification", {
         detail: {
           message: "File upload failed. Please try again.",
-          type: "error"
-        }
+          type: "error",
+        },
       })
       window.dispatchEvent(event)
-      
+
       return null
     }
   }
@@ -1005,7 +1005,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   const renderFile = (file: FileItem, folderId?: string) => (
     <div
       key={file.id}
-      className="flex items-center hover:bg-gray-50 rounded-md p-1"
+      className="flex items-center hover:bg-[#E7E7C9] rounded-xl p-2"
       draggable
       onDragStart={(e) => handleDragStart(e, file, "file", folderId || null)}
       title={getFullFilePath(file.id, folderId)}
@@ -1043,7 +1043,10 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
       onDragOver={handleDragOver}
       onDrop={(e) => handleDrop(e, folder.id)}
     >
-      <div className="flex items-center hover:bg-gray-50 rounded-md p-1" title={getFullFolderPath(folder.id)}>
+      <div
+        className="flex items-center hover:bg-[#E7E7C9] rounded-xl p-2 cursor-pointer"
+        title={getFullFolderPath(folder.id)}
+      >
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <button
             onClick={() => toggleFolder(folder.id)}
@@ -1230,7 +1233,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
   }, [rootFolders, userID])
 
   return (
-    <div className="relative h-[calc(100vh-64px)] bg-white text-black">
+    <div className="relative h-[calc(100vh-64px)] bg-[#F2F5DA] text-[#518650] rounded-xl transform scale-[0.95] origin-center">
       {/* Toggle button - always visible */}
       <div className={`absolute top-4 ${sidebarOpen ? "left-56" : "left-4"} z-10 transition-all duration-300`}>
         <Button
@@ -1259,7 +1262,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
 
       {/* Sidebar content - only visible when open */}
       <div
-        className={`file-collection-container border-r h-full overflow-auto transition-all duration-300 ${
+        className={`file-collection-container h-full overflow-auto transition-all duration-300 rounded-xl ${
           sidebarOpen ? "w-64 opacity-100" : "w-0 opacity-0 pointer-events-none"
         }`}
       >
@@ -1271,7 +1274,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           <div className="relative">
             <Input
               placeholder={t("searchAll")}
-              className="h-8 text-sm pr-8"
+              className="h-10 text-sm pr-8 bg-[#F2F5DA] border-[#86AB5D] rounded-xl text-[#518650] placeholder-[#86AB5D]"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => {
@@ -1291,7 +1294,7 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
           </div>
           <Button
             variant="secondary"
-            className="w-full h-8 text-sm bg-green-500 hover:bg-green-600 text-black"
+            className="w-full h-10 text-sm bg-[#E48D44] hover:bg-[#d47d34] text-[#F2F5DA] rounded-xl"
             onClick={handleSearch}
           >
             <Search className="w-4 h-4 mr-2" />
@@ -1368,26 +1371,29 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             </div>
 
             <div className="mt-2 flex-1 overflow-auto px-4">
-              <div className="flex items-center justify-between mb-2 sticky top-0 bg-white z-10">
-                <h3 className="text-sm font-medium">{t("fileCollection")}</h3>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="sm" className="h-8 px-2">
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-white shadow-lg">
-                    <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(true)}>
-                      Add Folder
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      className="cursor-pointer"
-                      onSelect={() => document.getElementById("root-file-upload")?.click()}
-                    >
-                      Add File
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+              {/* Updated File Collection Header */}
+              <div className="mb-2 sticky top-0 z-10">
+                <div className="flex items-center justify-between bg-[#E48D44] rounded-xl px-4 py-2">
+                  <h3 className="text-sm font-medium text-white">{t("fileCollection")}</h3>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-white hover:bg-[#d47d34]">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-white shadow-lg">
+                      <DropdownMenuItem className="cursor-pointer" onSelect={() => setShowNewFolderInput(true)}>
+                        Add Folder
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onSelect={() => document.getElementById("root-file-upload")?.click()}
+                      >
+                        Add File
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               {showNewFolderInput && (
@@ -1419,13 +1425,13 @@ export function FileCollection({ onFileSelect }: FileCollectionProps) {
             <div className="mt-4 px-4 pb-4">
               <h3 className="text-sm font-medium mb-2">{t("quickUpload")}</h3>
               <div
-                className="border-2 border-dashed rounded-lg p-4 text-center"
+                className="border-2 border-dashed border-[#86AB5D] rounded-xl p-4 text-center"
                 onDragOver={handleDragOver}
                 onDrop={(e) => handleDrop(e)}
               >
-                <p className="text-sm text-muted-foreground">{t("dropFileHere")}</p>
+                <p className="text-sm text-[#86AB5D]">{t("dropFileHere")}</p>
                 <p className="text-sm text-muted-foreground"> - or - </p>
-                <label className="cursor-pointer text-sm text-primary hover:underline">
+                <label className="cursor-pointer text-sm text-[#E48D44] hover:underline">
                   {t("clickToUpload")}
                   <input
                     id="root-file-upload"
