@@ -188,8 +188,8 @@ spec:
                 secretKeyRef:
                   name: secrets
                   key: MONGO_COLLECTION_NAME
-            - name: GOOGLE_API_KEY
+            - name: OPENAI_API_KEY
               valueFrom:
                 secretKeyRef:
                   name: secrets
-                  key: GOOGLE_API_KEY
+                  key: OPENAI_API_KEY
