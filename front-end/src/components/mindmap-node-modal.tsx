@@ -148,7 +148,8 @@ export function MindMapNodeModal({
       console.log("Starting recall session with:", requestBody)
   
       // Call the ACTUAL backend API endpoint
-      const response = await fetch("http://localhost:8000/recall/start", {
+      const url = process.env.NEXT_PUBLIC_BACKEND_DB_URL + "/api/recall/start"
+      const response = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

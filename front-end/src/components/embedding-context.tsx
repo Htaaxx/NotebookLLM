@@ -49,8 +49,9 @@ export function EmbeddingProvider({ children }: { children: React.ReactNode }) {
       if (!userId) return;
       
       // Try to fetch embeddings using existing GET endpoint
-      const response = await fetch(`http://localhost:8000/embed/embeddings/${docId}?user_id=${userId}`);
-      
+      const url = `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/embed/embeddings/${docId}?user_id=${userId}`;
+      const response = await fetch(url);
+  
       // If we get a successful response, embeddings exist
       if (response.ok) {
         const data = await response.json();

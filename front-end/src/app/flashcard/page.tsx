@@ -691,7 +691,8 @@ export default function FlashcardPage() {
 
   const submitReview = async (cardId: string, ease: number) => {
     try {
-      const response = await fetch(`http://localhost:8000/review/${cardId}`, {
+      const url = process.env.NEXT_PUBLIC_BACKEND_API_URL || "http://localhost:8000"
+      const response = await fetch(`${url}/review/${cardId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

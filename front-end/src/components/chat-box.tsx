@@ -230,7 +230,9 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
         console.log(`Processing answer for recall session: ${activeRecallSession}`)
 
         // Send answer to recall API
-        const response = await fetch("http://localhost:8000/recall/answer", {
+        const url = `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/recall/answer`
+        console.log("Sending request to:", url)
+        const response = await fetch(url, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -286,7 +288,7 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
       } else {
         // Regular chat message handling (existing code)
         const currentUserId = localStorage.getItem("user_id") || "default_user"
-        const queryApiUrl = "http://localhost:8000/query/"
+        const queryApiUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL + "/query/"
 
         // Prepare request body
         const requestBody = {
