@@ -7,7 +7,7 @@ import uvicorn
 from typing import List
 import sys
 import io
-
+import os
 # --- THÊM IMPORT NÀY ---
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -29,6 +29,7 @@ app = FastAPI()
 origins = [
     "http://localhost:3000",  # Địa chỉ React app khi chạy local
     "http://127.0.0.1:3000",  # Thêm IP nếu cần
+    os.getenv("FRONTEND_API_URL"),
     # "https://your-deployed-frontend.com", # Thêm địa chỉ frontend khi đã deploy
 ]
 
