@@ -15,6 +15,7 @@ const buttonVariants = cva(
         secondary: "bg-[#86AB5D] text-[#F2F5DA] hover:bg-[#518650]",
         ghost: "hover:bg-[#E7E7C9] hover:text-[#518650]",
         link: "text-[#E48D44] underline-offset-4 hover:underline",
+        navProfile: "bg-white text-[#86AB5D] rounded-full hover:bg-gray-100 font-quicksand font-bold",
       },
       size: {
         default: "h-10 px-4 py-2",
