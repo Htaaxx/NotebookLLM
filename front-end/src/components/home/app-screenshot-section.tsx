@@ -11,22 +11,22 @@ const anton = Anton({
 export function AppScreenshotSection() {
   return (
     <section className="py-28 px-6 bg-[#86AB5D] relative">
-      <div className="max-w-[1400px] mx-auto relative h-[800px]">
+      <div className="max-w-[1100px] mx-auto relative h-[750px]">
         {/* Container 1: Title and Description - Positioned independently */}
         <div 
           className="absolute bg-[#F2F5DA] rounded-t-3xl rounded-b-xl px-10 py-20 flex flex-col justify-center"
           style={{
-            top: "20px",
-            left: "20px",
-            width: "500px",
-            height: "580px"
+            top: "0px",
+            left: "0px",
+            width: "400px",
+            height: "530px"
           }}
         >
-          <h2 className={`${anton.className} text-7xl text-[#E48D44] font-bold leading-tight mb-6`}>
+          <h2 className={`${anton.className} text-5xl text-[#E48D44] font-bold leading-tight mb-6`}>
             See NoteUS 
             <br />in Action
           </h2>
-          <p className="text-gray-700 text-2xl">
+          <p className="text-gray-700 text-xl">
             Our intuitive interface makes it easy 
             <br />to organize your thoughts and 
             <br />boost your productivity.
@@ -37,10 +37,10 @@ export function AppScreenshotSection() {
         <div 
           className="absolute bg-[#F2F5DA] rounded-3xl px-10 py-12 flex items-center justify-center"
           style={{
-            top: "20px",
-            right: "-30px",
-            width: "880px",
-            height: "480px"
+            top: "0px",
+            right: "0px",
+            width: "670px",
+            height: "400px"
           }}
         >
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-200 w-full">
@@ -63,10 +63,10 @@ export function AppScreenshotSection() {
         <div 
           className="absolute bg-[#F2F5DA] rounded-3xl px-10 py-12"
           style={{
-            top: "535px",
-            bottom: "50px",
-            left: "20px",
-            width: "1410px",
+            top: "430px",
+            bottom: "0px",
+            left: "0px",
+            width: "1100px",
             height: "300px"
           }}
         >

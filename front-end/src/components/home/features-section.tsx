@@ -57,7 +57,7 @@ export function FeaturesSection() {
       title: "Create Mind Maps",
       description: "Visualize concepts and their relationships with automatically generated mind maps.",
       icon: <Network className="w-8 h-8 text-[#F2F5DA]" />,
-      width: 304,
+      width: 204,
       height: 275,
       top: 0,
       left: 617, // Adjusted position
@@ -90,7 +90,7 @@ export function FeaturesSection() {
       title: "Flashcards",
       description: "Generate flashcards from your notes to help you memorize key concepts and facts.",
       icon: <FlipHorizontal className="w-8 h-8 text-[#F2F5DA]" />,
-      width: 385,
+      width: 285,
       height: 275,
       top: 285,
       left: 530, // Adjusted position
@@ -102,8 +102,8 @@ export function FeaturesSection() {
     <section className="py-20 relative overflow-hidden bg-[#F2F5DA]">
       <div className="max-w-[1400px] mx-auto px-6 relative">
         {/* Title and Description - Right side with Anton font */}
-        <div className="absolute left-[1100px] top-20 max-w-md text-right z-10">
-          <h2 className={`${anton.className} text-8xl font-bold mb-8 text-[#E48D44]`}>
+        <div className="absolute left-[860px] top-20 max-w-md text-right z-10">
+          <h2 className={`${anton.className} text-7xl font-bold mb-8 text-[#E48D44]`}>
             Powerful Features
           </h2>
           <p className="text-2xl text-right leading-relaxed text-gray-700">

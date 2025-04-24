@@ -39,13 +39,16 @@ export function GreenBlock({ children }: GreenBlockProps) {
             borderBottomLeftRadius: "50px",
           }}
         >
-          <p
-                className="text-[16px] md:text-[16px] text-black max-w-[550px] mx-auto font-bold text-right"
-                style={{ fontFamily: "'Quicksand', sans-serif" }}
-              >
-                Upload your notes, ask questions, and get instant answers. Create flashcards, quizzes, and mind maps to
-                enhance your learning.
-              </p>
+            <p
+            className="text-[16px] md:text-[16px] text-black max-w-[550px] mx-auto font-bold text-right"
+            style={{
+              fontFamily: "'Quicksand', sans-serif",
+              marginRight: "15px",
+            }}
+            >
+            Upload your notes, ask questions, and get instant answers. Create flashcards, quizzes, and mind maps to
+            enhance your learning.
+            </p>
         </div>
       </div>
 

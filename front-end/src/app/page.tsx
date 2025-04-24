@@ -22,7 +22,7 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F2F5DA] flex flex-col">
+    <div className="w-full h-full bg-[#F2F5DA] flex flex-col">
       <div className="relative flex-grow overflow-hidden bg-[#F2F5DA] px-4 md:px-[90px] pt-[20px] md:pt-[40px]">
         {/* Navbar */}
         <div className="w-full md:w-[90%] mx-auto">
