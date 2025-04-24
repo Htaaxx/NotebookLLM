@@ -96,8 +96,8 @@ jobs:
           docker push "${DATABASE_TAG}"
 
           echo "Building API container: $API_TAG"
-          # docker build -f api/Dockerfile --tag "${API_TAG}" api/
-          # docker push "${API_TAG}"
+          docker build -f api/Dockerfile --tag "${API_TAG}" api/
+          docker push "${API_TAG}"
 
       # Create Kubernetes Secret from GitHub secrets
       - name: 'Create Kubernetes Secret/Config '
@@ -149,7 +149,7 @@ jobs:
           # Wait for the deployment to complete
           kubectl rollout restart deployment/$DEPLOYMENT_NAME_3
           kubectl rollout restart deployment/$DEPLOYMENT_NAME_2
-          # kubectl rollout restart deployment/$DEPLOYMENT_NAME_1
+          kubectl rollout restart deployment/$DEPLOYMENT_NAME_1
           
           # Check the status of services
           kubectl get services -o wide

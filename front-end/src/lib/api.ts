@@ -1,6 +1,6 @@
 import axios from 'axios';
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_DB_URL;
-console.log('API_URL:', API_URL);
+// console.log('API_URL:', API_URL);
 
 // Tạo instance axios với cấu hình mặc định
 const api = axios.create({
@@ -10,7 +10,7 @@ const api = axios.create({
   },
 });
 // console log api
-console.log('API instance:', api);
+// console.log('API instance:', api);
 // Thêm interceptor để gắn token xác thực vào headers
 api.interceptors.request.use(
   (config) => {
