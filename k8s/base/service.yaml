@@ -9,7 +9,7 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 3000
-  type: LoadBalancer  # This exposes the service externally with an external IP address
+  type: ClusterIP  # This exposes the service externally with an external IP address
 
 ---
 apiVersion: v1
