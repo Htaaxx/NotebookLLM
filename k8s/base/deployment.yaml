@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: noteus-frontend
-          image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-frontend:v1
+          image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-frontend:latest
           imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 3000
@@ -81,7 +81,7 @@ spec:
     spec:
       containers:
         - name: noteus-database
-          image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-database:v1
+          image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-database:latest
           imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 5000
@@ -143,7 +143,7 @@ spec:
     spec:
       containers:
         - name: noteus-api
-          image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-api:v1
+          image: asia-southeast2-docker.pkg.dev/neat-striker-455607-i3/noteus-repo/noteus-api:latest
           imagePullPolicy: Always   # <-- Add this line
           ports:
             - containerPort: 8000

@@ -73,9 +73,9 @@ jobs:
           gcloud auth configure-docker asia-southeast2-docker.pkg.dev
           export DOCKER_BUILDKIT=1
           export BUILDKIT_PROGRESS=plain
-          FRONTEND_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}"
-          DATABASE_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}"
-          API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}"
+          FRONTEND_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:latest"
+          DATABASE_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:latest"
+          API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:latest"
       
           # Set your build arguments
           BUILD_ARGS=(
@@ -133,15 +133,11 @@ jobs:
           echo "REPOSITORY: ${REPOSITORY}"
       - name: 'Deploy to GKE'
         run: |-
-          # Set the image tag with the commit SHA directly in the Kubernetes manifest files
-          # sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:${GITHUB_SHA}|g" k8s/base/deployment.yaml
-          sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:${GITHUB_SHA}|g" k8s/base/deployment.yaml
-          sed -i "s|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:v1|asia-southeast2-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:${GITHUB_SHA}|g" k8s/base/deployment.yaml
-          
           # Apply the Kubernetes manifests directly
           kubectl apply -f k8s/base/config.yaml
           kubectl apply -f k8s/base/deployment.yaml
           kubectl apply -f k8s/base/service.yaml
+          kubectl apply -f k8s/base/ingress-nginx.yaml
       
           # Wait for the deployment to complete
           kubectl rollout status deployment/$DEPLOYMENT_NAME_3
