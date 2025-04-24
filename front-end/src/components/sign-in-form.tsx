@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Check, Loader2 } from "lucide-react"
+import { Check, Loader2, Eye, EyeOff } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { authAPI } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
@@ -25,6 +25,7 @@ export function SignInForm({ onSuccess, onSwitchToSignUp, onOAuthSignIn, isOAuth
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const { language } = useLanguage()
   const isVietnamese = language === "vi"
 
@@ -34,14 +35,18 @@ export function SignInForm({ onSuccess, onSwitchToSignUp, onOAuthSignIn, isOAuth
     setIsLoading(true)
 
     try {
-      await authAPI.signIn(username, password)
+      const response = await authAPI.signIn(username, password)
+      console.log("Sign in successful:", response)
       setIsSuccess(true)
 
       // Wait a moment to show success state
       setTimeout(() => {
+        console.log("Redirecting after successful sign in")
         if (onSuccess) {
+          console.log("Calling onSuccess callback")
           onSuccess()
         } else {
+          console.log("No onSuccess callback, redirecting directly")
           router.push("/defaultPage")
         }
       }, 1000)
@@ -60,6 +65,10 @@ export function SignInForm({ onSuccess, onSwitchToSignUp, onOAuthSignIn, isOAuth
 
       setIsLoading(false)
     }
+  }
+
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword)
   }
 
   return (
@@ -98,15 +107,35 @@ export function SignInForm({ onSuccess, onSwitchToSignUp, onOAuthSignIn, isOAuth
                 {isVietnamese ? "Quên mật khẩu?" : "Forgot password?"}
               </button>
             </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="bg-[#F2F5DA] border-[#86AB5D] text-[#518650] h-12 rounded-full"
+            <div className="relative">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="bg-[#F2F5DA] border-[#86AB5D] text-[#518650] h-12 rounded-full pr-10"
+              />
+              <button
+                type="button"
+                onClick={togglePasswordVisibility}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-[#518650]"
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <input
+              type="checkbox"
+              id="remember"
+              className="rounded border-[#86AB5D] text-[#86AB5D] focus:ring-[#86AB5D]"
             />
+            <Label htmlFor="remember" className="text-sm text-[#518650]">
+              {isVietnamese ? "Ghi nhớ đăng nhập" : "Remember me"}
+            </Label>
           </div>
 
           <Button

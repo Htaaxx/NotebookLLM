@@ -27,9 +27,12 @@ export default function AuthUI({ initialMode = "signin", onAuthSuccess }: AuthUI
 
   // Handle successful authentication
   const handleAuthSuccess = () => {
+    console.log("Auth success handler called in auth-ui.tsx")
     if (onAuthSuccess) {
+      console.log("Calling provided onAuthSuccess callback")
       onAuthSuccess()
     } else {
+      console.log("No onAuthSuccess callback provided, redirecting to /defaultPage")
       router.push("/defaultPage")
     }
   }
@@ -73,8 +76,8 @@ export default function AuthUI({ initialMode = "signin", onAuthSuccess }: AuthUI
         ) : (
           <SignUpForm
             onSuccess={() => {
+              console.log("Sign up success, switching to sign in")
               setActiveTab("signin")
-              handleAuthSuccess()
             }}
             onSwitchToSignIn={() => setActiveTab("signin")}
             onOAuthSignIn={handleOAuthSignIn}

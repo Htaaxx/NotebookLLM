@@ -13,10 +13,12 @@ import { CTASection } from "@/components/home/cta-section"
 import { Footer } from "@/components/home/footer"
 import { GreenBlock } from "@/components/home/green-block"
 import { staggerContainer } from "@/lib/motion-utils"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
   const [showAuth, setShowAuth] = useState(false)
   const [authMode, setAuthMode] = useState<"signin" | "signup">("signin")
+  const router = useRouter()
 
   const handleNavClick = () => {
     // Any navigation logic here
@@ -32,6 +34,12 @@ export default function Home() {
     setShowAuth(true)
   }
 
+  const handleAuthSuccess = () => {
+    console.log("Auth success in home page, redirecting to defaultPage")
+    setShowAuth(false)
+    router.push("/defaultPage")
+  }
+
   return (
     <div className="w-full h-full bg-[#F2F5DA] flex flex-col">
       <div className="relative flex-grow overflow-hidden bg-[#F2F5DA] px-4 md:px-[90px] pt-[20px] md:pt-[40px]">
@@ -43,8 +51,8 @@ export default function Home() {
             </NavbarContainer>
             <HeroSection
               onGetStarted={() => {
-                setAuthMode("signup");
-                setShowAuth(true);
+                setAuthMode("signup")
+                setShowAuth(true)
               }}
               onSeeDemo={() => setShowAuth(false)}
             />
@@ -63,7 +71,12 @@ export default function Home() {
 
           <TestimonialsSection />
 
-          <CTASection onGetStarted={() => { setAuthMode("signup"); setShowAuth(true); }} />
+          <CTASection
+            onGetStarted={() => {
+              setAuthMode("signup")
+              setShowAuth(true)
+            }}
+          />
         </motion.main>
       </div>
 
@@ -88,7 +101,7 @@ export default function Home() {
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", duration: 0.5 }}
           >
-            <AuthUI initialMode={authMode} onAuthSuccess={() => setShowAuth(false)} />
+            <AuthUI initialMode={authMode} onAuthSuccess={handleAuthSuccess} />
             <button
               onClick={() => setShowAuth(false)}
               className="mt-4 text-white hover:underline text-sm mx-auto block"
