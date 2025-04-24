@@ -1,18 +1,12 @@
 "use client"
-
+import "react-pdf/dist/esm/Page/TextLayer.css"
+import "react-pdf/dist/esm/Page/AnnotationLayer.css"
 import { useState } from "react"
 import { Document, Page, pdfjs } from "react-pdf"
 import { ZoomIn, ZoomOut, File } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { buttonAnimation } from "@/lib/motion-utils"
-import "react-pdf/dist/esm/Page/TextLayer.css"
-import "react-pdf/dist/esm/Page/AnnotationLayer.css"
-import { 
-  FileSearch,       // PDF Review icon - thể hiện tìm kiếm trong file
-  BrainCircuit,     // Mind Map icon - thể hiện kết nối thông tin
-  ClipboardList     // Cheatsheet icon - thể hiện danh sách tóm tắt
-} from "lucide-react"
 
 // Set worker options for PDF.js
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.mjs`
@@ -41,7 +35,7 @@ export function PdfPreview({ url, fileName}: PdfPreviewProps) {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex justify-between items-center mb-2 bg-green-500 text-white p-3 rounded-md">
+      <div className="flex justify-between items-center bg-[#518650] text-white p-2 rounded-t-md">
         <div className="flex items-center">
           <File className="w-5 h-5 mr-2" />
           <span className="font-medium text-black">{fileName}</span>
@@ -70,7 +64,7 @@ export function PdfPreview({ url, fileName}: PdfPreviewProps) {
         </div>
       </div>
 
-      <div className="pdf-container flex-1 overflow-auto bg-gray-100 rounded-md">
+      <div className="pdf-container flex-1 overflow-auto bg-gray-100 rounded-b-md">
         <Document
           file={url}
           onLoadSuccess={onDocumentLoadSuccess}

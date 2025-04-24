@@ -4,7 +4,7 @@ export default function Loading() {
   // This component will simulate a longer loading time
   // to make the loading screen more visible
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#518650]">
+    <div className="min-h-screen flex items-center justify-center bg-[#86AB5D]">
       <div className="text-center">
         <div className="relative">
           <Loader2 className="h-16 w-16 animate-spin mx-auto text-[#F2F5DA] mb-4" />
