@@ -16,12 +16,6 @@ jobs:
       DEPLOYMENT_NAME_2: 'noteus-frontend'  # TODO: update to your deployment name
       DEPLOYMENT_NAME_3: 'noteus-database'  # TODO: update to your deployment name
       REPOSITORY: 'noteus-repo'  # TODO: update to your Artifact Registry docker repository name
-      NEXT_PUBLIC_APP_URL: ${{ vars.config.NEXT_PUBLIC_APP_URL }}
-      NEXT_PUBLIC_BACKEND_API_URL: ${{ vars.config.NEXT_PUBLIC_BACKEND_API_URL }}
-      NEXTAUTH_URL: ${{ vars.config.NEXTAUTH_URL }}
-      NEXT_PUBLIC_BACKEND_DB_URL: ${{ vars.config.NEXT_PUBLIC_BACKEND_DB_URL }}
-      FRONTEND_API_URL: ${{ vars.config.FRONTEND_API_URL }}
-      PORT_BACKEND: ${{ vars.config.PORT_BACKEND }}
       WORKLOAD_IDENTITY_PROVIDER: 'projects/669663908735/locations/global/workloadIdentityPools/github-action-pool/providers/github'  # TODO: update to your workload identity provider
 
     name: 'Setup, Build, Publish, and Deploy'
@@ -84,30 +78,21 @@ jobs:
           API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:latest"
       
           # Set your build arguments
+          BUILD_ARGS=(
+            --build-arg NEXT_PUBLIC_APP_URL="${{ vars.NEXT_PUBLIC_APP_URL }}"
+            --build-arg NEXT_PUBLIC_BACKEND_API_URL="${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}"
+            --build-arg NEXTAUTH_URL="${{ vars.NEXTAUTH_URL }}"
+            --build-arg NEXT_PUBLIC_BACKEND_DB_URL="${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}"
+            --build-arg FRONTEND_API_URL="${{ vars.FRONTEND_API_URL }}"
+            --build-arg PORT_BACKEND="${{ vars.PORT_BACKEND }}"
+          )
+
           echo "Building frontend container: $FRONTEND_TAG"
-          docker build \
-            --build-arg NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" \
-            --build-arg NEXT_PUBLIC_BACKEND_API_URL="$NEXT_PUBLIC_BACKEND_API_URL" \
-            --build-arg NEXTAUTH_URL="$NEXTAUTH_URL" \
-            --build-arg NEXT_PUBLIC_BACKEND_DB_URL="$NEXT_PUBLIC_BACKEND_DB_URL" \
-            --build-arg FRONTEND_API_URL="$FRONTEND_API_URL" \
-            --build-arg PORT_BACKEND="$PORT_BACKEND" \
-            -f front-end/Dockerfile \
-            --tag "${FRONTEND_TAG}" \
-            front-end/
+          docker build "${BUILD_ARGS[@]}" -f front-end/Dockerfile --tag "${FRONTEND_TAG}" front-end/
           docker push "${FRONTEND_TAG}"
 
           echo "Building database container: $DATABASE_TAG"
-          docker build \
-            --build-arg NEXT_PUBLIC_APP_URL="$NEXT_PUBLIC_APP_URL" \
-            --build-arg NEXT_PUBLIC_BACKEND_API_URL="$NEXT_PUBLIC_BACKEND_API_URL" \
-            --build-arg NEXTAUTH_URL="$NEXTAUTH_URL" \
-            --build-arg NEXT_PUBLIC_BACKEND_DB_URL="$NEXT_PUBLIC_BACKEND_DB_URL" \
-            --build-arg FRONTEND_API_URL="$FRONTEND_API_URL" \
-            --build-arg PORT_BACKEND="$PORT_BACKEND" \
-            -f database/Dockerfile \
-            --tag "${DATABASE_TAG}" \
-            database/
+          docker build -f database/Dockerfile --tag "${DATABASE_TAG}" database/
           docker push "${DATABASE_TAG}"
 
           echo "Building API container: $API_TAG"
@@ -141,12 +126,12 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
           kubectl create configmap config \
-            --from-literal=NEXT_PUBLIC_APP_URL="${{ vars.config.NEXT_PUBLIC_APP_URL }}" \
-            --from-literal=NEXT_PUBLIC_BACKEND_API_URL="${{ vars.config.NEXT_PUBLIC_BACKEND_API_URL }}" \
-            --from-literal=NEXTAUTH_URL="${{ vars.config.NEXTAUTH_URL }}" \
-            --from-literal=NEXT_PUBLIC_BACKEND_DB_URL="${{ vars.config.NEXT_PUBLIC_BACKEND_DB_URL }}" \
-            --from-literal=FRONTEND_API_URL="${{ vars.config.FRONTEND_API_URL }}" \
-            --from-literal=PORT_BACKEND="${{ vars.config.PORT_BACKEND }}" \
+            --from-literal=NEXT_PUBLIC_APP_URL="${{ vars.NEXT_PUBLIC_APP_URL }}" \
+            --from-literal=NEXT_PUBLIC_BACKEND_API_URL="${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}" \
+            --from-literal=NEXTAUTH_URL="${{ vars.NEXTAUTH_URL }}" \
+            --from-literal=NEXT_PUBLIC_BACKEND_DB_URL="${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}" \
+            --from-literal=FRONTEND_API_URL="${{ vars.FRONTEND_API_URL }}" \
+            --from-literal=PORT_BACKEND="${{ vars.PORT_BACKEND }}" \
             --dry-run=client -o yaml | kubectl apply -f -
       # Deploy to GKE (without using Kustomize)
       - name: 'Debug image tags'
