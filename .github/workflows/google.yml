@@ -147,9 +147,9 @@ jobs:
           kubectl apply -f k8s/base/ingress-nginx.yaml
       
           # Wait for the deployment to complete
-          kubectl rollout status deployment/$DEPLOYMENT_NAME_3
-          kubectl rollout status deployment/$DEPLOYMENT_NAME_2
-          # kubectl rollout status deployment/$DEPLOYMENT_NAME_1
+          kubectl rollout restart deployment/$DEPLOYMENT_NAME_3
+          kubectl rollout restart deployment/$DEPLOYMENT_NAME_2
+          # kubectl rollout restart deployment/$DEPLOYMENT_NAME_1
           
           # Check the status of services
           kubectl get services -o wide
