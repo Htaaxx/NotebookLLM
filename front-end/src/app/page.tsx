@@ -4,12 +4,14 @@ import { useState } from "react"
 import { motion } from "framer-motion"
 import AuthUI from "@/components/auth-ui"
 import { NavBar } from "@/components/home/navbar"
+import { NavbarContainer } from "@/components/home/navbar-container"
 import { HeroSection } from "@/components/home/hero-section"
 import { FeaturesSection } from "@/components/home/features-section"
 import { AppScreenshotSection } from "@/components/home/app-screenshot-section"
 import { TestimonialsSection } from "@/components/home/testimonials-section"
 import { CTASection } from "@/components/home/cta-section"
 import { Footer } from "@/components/home/footer"
+import { GreenBlock } from "@/components/home/green-block"
 import { staggerContainer } from "@/lib/motion-utils"
 
 export default function Home() {
@@ -20,27 +22,37 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen relative bg-white overflow-hidden">
-      <NavBar onNavClick={handleNavClick} onSignUp={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />
+    <div className="min-h-screen bg-[#F2F5DA] flex flex-col">
+      <div className="relative flex-grow overflow-hidden bg-[#F2F5DA] px-4 md:px-[90px] pt-[20px] md:pt-[40px]">
+        {/* Navbar */}
+        <div className="w-full md:w-[90%] mx-auto">
+          <GreenBlock>
+            <NavbarContainer>
+              <NavBar onNavClick={handleNavClick} onSignUp={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />
+            </NavbarContainer>
+            <HeroSection onGetStarted={() => setShowAuth(true)} onSeeDemo={() => setShowAuth(false)} />
+          </GreenBlock>
 
-      <motion.main
-        className="min-h-screen relative bg-white overflow-hidden pt-16" // Added pt-16 for padding-top
-        initial="hidden"
-        animate="show"
-        variants={staggerContainer(0.2, 0.1)}
-      >
-        <HeroSection onGetStarted={() => setShowAuth(true)} onSeeDemo={() => setShowAuth(false)} />
+        </div>
 
-        <FeaturesSection />
+        <motion.main
+          className="relative overflow-hidden mt-0"
+          initial="hidden"
+          animate="show"
+          variants={staggerContainer(0.2, 0.1)}
+        >
+          <FeaturesSection />
 
-        <AppScreenshotSection />
+          <AppScreenshotSection />
 
-        <TestimonialsSection />
+          <TestimonialsSection />
 
-        <CTASection onGetStarted={() => setShowAuth(true)} />
+          <CTASection onGetStarted={() => setShowAuth(true)} />
+        </motion.main>
+      </div>
 
-        <Footer onNavClick={handleNavClick} />
-      </motion.main>
+      {/* Footer - outside the main content div to ensure full width */}
+      <Footer onNavClick={handleNavClick} />
 
       {/* Auth Modal Overlay */}
       {showAuth && (
