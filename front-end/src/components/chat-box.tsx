@@ -99,9 +99,7 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
       try {
         const storedUserId = localStorage.getItem('user_id');
         if (!storedUserId) return;
-        
         setUserId(storedUserId);
-        
         // Check if we need to reset daily counts
         if (shouldResetDailyCounts()) {
           console.log("Resetting daily counts");
@@ -109,22 +107,18 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
           // For now, we'll just update our local state
           setQueryCount(0);
         }
-        
         // Fetch account type
         const accountTypeData = await accountTypeAPI.getAccountTypes(storedUserId);
         setAccountType(accountTypeData.accountType || "FREE");
-        
         // Fetch query count
         const countData = await accountTypeAPI.getCountQuery(storedUserId);
         setQueryCount(countData.countQuery || 0);
-        
         // Check if limit exceeded
         checkQueryLimit(accountTypeData.accountType || "FREE", countData.countQuery || 0);
       } catch (error) {
         console.error("Error fetching user info:", error);
       }
     };
-    
     fetchUserInfo();
   }, []);
 
@@ -134,15 +128,12 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
       type === "PRO" ? ACCOUNT_LIMITS.PRO.CHAT_QUERIES :
       type === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES :
       ACCOUNT_LIMITS.FREE.CHAT_QUERIES;
-      
     setLimitExceeded(count >= limit);
-  };
-  
+  }
   // Add word count check
   const countWords = (text: string): number => {
     return text.trim().split(/\s+/).length;
   };
-
 
   useEffect(() => {
     if (useAsContext) {
@@ -216,7 +207,6 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
       const wordLimit = accountType === "STANDARD" ? 
                         ACCOUNT_LIMITS.STANDARD.MAX_QUERY_WORDS : 
                         ACCOUNT_LIMITS.FREE.MAX_QUERY_WORDS;
-                        
       if (wordCount > wordLimit) {
         setChatHistory(prev => [
           ...prev, 
@@ -351,7 +341,6 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
         const newCount = queryCount + 1;
         await accountTypeAPI.updateCountQuery(userId);
         setQueryCount(newCount);
-        
         // Check if this query puts user over the limit
         checkQueryLimit(accountType, newCount);
       }
@@ -655,18 +644,45 @@ export function ChatBox({ isDisabled = false }: ChatBoxProps) {
       transition={{ duration: 0.5 }}
     >
       {/* Daily limit warning - show when user is approaching limit */}
-      {accountType !== "PRO" && queryCount > 0 && (
-        <div className={`${limitExceeded ? "bg-red-50" : "bg-amber-50"} rounded-md p-2 mb-2 mx-4 mt-2 text-sm`}>
-          <p className="text-gray-700 text-xs flex items-center">
-            <AlertCircle className="w-3 h-3 mr-1 text-amber-500" />
-            {limitExceeded 
-              ? `You've reached your daily limit of ${accountType === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES : ACCOUNT_LIMITS.FREE.CHAT_QUERIES} queries for ${accountType} accounts. Upgrade to access more.`
-              : `You've used ${queryCount}/${accountType === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES : ACCOUNT_LIMITS.FREE.CHAT_QUERIES} daily queries.`
-            }
-          </p>
-        </div>
+      {accountType !== "PRO" && (
+        <>
+          {/* Threshold notifications (10, 20, 30, 40, 50) */}
+          {!limitExceeded &&
+            [10, 20, 30, 40, ACCOUNT_LIMITS[accountType === "STANDARD" ? "STANDARD" : "FREE"].CHAT_QUERIES].includes(
+              queryCount,
+            ) && (
+              <div className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-md p-3 mb-2 mx-4 mt-2 border border-amber-200">
+                <p className="text-amber-800 text-sm flex items-center">
+                  <AlertCircle className="w-4 h-4 mr-2 text-amber-500" />
+                  You've used {queryCount}/
+                  {accountType === "STANDARD" ? ACCOUNT_LIMITS.STANDARD.CHAT_QUERIES : ACCOUNT_LIMITS.FREE.CHAT_QUERIES}{" "}
+                  daily queries.
+                </p>
+              </div>
+            )}
+
+          {/* Limit exceeded notification */}
+          {limitExceeded && (
+            <div className="bg-gradient-to-r from-red-50 to-red-100 rounded-md p-3 mb-2 mx-4 mt-2 border border-red-200">
+              <p className="text-red-800 text-sm flex items-center">
+                <AlertCircle className="w-4 h-4 mr-2 text-red-500" />
+                You are out of messages until 00:00 of the next day.
+              </p>
+              <p className="text-red-800 text-sm mt-1 ml-6">
+                Please upgrade your{" "}
+                <span
+                  className="text-blue-600 underline cursor-pointer hover:text-blue-800"
+                  onClick={() => (window.location.href = "/pricing")}
+                >
+                  plan
+                </span>{" "}
+                to get more messages.
+              </p>
+            </div>
+          )}
+        </>
       )}
-      
+
       {/* Embedding Status Message - Show when embedding is in progress */}
       {isDisabled && (
         <div className="bg-amber-50 rounded-md p-2 mb-2 mx-4 mt-2 text-sm">

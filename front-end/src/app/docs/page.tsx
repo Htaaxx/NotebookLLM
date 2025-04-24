@@ -154,7 +154,12 @@ export default function DocsPage() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowAuth(false)} />
             <div className="z-10 w-full max-w-md">
-              <AuthUI onAuthSuccess={() => setShowAuth(false)} />
+              <AuthUI
+                onAuthSuccess={() => {
+                  setShowAuth(false)
+                  window.location.href = "/defaultPage"
+                }}
+              />
               <button
                 onClick={() => setShowAuth(false)}
                 className="mt-4 text-white hover:underline text-sm mx-auto block"

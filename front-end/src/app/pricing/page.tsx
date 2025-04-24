@@ -14,6 +14,21 @@ import { useLanguage } from "@/lib/language-context"
 import { plans } from "@/lib/stripe"
 import { motion } from "framer-motion"
 import { fadeIn, staggerContainer, buttonAnimation, cardHoverEffect } from "@/lib/motion-utils"
+import { accountTypeAPI} from "@/lib/api"
+// Replace the getPlanLevel function with this improved version that handles null/undefined values
+const getPlanLevel = (planName: string | null): number => {
+  if (!planName) return 1 // Default to Free level if no plan is provided
+
+  switch (planName.toLowerCase()) {
+    case "pro":
+      return 3
+    case "standard":
+      return 2
+    case "free":
+    default:
+      return 1
+  }
+}
 
 export default function PricingPage() {
   const [showAuth, setShowAuth] = useState(false)
@@ -26,9 +41,33 @@ export default function PricingPage() {
   const isVietnamese = language === "vi"
   const router = useRouter()
 
+  
+
   // Check authentication status
   useEffect(() => {
-    // Simulate some loading time
+    const fetchAccountType = async () => {
+      // Load user data
+      const storedUsername = localStorage.getItem("username")
+      const storedUserID = localStorage.getItem("user_id")
+
+      if (storedUsername) {
+        setUserName(storedUsername)
+      }
+
+      if (storedUserID) {
+        try {
+          const storedPlan = await accountTypeAPI.getAccountTypes(storedUserID);
+          setCurrentPlan(storedPlan.accountType);
+        } catch (error) {
+          console.error("Error fetching account types:", error);
+        }
+      } else {
+        console.error("User ID is null, cannot fetch account types.");
+      }      
+    }
+
+    fetchAccountType()
+
     const loadingTimer = setTimeout(() => {
       const token = localStorage.getItem("accessToken")
       const storedUsername = localStorage.getItem("username")
@@ -37,13 +76,6 @@ export default function PricingPage() {
         setIsAuthenticated(true)
         setUserName(storedUsername)
 
-        // Get current plan from localStorage
-        const userPlan = localStorage.getItem("currentPlan")
-        if (userPlan) {
-          setCurrentPlan(userPlan)
-        } else {
-          setCurrentPlan("Free") // Default to Free if no plan is stored
-        }
       }
 
       setIsLoading(false)
@@ -56,11 +88,29 @@ export default function PricingPage() {
     // Don't do anything special here, let regular navigation happen
   }
 
+  // Update the handleSubscribe function to be more robust
   const handleSubscribe = (planId: string) => {
     if (!isAuthenticated) {
       // Store the selected plan ID and show auth modal
       setSelectedPlanId(planId)
       setShowAuth(true)
+      return
+    }
+
+    // Get the level of the current plan and the selected plan
+    const currentPlanLevel = getPlanLevel(currentPlan)
+    const selectedPlanName = planId === "free" ? "Free" : planId === "standard" ? "Standard" : "Pro"
+    const selectedPlanLevel = getPlanLevel(selectedPlanName)
+
+    // If trying to subscribe to current plan, show message
+    if (selectedPlanName.toLowerCase() === currentPlan?.toLowerCase()) {
+      alert("You are already subscribed to this plan.")
+      return
+    }
+
+    // Prevent downgrading to a lower plan
+    if (selectedPlanLevel < currentPlanLevel) {
+      alert("You cannot downgrade to a lower plan. Please contact support if you need assistance.")
       return
     }
 
@@ -191,9 +241,17 @@ export default function PricingPage() {
                       <Button
                         className="w-full bg-green-600 hover:bg-green-700"
                         onClick={() => handleSubscribe("free")}
-                        disabled={(isAuthenticated && currentPlan === "Free") || isLoading}
+                        disabled={
+                          isLoading ||
+                          (isAuthenticated &&
+                            (currentPlan?.toLowerCase() === "free" || getPlanLevel(currentPlan) > getPlanLevel("Free")))
+                        }
                       >
-                        {isAuthenticated && currentPlan === "Free" ? "Current Plan" : "Get Started"}
+                        {isAuthenticated && currentPlan?.toLowerCase() === "free"
+                          ? "Current Plan"
+                          : isAuthenticated && getPlanLevel(currentPlan) > getPlanLevel("Free")
+                            ? "Downgrade Not Available"
+                            : "Get Started"}
                       </Button>
                     </motion.div>
                   </CardFooter>
@@ -250,9 +308,18 @@ export default function PricingPage() {
                       <Button
                         className="w-full bg-blue-500 hover:bg-blue-600"
                         onClick={() => handleSubscribe("standard")}
-                        disabled={(isAuthenticated && currentPlan === "Standard") || isLoading}
+                        disabled={
+                          isLoading ||
+                          (isAuthenticated &&
+                            (currentPlan?.toLowerCase() === "standard" ||
+                              getPlanLevel(currentPlan) > getPlanLevel("Standard")))
+                        }
                       >
-                        {isAuthenticated && currentPlan === "Standard" ? "Current Plan" : "Subscribe Now"}
+                        {isAuthenticated && currentPlan?.toLowerCase() === "standard"
+                          ? "Current Plan"
+                          : isAuthenticated && getPlanLevel(currentPlan) > getPlanLevel("Standard")
+                            ? "Downgrade Not Available"
+                            : "Subscribe Now"}
                       </Button>
                     </motion.div>
                   </CardFooter>
@@ -309,9 +376,9 @@ export default function PricingPage() {
                       <Button
                         className="w-full bg-green-600 hover:bg-green-700"
                         onClick={() => handleSubscribe("pro")}
-                        disabled={(isAuthenticated && currentPlan === "Pro") || isLoading}
+                        disabled={isLoading || (isAuthenticated && currentPlan?.toLowerCase() === "pro")}
                       >
-                        {isAuthenticated && currentPlan === "Pro" ? "Current Plan" : "Go Pro"}
+                        {isAuthenticated && currentPlan?.toLowerCase() === "pro" ? "Current Plan" : "Go Pro"}
                       </Button>
                     </motion.div>
                   </CardFooter>
@@ -371,4 +438,3 @@ export default function PricingPage() {
     </main>
   )
 }
-

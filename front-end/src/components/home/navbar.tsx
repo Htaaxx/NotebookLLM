@@ -37,12 +37,6 @@ export function NavBar({ onNavClick, onSignUp, onSignIn }: NavBarProps) {
               >
                 HOME
               </Link>
-              <button
-                onClick={onNavClick}
-                className="font-medium hover:text-green-600 transition-colors py-1 border-b-2 border-transparent text-gray-900"
-              >
-                FEATURES
-              </button>
               <Link
                 href="/pricing"
                 className={`font-medium hover:text-green-600 transition-colors py-1 border-b-2 ${
