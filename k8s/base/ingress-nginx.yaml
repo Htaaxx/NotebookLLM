@@ -7,19 +7,19 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-    http:
-      paths:
-      - path: /api/?(.*)
-        pathType: Prefix
-        backend:
-          service:
-            name: noteus-api
-            port:
-              number: 8000
-      - path: /(.*)
-        pathType: Prefix
-        backend:
-          service:
-            name: noteus-frontend
-            port:
-              number: 80
+    - http:
+        paths:
+          - path: /api/?(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: noteus-api
+                port:
+                  number: 8000
+          - path: /(.*)
+            pathType: Prefix
+            backend:
+              service:
+                name: noteus-frontend
+                port:
+                  number: 80
