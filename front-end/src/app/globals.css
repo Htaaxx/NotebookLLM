@@ -3,20 +3,32 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ---------- fonts ---------- */
 @layer base {
   :root {
-    /* Fixed light theme variables - no dark mode */
+    --font-quicksand: "Quicksand", sans-serif;
+    --font-anton: "Anton", sans-serif;
+  }
+
+  .font-quicksand { font-family: var(--font-quicksand); }
+  .font-anton     { font-family: var(--font-anton); }
+}
+
+/* ---------- design tokens ---------- */
+@layer base {
+  :root {
     --background: #ffffff;
     --foreground: #171717;
+
     --border: 214.3 31.8% 91.4%;
     --input: 214.3 31.8% 91.4%;
     --ring: 142.1 76.2% 36.3%;
     --radius: 0.5rem;
-    --foreground-rgb: 0, 0, 0;
+
+    --text-base: 0, 0, 0;
     --background-start-rgb: 242, 245, 218;
     --background-end-rgb: 242, 245, 218;
 
-    /* Additional variables for components */
     --card: 0 0% 100%;
     --card-foreground: 222.2 84% 4.9%;
     --popover: 0 0% 100%;
@@ -31,177 +43,66 @@
     --accent-foreground: 222.2 47.4% 11.2%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
+
+    --nav-green: #86ab5d;
+    --nav-text:  #f2f5da;
+    --nav-orange:#d9a066;
+    --nav-hover: #f26d3d;
   }
 
-  * {
-    border-color: hsl(var(--border));
-  }
+  * { border-color: hsl(var(--border)); }
 }
 
+/* ---------- global tag styles ---------- */
 body {
-  color: rgb(var(--foreground-rgb));
+  color: rgb(var(--text-base));
   background: rgb(var(--background-start-rgb));
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Grid pattern background utility */
+/* ---------- utilities ---------- */
 @layer utilities {
-  .bg-grid-pattern {
-    background-image: linear-gradient(to right, rgba(0, 0, 0, 0.1) 1px, transparent 1px),
-      linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 1px, transparent 1px);
-    background-size: 20px 20px;
+  .bg-grid-pattern{
+    background-image:
+      linear-gradient(to right ,rgba(0,0,0,.1) 1px,transparent 1px),
+      linear-gradient(to bottom,rgba(0,0,0,.1) 1px,transparent 1px);
+    background-size:20px 20px;
   }
-
-  /* Animation utilities */
-  .perspective {
-    perspective: 1000px;
-  }
-
-  .transform-style-3d {
-    transform-style: preserve-3d;
-  }
-
-  .backface-hidden {
-    backface-visibility: hidden;
-  }
-
-  .rotate-y-180 {
-    transform: rotateY(180deg);
-  }
+  .perspective{perspective:1000px;}
+  .transform-style-3d{transform-style:preserve-3d;}
+  .backface-hidden{backface-visibility:hidden;}
+  .rotate-y-180{transform:rotateY(180deg);}
 }
 
-/* Animation classes */
-.fade-in {
-  animation: fadeIn 0.5s ease-in-out forwards;
-}
+/* ---------- animations ---------- */
+.fade-in{animation:fadeIn .5s ease-in-out forwards;}
+.slide-in-left {animation:slideInLeft  .5s ease-in-out forwards;}
+.slide-in-right{animation:slideInRight .5s ease-in-out forwards;}
+.slide-in-up   {animation:slideInUp    .5s ease-in-out forwards;}
+.slide-in-down {animation:slideInDown  .5s ease-in-out forwards;}
+.zoom-in       {animation:zoomIn       .5s ease-in-out forwards;}
 
-.slide-in-left {
-  animation: slideInLeft 0.5s ease-in-out forwards;
-}
+@keyframes fadeIn      {from{opacity:0}           to{opacity:1}}
+@keyframes slideInLeft {from{transform:translateX(-50px);opacity:0} to{transform:none;opacity:1}}
+@keyframes slideInRight{from{transform:translateX( 50px);opacity:0} to{transform:none;opacity:1}}
+@keyframes slideInUp   {from{transform:translateY( 50px);opacity:0} to{transform:none;opacity:1}}
+@keyframes slideInDown {from{transform:translateY(-50px);opacity:0} to{transform:none;opacity:1}}
+@keyframes zoomIn      {from{transform:scale(.8);opacity:0}          to{transform:scale(1);opacity:1}}
 
-.slide-in-right {
-  animation: slideInRight 0.5s ease-in-out forwards;
-}
+/* ---------- page transition ---------- */
+.page-enter        {opacity:0;transform:translateY(20px);}
+.page-enter-active {opacity:1;transform:none;transition:opacity .3s,transform .3s;}
+.page-exit         {opacity:1;}
+.page-exit-active  {opacity:0;transform:translateY(-20px);transition:opacity .3s,transform .3s;}
 
-.slide-in-up {
-  animation: slideInUp 0.5s ease-in-out forwards;
+/* ---------- card flip ---------- */
+.card-flip{transition:transform .6s;transform-style:preserve-3d;}
+.card-flip.flipped{transform:rotateY(180deg);}
+.card-front,.card-back{
+  backface-visibility:hidden;position:absolute;inset:0;width:100%;height:100%;
 }
+.card-back{transform:rotateY(180deg);}
 
-.slide-in-down {
-  animation: slideInDown 0.5s ease-in-out forwards;
-}
-
-.zoom-in {
-  animation: zoomIn 0.5s ease-in-out forwards;
-}
-
-/* Keyframes */
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes slideInLeft {
-  from {
-    transform: translateX(-50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    transform: translateX(50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInUp {
-  from {
-    transform: translateY(50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes slideInDown {
-  from {
-    transform: translateY(-50px);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
-}
-
-@keyframes zoomIn {
-  from {
-    transform: scale(0.8);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-/* Page transitions */
-.page-enter {
-  opacity: 0;
-  transform: translateY(20px);
-}
-
-.page-enter-active {
-  opacity: 1;
-  transform: translateY(0);
-  transition: opacity 300ms, transform 300ms;
-}
-
-.page-exit {
-  opacity: 1;
-}
-
-.page-exit-active {
-  opacity: 0;
-  transform: translateY(-20px);
-  transition: opacity 300ms, transform 300ms;
-}
-
-/* Card flip animation */
-.card-flip {
-  transition: transform 0.6s;
-  transform-style: preserve-3d;
-}
-
-.card-flip.flipped {
-  transform: rotateY(180deg);
-}
-
-.card-front,
-.card-back {
-  backface-visibility: hidden;
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.card-back {
-  transform: rotateY(180deg);
+a {
+  @apply text-inherit;
 }
