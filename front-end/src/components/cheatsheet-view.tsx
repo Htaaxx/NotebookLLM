@@ -1128,7 +1128,7 @@ export function CheatsheetView({ initialMarkdown, selectedFiles }: CheatsheetVie
   return (
     <div className="flex flex-col h-full" ref={containerRef}>
       {/* Simplified Taskbar */}
-      <div className="cheatsheet-header-bar sticky top-0 z-10">
+      <div className="cheatsheet-header-bar sticky top-0 z-10 bg-[#518650] p-3 rounded-t-lg">
         <div className="flex items-center">
           <div className="text-lg font-medium cursor-pointer" onDoubleClick={() => setEditingTitle(true)}>
             {editingTitle ? (
