@@ -827,7 +827,7 @@ export default function FlashcardPage() {
                     <div className="h-2 bg-green-600"></div>
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start">
-                        <h3 className="text-xl font-bold mb-2">{deck.name}</h3>
+                        <h3 className="text-xl font-bold mb-2 text-[#F2F5DA]">{deck.name}</h3>
                         <Button
                           variant="ghost"
                           size="sm"

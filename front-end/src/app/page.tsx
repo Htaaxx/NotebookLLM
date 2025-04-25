@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { motion } from "framer-motion"
 import AuthUI from "@/components/auth-ui"
-import { NavBar } from "@/components/home/navbar"
+import NavBar from "@/components/home/navbar"
 import { NavbarContainer } from "@/components/home/navbar-container"
 import { HeroSection } from "@/components/home/hero-section"
 import { FeaturesSection } from "@/components/home/features-section"
@@ -13,12 +13,31 @@ import { CTASection } from "@/components/home/cta-section"
 import { Footer } from "@/components/home/footer"
 import { GreenBlock } from "@/components/home/green-block"
 import { staggerContainer } from "@/lib/motion-utils"
+import { useRouter } from "next/navigation"
 
 export default function Home() {
   const [showAuth, setShowAuth] = useState(false)
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin")
+  const router = useRouter()
 
   const handleNavClick = () => {
+    // Any navigation logic here
+  }
+
+  const handleSignIn = () => {
+    setAuthMode("signin")
     setShowAuth(true)
+  }
+
+  const handleSignUp = () => {
+    setAuthMode("signup")
+    setShowAuth(true)
+  }
+
+  const handleAuthSuccess = () => {
+    console.log("Auth success in home page, redirecting to defaultPage")
+    setShowAuth(false)
+    router.push("/defaultPage")
   }
 
   return (
@@ -28,11 +47,16 @@ export default function Home() {
         <div className="w-full md:w-[90%] mx-auto">
           <GreenBlock>
             <NavbarContainer>
-              <NavBar onNavClick={handleNavClick} onSignUp={() => setShowAuth(true)} onSignIn={() => setShowAuth(true)} />
+              <NavBar onNavClick={handleNavClick} onSignUp={handleSignUp} onSignIn={handleSignIn} />
             </NavbarContainer>
-            <HeroSection onGetStarted={() => setShowAuth(true)} onSeeDemo={() => setShowAuth(false)} />
+            <HeroSection
+              onGetStarted={() => {
+                setAuthMode("signup")
+                setShowAuth(true)
+              }}
+              onSeeDemo={() => setShowAuth(false)}
+            />
           </GreenBlock>
-
         </div>
 
         <motion.main
@@ -47,7 +71,12 @@ export default function Home() {
 
           <TestimonialsSection />
 
-          <CTASection onGetStarted={() => setShowAuth(true)} />
+          <CTASection
+            onGetStarted={() => {
+              setAuthMode("signup")
+              setShowAuth(true)
+            }}
+          />
         </motion.main>
       </div>
 
@@ -72,7 +101,7 @@ export default function Home() {
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", duration: 0.5 }}
           >
-            <AuthUI />
+            <AuthUI initialMode={authMode} onAuthSuccess={handleAuthSuccess} />
             <button
               onClick={() => setShowAuth(false)}
               className="mt-4 text-white hover:underline text-sm mx-auto block"

@@ -8,7 +8,6 @@ import { Logo } from "@/components/logo"
 import { authAPI } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
 import type { Language } from "@/lib/i18n"
-import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -69,32 +68,32 @@ export function NavBar() {
       <div className="flex h-16 items-center justify-between px-6">
         {/* Logo on the left */}
         <Link href={isLoggedIn ? "/defaultPage" : "/"} className="flex items-center gap-2">
-          <Logo className="w-8 h-8 text-[#F2F5DA] " />
-          <span className="font-anton font-normal text-[#F2F5DA] text-2xl">NoteUS</span>
+          <Logo className="w-12 h-12 text-[#E48D44]" />
+          <span className="font-['Anton'] font-normal text-2xl text-[#F2F5DA]">NoteUS</span>
         </Link>
 
         {/* Navigation links in the center */}
         <div className="absolute left-1/2 transform -translate-x-1/2 flex space-x-8">
           <Link
             href="/defaultPage"
-            className={`font-quicksand font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
-              isActivePage("defaultPage") ? "text-[#F26D3D]" : ""
+            className={`font-['Quicksand'] font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
+              isActivePage("defaultPage") ? "border-b-2 border-[#F2F5DA]" : ""
             }`}
           >
             {t("CHATBOX").toUpperCase()}
           </Link>
           <Link
             href="/files"
-            className={`font-quicksand font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
-              isActivePage("files") ? "text-[#F26D3D]" : ""
+            className={`font-['Quicksand'] font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
+              isActivePage("files") ? "border-b-2 border-[#F2F5DA]" : ""
             }`}
           >
             {t("FILES").toUpperCase()}
           </Link>
           <Link
             href="/flashcard"
-            className={`font-quicksand font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
-              isActivePage("flashcard") ? "text-[#F26D3D]" : ""
+            className={`font-['Quicksand'] font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
+              isActivePage("flashcard") ? "border-b-2 border-[#F2F5DA]" : ""
             }`}
             suppressHydrationWarning
           >
@@ -105,23 +104,23 @@ export function NavBar() {
         {/* User profile on the right */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="navProfile" size="navProfile" className="flex items-center gap-2">
-              <span className="font-quicksand font-bold text-[#86AB5D]">{userName}</span>
-              <div className="w-6 h-6 rounded-full bg-[#D9A066]"></div>
-            </Button>
+            <button className="flex items-center gap-2 px-4 py-1 rounded-full bg-[#F2F5DA] hover:bg-[#F2F5DA] transition-colors">
+              <span className="font-['Quicksand'] font-bold text-[#86AB5D]">{userName.toUpperCase()}</span>
+              <div className="w-6 h-6 rounded-full bg-[#E48D44]"></div>
+            </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 bg-white" align="end">
+          <DropdownMenuContent className="w-56 bg-[#86AB5D]" align="end">
             <DropdownMenuItem
-              className="cursor-pointer font-quicksand"
+              className="cursor-pointer"
               onClick={() => changeLanguage(language === "en" ? "vi" : "en")}
             >
-              {t("language")}: {language.toUpperCase()}
+              {t("Language")}: {language.toUpperCase()}
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
 
             <DropdownMenuItem asChild>
-              <Link href="/profile" className="flex items-center cursor-pointer font-quicksand">
+              <Link href="/profile" className="flex items-center cursor-pointer">
                 <User className="w-4 h-4 mr-2" />
                 <span>Profile</span>
               </Link>
@@ -130,11 +129,11 @@ export function NavBar() {
             <DropdownMenuSeparator />
 
             <DropdownMenuItem
-              className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 flex items-center font-quicksand"
+              className="cursor-pointer text-red-500 hover:text-red-600 hover:bg-red-50 flex items-center"
               onClick={handleSignOut}
             >
               <LogOut className="w-4 h-4 mr-2" />
-              {t("signOut")}
+              {t("SignOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
