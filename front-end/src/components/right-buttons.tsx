@@ -1,5 +1,5 @@
 "use client"
-import { FileText, Network, BookOpen, BrainCircuit, Clipboard } from "lucide-react"
+import { FileText, BrainCircuit, Clipboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { motion } from "framer-motion"
 import { buttonAnimation } from "@/lib/motion-utils"
@@ -26,17 +26,17 @@ export function RightButtons({ onViewChange, activeView, isDisabled = false }: R
       >
         <Button
           variant={activeView === "preview" ? "default" : "outline"}
-          size="lg"
+          size="icon"
           onClick={() => !isDisabled && onViewChange(activeView === "preview" ? null : "preview")}
-          className={`rounded-full w-12 h-12 flex items-center justify-center ${
+          className={`rounded-full flex items-center justify-center ${
             activeView === "preview"
-              ? "bg-[#E48D44] hover:bg-[#d47d34]" 
+              ? "bg-[#E48D44] hover:bg-[#d47d34]"
               : "bg-[#F2F5DA] text-[#518650] border-[#86AB5D] hover:bg-[#E7E7C9]"
           } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={isDisabled}
           title={isDisabled ? "Document processing in progress. Please wait." : "PDF Review"}
         >
-          <FileText className={`w-5 h-5 ${activeView === "preview" ? "text-white" : ""}`} />
+          <FileText className="w-5 h-5 z-10 relative" />
         </Button>
       </motion.div>
 
@@ -48,17 +48,17 @@ export function RightButtons({ onViewChange, activeView, isDisabled = false }: R
       >
         <Button
           variant={activeView === "mindmap" ? "default" : "outline"}
-          size="lg"
+          size="icon"
           onClick={() => !isDisabled && onViewChange(activeView === "mindmap" ? null : "mindmap")}
-          className={`rounded-full w-12 h-12 flex items-center justify-center ${
+          className={`rounded-full flex items-center justify-center ${
             activeView === "mindmap"
-              ? "bg-[#E48D44] hover:bg-[#d47d34]" 
+              ? "bg-[#E48D44] hover:bg-[#d47d34]"
               : "bg-[#F2F5DA] text-[#518650] border-[#86AB5D] hover:bg-[#E7E7C9]"
           } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={isDisabled}
           title={isDisabled ? "Document processing in progress. Please wait." : "Mind Map"}
         >
-          <BrainCircuit className={`w-5 h-5 ${activeView === "mindmap" ? "text-white" : ""}`} />
+          <BrainCircuit className="w-5 h-5 z-10 relative" />
         </Button>
       </motion.div>
 
@@ -70,17 +70,17 @@ export function RightButtons({ onViewChange, activeView, isDisabled = false }: R
       >
         <Button
           variant={activeView === "cheatsheet" ? "default" : "outline"}
-          size="lg"
+          size="icon"
           onClick={() => !isDisabled && onViewChange(activeView === "cheatsheet" ? null : "cheatsheet")}
-          className={`rounded-full w-12 h-12 flex items-center justify-center ${
+          className={`rounded-full flex items-center justify-center ${
             activeView === "cheatsheet"
-              ? "bg-[#E48D44] hover:bg-[#d47d34]" 
+              ? "bg-[#E48D44] hover:bg-[#d47d34]"
               : "bg-[#F2F5DA] text-[#518650] border-[#86AB5D] hover:bg-[#E7E7C9]"
           } ${isDisabled ? "opacity-50 cursor-not-allowed" : ""}`}
           disabled={isDisabled}
           title={isDisabled ? "Document processing in progress. Please wait." : "Cheatsheet"}
         >
-        <Clipboard className={`w-5 h-5 ${activeView === "cheatsheet" ? "text-white" : ""}`} />
+          <Clipboard className="w-5 h-5 z-10 relative" />
         </Button>
       </motion.div>
     </motion.div>
