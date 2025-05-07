@@ -2,7 +2,7 @@ name: Build and Push Docker Images
 
 on:
   push:
-    branches: [dev]
+    branches: [main]
     paths:
       - 'api/**'
       - 'front-end/**'
