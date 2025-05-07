@@ -51,21 +51,6 @@ jobs:
           username: 'oauth2accesstoken'
           password: '${{ steps.auth.outputs.auth_token }}'  # Ensure this outputs the correct token
           registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
-
-      # Set up GKE credentials and Install the gke-gcloud-auth-plugin for Kubernetes authentication
-      - name: 'Set up GKE credentials and Install GKE gcloud auth plugin'
-        uses: 'google-github-actions/get-gke-credentials@v2'
-        with:
-          cluster_name: '${{ env.GKE_CLUSTER }}'
-          location: '${{ env.GKE_ZONE }}'
-          project_id: '${{ env.PROJECT_ID }}'
-
-      # Enable command tracing for debugging
-      - run: |
-          set -x  # Enable command tracing for debugging
-          gcloud container clusters get-credentials $GKE_CLUSTER --zone $GKE_ZONE --project $PROJECT_ID
-          gcloud components update
-          gcloud components install gke-gcloud-auth-plugin
           
       # Build and push Docker containers for all three services
       - name: 'Build and push Docker containers'
@@ -91,56 +76,86 @@ jobs:
           docker push "${API_TAG}"
 
       # Create Kubernetes Secret from GitHub secrets
-      - name: 'Create Kubernetes Secret/Config '
+      - name: 'Generate Cloud Run env.yaml'
         run: |
-          kubectl create secret generic secrets \
-            --from-literal=GOOGLE_CLIENT_ID="${{ secrets.GOOGLE_CLIENT_ID }}" \
-            --from-literal=GOOGLE_CLIENT_SECRET="${{ secrets.GOOGLE_CLIENT_SECRET }}" \
-            --from-literal=NEXTAUTH_SECRET="${{ secrets.NEXTAUTH_SECRET }}" \
-            --from-literal=STRIPE_SECRET_KEY="${{ secrets.STRIPE_SECRET_KEY }}" \
-            --from-literal=NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}" \
-            --from-literal=JWT_SECRET="${{ secrets.JWT_SECRET }}" \
-            --from-literal=CLOUDINARY_CLOUD_NAME="${{ secrets.CLOUDINARY_CLOUD_NAME }}" \
-            --from-literal=CLOUDINARY_API_KEY="${{ secrets.CLOUDINARY_API_KEY }}" \
-            --from-literal=CLOUDINARY_API_SECRET="${{ secrets.CLOUDINARY_API_SECRET }}" \
-            --from-literal=GOOGLE_API_KEY="${{ secrets.GOOGLE_API_KEY }}" \
-            --from-literal=MONGO_URI="${{ secrets.MONGO_URI }}" \
-            --from-literal=MONGO_DB_NAME="${{ secrets.MONGO_DB_NAME }}" \
-            --from-literal=MONGO_COLLECTION_NAME="${{ secrets.MONGO_COLLECTION_NAME }}" \
-            --from-literal=OPENAI_API_KEY="${{ secrets.OPENAI_API_KEY }}" \
-            --from-literal=ZILLIZ_CLOUD_URI="${{ secrets.ZILLIZ_CLOUD_URI }}" \
-            --from-literal=ZILLIZ_CLOUD_TOKEN="${{ secrets.ZILLIZ_CLOUD_TOKEN }}" \
-            --from-literal=LANGCHAIN_API_KEY="${{ secrets.LANGCHAIN_API_KEY }}" \
-            --from-literal=LANGCHAIN_ENDPOINT="${{ secrets.LANGCHAIN_ENDPOINT }}" \
-            --from-literal=USER_AGENT="${{ secrets.USER_AGENT }}" \
-            --from-literal=HUGGINGFACE_TOKEN="${{ secrets.HUGGINGFACE_TOKEN }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
+          cat <<EOF > env.yaml
+          envs:
+            - name: GOOGLE_CLIENT_ID
+              value: "${{ secrets.GOOGLE_CLIENT_ID }}"
+            - name: GOOGLE_CLIENT_SECRET
+              value: "${{ secrets.GOOGLE_CLIENT_SECRET }}"
+            - name: NEXTAUTH_SECRET
+              value: "${{ secrets.NEXTAUTH_SECRET }}"
+            - name: STRIPE_SECRET_KEY
+              value: "${{ secrets.STRIPE_SECRET_KEY }}"
+            - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+              value: "${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}"
+            - name: JWT_SECRET
+              value: "${{ secrets.JWT_SECRET }}"
+            - name: CLOUDINARY_CLOUD_NAME
+              value: "${{ secrets.CLOUDINARY_CLOUD_NAME }}"
+            - name: CLOUDINARY_API_KEY
+              value: "${{ secrets.CLOUDINARY_API_KEY }}"
+            - name: CLOUDINARY_API_SECRET
+              value: "${{ secrets.CLOUDINARY_API_SECRET }}"
+            - name: GOOGLE_API_KEY
+              value: "${{ secrets.GOOGLE_API_KEY }}"
+            - name: MONGO_URI
+              value: "${{ secrets.MONGO_URI }}"
+            - name: MONGO_DB_NAME
+              value: "${{ secrets.MONGO_DB_NAME }}"
+            - name: MONGO_COLLECTION_NAME
+              value: "${{ secrets.MONGO_COLLECTION_NAME }}"
+            - name: OPENAI_API_KEY
+              value: "${{ secrets.OPENAI_API_KEY }}"
+            - name: ZILLIZ_CLOUD_URI
+              value: "${{ secrets.ZILLIZ_CLOUD_URI }}"
+            - name: ZILLIZ_CLOUD_TOKEN
+              value: "${{ secrets.ZILLIZ_CLOUD_TOKEN }}"
+            - name: LANGCHAIN_API_KEY
+              value: "${{ secrets.LANGCHAIN_API_KEY }}"
+            - name: LANGCHAIN_ENDPOINT
+              value: "${{ secrets.LANGCHAIN_ENDPOINT }}"
+            - name: USER_AGENT
+              value: "${{ secrets.USER_AGENT }}"
+            - name: HUGGINGFACE_TOKEN
+              value: "${{ secrets.HUGGINGFACE_TOKEN }}"
+            - name: NEXT_PUBLIC_APP_URL
+              value: "${{ vars.NEXT_PUBLIC_APP_URL }}"
+            - name: NEXT_PUBLIC_BACKEND_API_URL
+              value: "${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}"
+            - name: NEXTAUTH_URL
+              value: "${{ vars.NEXTAUTH_URL }}"
+            - name: NEXT_PUBLIC_BACKEND_DB_URL
+              value: "${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}"
+            - name: FRONTEND_API_URL
+              value: "${{ vars.FRONTEND_API_URL }}"
+            - name: PORT_BACKEND
+              value: "${{ vars.PORT_BACKEND }}"
+          EOF
 
-          kubectl create configmap config \
-            --from-literal=NEXT_PUBLIC_APP_URL="${{ vars.NEXT_PUBLIC_APP_URL }}" \
-            --from-literal=NEXT_PUBLIC_BACKEND_API_URL="${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}" \
-            --from-literal=NEXTAUTH_URL="${{ vars.NEXTAUTH_URL }}" \
-            --from-literal=NEXT_PUBLIC_BACKEND_DB_URL="${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}" \
-            --from-literal=FRONTEND_API_URL="${{ vars.FRONTEND_API_URL }}" \
-            --from-literal=PORT_BACKEND="${{ vars.PORT_BACKEND }}" \
-            --dry-run=client -o yaml | kubectl apply -f -
-      # Deploy to GKE (without using Kustomize)
-      - name: 'Debug image tags'
+      - name: 'Deploy Frontend to Cloud Run'
         run: |
-          echo "GITHUB_SHA: ${GITHUB_SHA}"
-          echo "PROJECT_ID: ${PROJECT_ID}"
-          echo "REPOSITORY: ${REPOSITORY}"
-      - name: 'Deploy to GKE'
-        run: |-
-          # Apply the Kubernetes manifests directly
-          kubectl apply -f k8s/base/deployment.yaml
-          kubectl apply -f k8s/base/service.yaml
-          kubectl apply -f k8s/base/ingress-nginx.yaml
-      
-          # Wait for the deployment to complete
-          kubectl rollout restart deployment/$DEPLOYMENT_NAME_3
-          kubectl rollout restart deployment/$DEPLOYMENT_NAME_2
-          kubectl rollout restart deployment/$DEPLOYMENT_NAME_1
-          
-          # Check the status of services
-          kubectl get services -o wide
+          gcloud run deploy noteus-frontend \
+            --image=${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:latest \
+            --region=${GAR_LOCATION} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --env-vars-file=env.yaml
+
+      - name: 'Deploy API to Cloud Run'
+        run: |
+          gcloud run deploy noteus-api \
+            --image=${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:latest \
+            --region=${GAR_LOCATION} \
+            --platform=managed \
+            --allow-unauthenticated \
+            --env-vars-file=env.yaml
+
+      - name: 'Deploy Database to Cloud Run'
+        run: |
+          gcloud run deploy noteus-database \
+            --image=${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:latest \
+            --region=${GAR_LOCATION} \
+            --platform=managed \
+            --allow-unauthenticated
