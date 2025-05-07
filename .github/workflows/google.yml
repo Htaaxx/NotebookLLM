@@ -96,6 +96,9 @@ jobs:
           service: 'noteus-api'
           image: '${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/noteus-api:latest'
           region: '${{ env.GAR_LOCATION }}'
+          memory: '8Gi'               # ⬅️ Up to 128Gi
+          cpu: '4'                    # ⬅️ Up to 32 (if using Cloud Run max settings)
+          max_instances: '3'          # Optional: limit how many can scale
           allow_unauthenticated: true
           env_vars: |-
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
