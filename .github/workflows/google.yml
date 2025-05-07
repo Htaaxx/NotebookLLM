@@ -60,7 +60,6 @@ jobs:
           service: 'noteus-frontend'
           image: '${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/noteus-frontend:latest'
           region: '${{ env.GAR_LOCATION }}'
-          allow_unauthenticated: true
           env_vars: |-
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
@@ -88,6 +87,8 @@ jobs:
             NEXT_PUBLIC_BACKEND_DB_URL=${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}
             FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
             PORT_BACKEND=${{ vars.PORT_BACKEND }}
+          flags: >
+            --allow-unauthenticated
 
 
       - id: deploy-api
@@ -99,7 +100,6 @@ jobs:
           memory: '8Gi'               # ⬅️ Up to 128Gi
           cpu: '4'                    # ⬅️ Up to 32 (if using Cloud Run max settings)
           max_instances: '3'          # Optional: limit how many can scale
-          allow_unauthenticated: true
           env_vars: |-
             GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
             GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
@@ -127,6 +127,13 @@ jobs:
             NEXT_PUBLIC_BACKEND_DB_URL=${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}
             FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
             PORT_BACKEND=${{ vars.PORT_BACKEND }}
+          flags: >
+            --memory=8Gi
+            --cpu=4
+            --max-instances=3
+            --concurrency=1
+            --timeout=900s
+            --allow-unauthenticated
 
 
       - id: deploy-database
@@ -163,6 +170,8 @@ jobs:
             NEXT_PUBLIC_BACKEND_DB_URL=${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}
             FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
             PORT_BACKEND=${{ vars.PORT_BACKEND }}
+          flags: >
+            --allow-unauthenticated
 
       - name: 'Hit deployed API endpoint'
         run: |
