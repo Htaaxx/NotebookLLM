@@ -129,6 +129,7 @@ jobs:
             PORT_BACKEND=${{ vars.PORT_BACKEND }}
           flags: >
             --memory=8Gi
+            --port=8000
             --cpu=4
             --max-instances=3
             --concurrency=1
@@ -171,6 +172,7 @@ jobs:
             FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
             PORT_BACKEND=${{ vars.PORT_BACKEND }}
           flags: >
+            --port=5000
             --allow-unauthenticated
 
       - name: 'Hit deployed API endpoint'
