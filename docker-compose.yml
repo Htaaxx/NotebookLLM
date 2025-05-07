@@ -4,6 +4,7 @@ services:
     platform: linux/amd64
     ports:
       - "8000:8000"
+    pull_policy: always
     env_file:
       - .env.config
       - .env.secret
@@ -14,6 +15,7 @@ services:
     platform: linux/amd64
     ports:
       - "5000:5000"
+    pull_policy: always
     env_file:
       - .env.config
       - .env.secret
@@ -21,8 +23,9 @@ services:
       - api
 
   frontend:
-    image: voasd00/noteus-frontend:latest
+    image: voasd00/noteus-front-end:latest
     platform: linux/amd64
+    pull_policy: always
     ports:
       - "3000:3000"
     env_file:
