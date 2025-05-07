@@ -45,8 +45,8 @@ jobs:
           service_account: 'github-wif@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
       # Create env.yaml file for Cloud Run
       - name: 'Generate Cloud Run env.yaml'
-  run: |
-    cat <<EOF > env.yaml
+        run: |
+          cat <<EOF > env.yaml
 GOOGLE_CLIENT_ID: "${{ secrets.GOOGLE_CLIENT_ID }}"
 GOOGLE_CLIENT_SECRET: "${{ secrets.GOOGLE_CLIENT_SECRET }}"
 NEXTAUTH_SECRET: "${{ secrets.NEXTAUTH_SECRET }}"
