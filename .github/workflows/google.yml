@@ -1,4 +1,4 @@
-name: 'Build and Deploy to GKE'
+name: 'Build and Deploy to Cloud Run'
 
 on:
   push:
@@ -7,128 +7,111 @@ on:
 
 jobs:
   setup-build-publish-deploy:
-    env:
-      PROJECT_ID: 'neat-striker-455607-i3'  # TODO: update to your Google Cloud project ID
-      GAR_LOCATION: 'asia-southeast2'  # TODO: update to your region
-      GKE_CLUSTER: 'noteus-cluster'  # TODO: update to your cluster name
-      GKE_ZONE: 'asia-southeast1-a'  # TODO: update to your cluster zone
-      DEPLOYMENT_NAME_1: 'noteus-api'  # TODO: update to your deployment name
-      DEPLOYMENT_NAME_2: 'noteus-frontend'  # TODO: update to your deployment name
-      DEPLOYMENT_NAME_3: 'noteus-database'  # TODO: update to your deployment name
-      REPOSITORY: 'noteus-repo'  # TODO: update to your Artifact Registry docker repository name
-      WORKLOAD_IDENTITY_PROVIDER: 'projects/669663908735/locations/global/workloadIdentityPools/github-action-pool/providers/github'  # TODO: update to your workload identity provider
-
     name: 'Setup, Build, Publish, and Deploy'
     runs-on: 'ubuntu-latest'
     environment: 'production'
+
+    env:
+      PROJECT_ID: 'neat-striker-455607-i3'
+      GAR_LOCATION: 'asia-southeast2'
+      REPOSITORY: 'noteus-repo'
+      WORKLOAD_IDENTITY_PROVIDER: 'projects/669663908735/locations/global/workloadIdentityPools/github-action-pool/providers/github'
+      SERVICE_ACCOUNT: 'github-wif@neat-striker-455607-i3.iam.gserviceaccount.com'
 
     permissions:
       contents: 'read'
       id-token: 'write'
 
     steps:
-      # Checkout the code from GitHub
-      - name: 'Checkout'
+      - name: 'Checkout Code'
         uses: 'actions/checkout@v4'
-        # Setup gcloud CLI
-      - uses: google-github-actions/setup-gcloud@1bee7de035d65ec5da40a31f8589e240eba8fde5
-        with:
-          service_account_key: ${{ secrets.GCP_SA_KEY }}
-          project_id: ${{ env.PROJECT_ID }}
 
-      # Authenticate to Google Cloud using Workload Identity Federation
-      - id: 'auth'
-        name: 'Authenticate to Google Cloud'
+      - name: 'Authenticate to Google Cloud'
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
-          service_account: 'github-wif@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
-      # Create env.yaml file for Cloud Run
-      - name: 'Generate Cloud Run env.yaml'
+          service_account: '${{ env.SERVICE_ACCOUNT }}'
+
+      - name: 'Generate env.yaml'
         run: |
           cat <<EOF > env.yaml
-          GOOGLE_CLIENT_ID: "${{ secrets.GOOGLE_CLIENT_ID }}"
-          GOOGLE_CLIENT_SECRET: "${{ secrets.GOOGLE_CLIENT_SECRET }}"
-          NEXTAUTH_SECRET: "${{ secrets.NEXTAUTH_SECRET }}"
-          STRIPE_SECRET_KEY: "${{ secrets.STRIPE_SECRET_KEY }}"
-          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}"
-          JWT_SECRET: "${{ secrets.JWT_SECRET }}"
-          CLOUDINARY_CLOUD_NAME: "${{ secrets.CLOUDINARY_CLOUD_NAME }}"
-          CLOUDINARY_API_KEY: "${{ secrets.CLOUDINARY_API_KEY }}"
-          CLOUDINARY_API_SECRET: "${{ secrets.CLOUDINARY_API_SECRET }}"
-          GOOGLE_API_KEY: "${{ secrets.GOOGLE_API_KEY }}"
-          MONGO_URI: "${{ secrets.MONGO_URI }}"
-          MONGO_DB_NAME: "${{ secrets.MONGO_DB_NAME }}"
-          MONGO_COLLECTION_NAME: "${{ secrets.MONGO_COLLECTION_NAME }}"
-          OPENAI_API_KEY: "${{ secrets.OPENAI_API_KEY }}"
-          ZILLIZ_CLOUD_URI: "${{ secrets.ZILLIZ_CLOUD_URI }}"
-          ZILLIZ_CLOUD_TOKEN: "${{ secrets.ZILLIZ_CLOUD_TOKEN }}"
-          LANGCHAIN_API_KEY: "${{ secrets.LANGCHAIN_API_KEY }}"
-          LANGCHAIN_ENDPOINT: "${{ secrets.LANGCHAIN_ENDPOINT }}"
-          USER_AGENT: "${{ secrets.USER_AGENT }}"
-          HUGGINGFACE_TOKEN: "${{ secrets.HUGGINGFACE_TOKEN }}"
-          NEXT_PUBLIC_APP_URL: "${{ vars.NEXT_PUBLIC_APP_URL }}"
-          NEXT_PUBLIC_BACKEND_API_URL: "${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}"
-          NEXTAUTH_URL: "${{ vars.NEXTAUTH_URL }}"
-          NEXT_PUBLIC_BACKEND_DB_URL: "${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}"
-          FRONTEND_API_URL: "${{ vars.FRONTEND_API_URL }}"
-          PORT_BACKEND: "${{ vars.PORT_BACKEND }}"
-          EOF
-      # Authenticate Docker to Google Cloud Artifact Registry
-      - name: 'Docker Auth'
-        uses: 'docker/login-action@v3'
+GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+JWT_SECRET=${{ secrets.JWT_SECRET }}
+CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+MONGO_URI=${{ secrets.MONGO_URI }}
+MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}
+MONGO_COLLECTION_NAME=${{ secrets.MONGO_COLLECTION_NAME }}
+OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+ZILLIZ_CLOUD_URI=${{ secrets.ZILLIZ_CLOUD_URI }}
+ZILLIZ_CLOUD_TOKEN=${{ secrets.ZILLIZ_CLOUD_TOKEN }}
+LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
+LANGCHAIN_ENDPOINT=${{ secrets.LANGCHAIN_ENDPOINT }}
+USER_AGENT=${{ secrets.USER_AGENT }}
+HUGGINGFACE_TOKEN=${{ secrets.HUGGINGFACE_TOKEN }}
+NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+NEXT_PUBLIC_BACKEND_API_URL=${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}
+NEXTAUTH_URL=${{ vars.NEXTAUTH_URL }}
+NEXT_PUBLIC_BACKEND_DB_URL=${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}
+FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
+PORT_BACKEND=${{ vars.PORT_BACKEND }}
+EOF
+
+      - name: 'Configure Docker for Artifact Registry'
+        run: |
+          gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev
+
+      - name: 'Build and Push Docker Images'
+        run: |
+          export FRONTEND_TAG="$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/noteus-frontend:latest"
+          export DATABASE_TAG="$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/noteus-database:latest"
+          export API_TAG="$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/noteus-api:latest"
+
+          echo "Building and pushing Frontend..."
+          docker build -f front-end/Dockerfile -t $FRONTEND_TAG front-end/
+          docker push $FRONTEND_TAG
+
+          echo "Building and pushing Database..."
+          docker build -f database/Dockerfile -t $DATABASE_TAG database/
+          docker push $DATABASE_TAG
+
+          echo "Building and pushing API..."
+          docker build -f api/Dockerfile -t $API_TAG api/
+          docker push $API_TAG
+
+      - id: deploy-frontend
+        uses: 'google-github-actions/deploy-cloudrun@v2'
         with:
-          username: 'oauth2accesstoken'
-          password: '${{ steps.auth.outputs.auth_token }}'  # Ensure this outputs the correct token
-          registry: '${{ env.GAR_LOCATION }}-docker.pkg.dev'
-          
-      # Build and push Docker containers for all three services
-      - name: 'Build and push Docker containers'
-        run: |-
-          gcloud auth configure-docker asia-southeast2-docker.pkg.dev
-          export DOCKER_BUILDKIT=1
-          export BUILDKIT_PROGRESS=plain
-          FRONTEND_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:latest"
-          DATABASE_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:latest"
-          API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:latest"
-      
-          # Set your build arguments
-          echo "Building frontend container: $FRONTEND_TAG"
-          docker build "${BUILD_ARGS[@]}" -f front-end/Dockerfile --tag "${FRONTEND_TAG}" front-end/
-          docker push "${FRONTEND_TAG}"
+          service: 'noteus-frontend'
+          image: '${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/noteus-frontend:latest'
+          region: '${{ env.GAR_LOCATION }}'
+          env_vars_file: env.yaml
+          allow_unauthenticated: true
 
-          echo "Building database container: $DATABASE_TAG"
-          docker build -f database/Dockerfile --tag "${DATABASE_TAG}" database/
-          docker push "${DATABASE_TAG}"
+      - id: deploy-api
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: 'noteus-api'
+          image: '${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/noteus-api:latest'
+          region: '${{ env.GAR_LOCATION }}'
+          env_vars_file: env.yaml
+          allow_unauthenticated: true
 
-          echo "Building API container: $API_TAG"
-          docker build -f api/Dockerfile --tag "${API_TAG}" api/
-          docker push "${API_TAG}"
+      - id: deploy-database
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: 'noteus-database'
+          image: '${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/noteus-database:latest'
+          region: '${{ env.GAR_LOCATION }}'
+          allow_unauthenticated: true
 
-      
-
-      - name: 'Deploy Frontend to Cloud Run'
+      - name: 'Hit deployed API endpoint'
         run: |
-          gcloud run deploy noteus-frontend \
-            --image=${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-frontend:latest \
-            --region=${GAR_LOCATION} \
-            --platform=managed \
-            --allow-unauthenticated \
-            --env-vars-file=env.yaml
-
-      - name: 'Deploy API to Cloud Run'
-        run: |
-          gcloud run deploy noteus-api \
-            --image=${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:latest \
-            --region=${GAR_LOCATION} \
-            --platform=managed \
-            --allow-unauthenticated \
-            --env-vars-file=env.yaml
-
-      - name: 'Deploy Database to Cloud Run'
-        run: |
-          gcloud run deploy noteus-database \
-            --image=${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-database:latest \
-            --region=${GAR_LOCATION} \
-            --platform=managed \
-            --allow-unauthenticated
+          echo "API URL: ${{ steps.deploy-api.outputs.url }}"
+          curl "${{ steps.deploy-api.outputs.url }}"
