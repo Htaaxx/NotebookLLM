@@ -1,113 +1,170 @@
 "use client"
 
+import type React from "react"
+import { useState } from "react"
 import { MessageSquare, Upload, Network, FlipHorizontal, ClipboardCheck, Sparkles } from "lucide-react"
-import { motion } from "framer-motion"
-import { fadeIn, staggerContainer } from "@/lib/motion-utils"
+import { Anton } from "next/font/google"
 
-export function FeaturesSection() {
-  return (
-    <motion.div
-      className="py-20 bg-white"
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount: 0.25 }}
-      variants={staggerContainer(0.1, 0.1)}
-    >
-      <div className="max-w-7xl mx-auto px-6">
-        <motion.div className="text-center mb-16" variants={fadeIn("up", 0.1)}>
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">Powerful Features</h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Our platform offers a comprehensive set of tools to help you learn more effectively and efficiently.
-          </p>
-        </motion.div>
+// Initialize Anton font
+const anton = Anton({ 
+  weight: "400", 
+  subsets: ["latin"],
+  display: "swap",
+})
 
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {/* Feature 1 */}
-          <motion.div
-            className="bg-gray-50 p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-            variants={fadeIn("up", 0.2)}
-          >
-            <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mb-6">
-              <Upload className="w-7 h-7 text-green-600" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">Upload Any Document</h3>
-            <p className="text-gray-600">
-              Upload PDFs, Word documents, or even YouTube videos to extract and analyze content.
-            </p>
-          </motion.div>
 
-          {/* Feature 2 */}
-          <motion.div
-            className="bg-gray-50 p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-            variants={fadeIn("up", 0.3)}
-          >
-            <div className="w-14 h-14 bg-blue-100 rounded-full flex items-center justify-center mb-6">
-              <MessageSquare className="w-7 h-7 text-blue-600" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">Ask Questions</h3>
-            <p className="text-gray-600">
-              Ask questions about your documents and get instant, accurate answers powered by AI.
-            </p>
-          </motion.div>
-
-          {/* Feature 3 */}
-          <motion.div
-            className="bg-gray-50 p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-            variants={fadeIn("up", 0.4)}
-          >
-            <div className="w-14 h-14 bg-purple-100 rounded-full flex items-center justify-center mb-6">
-              <Network className="w-7 h-7 text-purple-600" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">Create Mind Maps</h3>
-            <p className="text-gray-600">
-              Visualize concepts and their relationships with automatically generated mind maps.
-            </p>
-          </motion.div>
-
-          {/* Feature 4 */}
-          <motion.div
-            className="bg-gray-50 p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-            variants={fadeIn("up", 0.5)}
-          >
-            <div className="w-14 h-14 bg-yellow-100 rounded-full flex items-center justify-center mb-6">
-              <FlipHorizontal className="w-7 h-7 text-yellow-600" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">Flashcards</h3>
-            <p className="text-gray-600">
-              Generate flashcards from your notes to help you memorize key concepts and facts.
-            </p>
-          </motion.div>
-
-          {/* Feature 5 */}
-          <motion.div
-            className="bg-gray-50 p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-            variants={fadeIn("up", 0.6)}
-          >
-            <div className="w-14 h-14 bg-red-100 rounded-full flex items-center justify-center mb-6">
-              <ClipboardCheck className="w-7 h-7 text-red-600" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">Quizzes</h3>
-            <p className="text-gray-600">
-              Test your knowledge with automatically generated quizzes based on your content.
-            </p>
-          </motion.div>
-
-          {/* Feature 6 */}
-          <motion.div
-            className="bg-gray-50 p-8 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-            variants={fadeIn("up", 0.7)}
-          >
-            <div className="w-14 h-14 bg-teal-100 rounded-full flex items-center justify-center mb-6">
-              <Sparkles className="w-7 h-7 text-teal-600" />
-            </div>
-            <h3 className="text-xl font-semibold mb-3">AI-Powered Insights</h3>
-            <p className="text-gray-600">
-              Get intelligent summaries, key points, and connections between different documents.
-            </p>
-          </motion.div>
-        </div>
-      </div>
-    </motion.div>
-  )
+type FeatureBox = {
+  id: number
+  title: string
+  description: string
+  icon: React.ReactNode
+  width: number
+  height: number
+  top?: number
+  left?: number
+  borderRadius: string
 }
 
+export function FeaturesSection() {
+  const [hoveredFeature, setHoveredFeature] = useState<number | null>(null)
+
+  // Adjusted positions to move feature boxes to the left
+  const features: FeatureBox[] = [
+    {
+      id: 1,
+      title: "Quizzes",
+      description: "Test your knowledge with automatically generated quizzes based on your content.",
+      icon: <ClipboardCheck className="w-8 h-8 text-[#F2F5DA]" />,
+      width: 170,
+      height: 190,
+      top: 0,
+      left: 0, // Moved to the left edge
+      borderRadius: "40px 40px 40px 40px",
+    },
+    {
+      id: 2,
+      title: "Upload Any Document",
+      description: "Upload PDFs, Word documents, or even YouTube videos to extract and analyze content.",
+      icon: <Upload className="w-8 h-8 text-[#F2F5DA]" />,
+      width: 427,
+      height: 275,
+      top: 0,
+      left: 180, // Adjusted position
+      borderRadius: "40px 40px 40px 40px",
+    },
+    {
+      id: 3,
+      title: "Create Mind Maps",
+      description: "Visualize concepts and their relationships with automatically generated mind maps.",
+      icon: <Network className="w-8 h-8 text-[#F2F5DA]" />,
+      width: 204,
+      height: 275,
+      top: 0,
+      left: 617, // Adjusted position
+      borderRadius: "40px 40px 40px 40px",
+    },
+    {
+      id: 4,
+      title: "Ask Questions",
+      description: "Ask questions about your documents and get instant, accurate answers powered by AI.",
+      icon: <MessageSquare className="w-8 h-8 text-[#F2F5DA]" />,
+      width: 170,
+      height: 360,
+      top: 200,
+      left: 0, // Moved to the left edge
+      borderRadius: "40px 40px 40px 40px",
+    },
+    {
+      id: 5,
+      title: "AI-Powered Insights",
+      description: "Get intelligent summaries, key points, and connections between different documents.",
+      icon: <Sparkles className="w-8 h-8 text-[#F2F5DA]" />,
+      width: 340,
+      height: 275,
+      top: 285,
+      left: 180, // Adjusted position
+      borderRadius: "40px 40px 40px 40px",
+    },
+    {
+      id: 6,
+      title: "Flashcards",
+      description: "Generate flashcards from your notes to help you memorize key concepts and facts.",
+      icon: <FlipHorizontal className="w-8 h-8 text-[#F2F5DA]" />,
+      width: 285,
+      height: 275,
+      top: 285,
+      left: 530, // Adjusted position
+      borderRadius: "40px 40px 40px 40px",
+    },
+  ]
+
+  return (
+    <section className="py-20 relative overflow-hidden bg-[#F2F5DA]">
+      <div className="max-w-[1400px] mx-auto px-6 relative">
+        {/* Title and Description - Right side with Anton font */}
+        <div className="absolute left-[860px] top-20 max-w-md text-right z-10">
+          <h2 className={`${anton.className} text-7xl font-bold mb-8 text-[#E48D44]`}>
+            Powerful Features
+          </h2>
+          <p className="text-2xl text-right leading-relaxed text-gray-700">
+            Our platform offers 
+            <br />a comprehensive set of tools 
+            <br />to help you learn more 
+            <br />effectively and efficiently.
+          </p>
+        </div>
+
+        {/* Features Grid - Left side with Anton font for titles */}
+        <div className="relative h-[570px] w-full">
+          {features.map((feature) => (
+            <div
+              key={feature.id}
+              className="absolute transition-all duration-300"
+              style={{
+                width: `${feature.width}px`,
+                height: `${feature.height}px`,
+                top: feature.top ? `${feature.top}px` : undefined,
+                left: feature.left ? `${feature.left}px` : undefined,
+                borderRadius: feature.borderRadius,
+                overflow: "hidden",
+              }}
+              onMouseEnter={() => setHoveredFeature(feature.id)}
+              onMouseLeave={() => setHoveredFeature(null)}
+            >
+              {/* Default State */}
+              <div
+                className={`absolute inset-0 flex flex-col items-center justify-center p-6 transition-opacity duration-300 ${
+                  hoveredFeature === feature.id ? "opacity-0" : "opacity-100"
+                }`}
+                style={{
+                  backgroundColor: "#86AB5D",
+                  borderRadius: feature.borderRadius,
+                }}
+              >
+                <span className={`${anton.className} text-5xl font-bold text-white absolute top-3 right-6`}>{feature.id}</span>
+                <h3 className={`${anton.className} text-3xl font-bold text-[#F2F5DA] text-center mt-auto mb-8`}>{feature.title}</h3>
+              </div>
+
+              {/* Hover State */}
+              <div
+                className={`absolute inset-0 flex flex-col items-center justify-center p-6 transition-opacity duration-300 ${
+                  hoveredFeature === feature.id ? "opacity-100" : "opacity-0"
+                }`}
+                style={{
+                  backgroundColor: "#E48D44",
+                  borderRadius: feature.borderRadius,
+                }}
+              >
+                <div className="flex flex-col items-center justify-center h-full">
+                  {feature.icon}
+                  <h3 className={`${anton.className} text-xl font-bold text-[#F2F5DA] mt-3 mb-3`}>{feature.title}</h3>
+                  <p className="text-white text-center text-sm">{feature.description}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}

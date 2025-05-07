@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation" // Import usePathname
-import { UserCircle, ChevronDown, User, LogOut } from "lucide-react"
-import { Logo } from "../logo"
+import { usePathname } from "next/navigation"
+import { User, LogOut } from "lucide-react"
+import { Logo } from "@/components/logo"
 import { authAPI } from "@/lib/api"
 import { useLanguage } from "@/lib/language-context"
 import type { Language } from "@/lib/i18n"
@@ -15,15 +15,13 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
-import { motion } from "framer-motion"
-import { fadeIn } from "@/lib/motion-utils"
 
 export function NavBar() {
   const [userName, setUserName] = useState("User")
   const [isScrolled, setIsScrolled] = useState(false)
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const { language, setLanguage, t } = useLanguage()
-  const pathname = usePathname() // Use Next.js's usePathname hook
+  const pathname = usePathname()
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -61,86 +59,62 @@ export function NavBar() {
     setLanguage(lang)
   }
 
-  // Use the pathname from usePathname() hook instead of window.location
   const isActivePage = (path: string) => {
     return pathname?.includes(path) || false
   }
 
   return (
-    <motion.nav
-      className={`flex items-center h-16 px-6 border-b sticky top-0 z-50 bg-white text-black transition-shadow ${
-        isScrolled ? "shadow-md" : ""
-      }`}
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      {/* Logo links to defaultPage if logged in, otherwise to landing page */}
-      <Link href={isLoggedIn ? "/defaultPage" : "/"} className="flex items-center gap-2">
-        <motion.div
-          initial={{ rotate: -10, scale: 0.9 }}
-          animate={{ rotate: 0, scale: 1 }}
-          transition={{ duration: 0.5, type: "spring" }}
-        >
-          <Logo className="w-8 h-8 text-green-600" />
-        </motion.div>
-        <motion.span
-          className="font-semibold"
-          initial={{ x: -10, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-        >
-          NoteUS
-        </motion.span>
-      </Link>
+    <div className="sticky top-0 z-50 w-full bg-[#86AB5D] shadow-sm">
+      <div className="flex h-16 items-center justify-between px-6">
+        {/* Logo on the left */}
+        <Link href={isLoggedIn ? "/defaultPage" : "/"} className="flex items-center gap-2">
+          <Logo className="w-12 h-12 text-[#E48D44]" />
+          <span className="font-['Anton'] font-normal text-2xl text-[#F2F5DA]">NoteUS</span>
+        </Link>
 
-      <motion.div className="flex gap-8 ml-12" variants={fadeIn("down", 0.2)} initial="hidden" animate="show">
-        <Link
-          href="/defaultPage"
-          className={`hover:text-green-600 transition-colors py-1 border-b-2 text-black ${
-            isActivePage("defaultPage") ? "border-green-600 text-green-600" : "border-transparent"
-          }`}
-        >
-          {t("chatbox")}
-        </Link>
-        <Link
-          href="/files"
-          className={`hover:text-green-600 transition-colors py-1 border-b-2 text-black ${
-            isActivePage("files") ? "border-green-600 text-green-600" : "border-transparent"
-          }`}
-        >
-          {t("files")}
-        </Link>
-        <Link
-          href="/flashcard"
-          className={`hover:text-green-600 transition-colors py-1 border-b-2 text-black ${
-            isActivePage("flashcard") ? "border-green-600 text-green-600" : "border-transparent"
-          }`}
-          suppressHydrationWarning // Add this to suppress hydration warnings
-        >
-          {t("flashcard")}
-        </Link>
-      </motion.div>
+        {/* Navigation links in the center */}
+        <div className="absolute left-1/2 transform -translate-x-1/2 flex space-x-8">
+          <Link
+            href="/defaultPage"
+            className={`font-['Quicksand'] font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
+              isActivePage("defaultPage") ? "border-b-2 border-[#F2F5DA]" : ""
+            }`}
+          >
+            {t("CHATBOX").toUpperCase()}
+          </Link>
+          <Link
+            href="/files"
+            className={`font-['Quicksand'] font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
+              isActivePage("files") ? "border-b-2 border-[#F2F5DA]" : ""
+            }`}
+          >
+            {t("FILES").toUpperCase()}
+          </Link>
+          <Link
+            href="/flashcard"
+            className={`font-['Quicksand'] font-bold text-[#F2F5DA] hover:text-[#F26D3D] transition-colors py-1 px-4 ${
+              isActivePage("flashcard") ? "border-b-2 border-[#F2F5DA]" : ""
+            }`}
+            suppressHydrationWarning
+          >
+            {t("FLASHCARD").toUpperCase()}
+          </Link>
+        </div>
 
-      <motion.div className="ml-auto" variants={fadeIn("down", 0.3)} initial="hidden" animate="show">
+        {/* User profile on the right */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <motion.button
-              className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors text-black"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <UserCircle className="w-6 h-6" />
-              <span className="text-sm font-medium">{userName}</span>
-              <ChevronDown className="w-4 h-4 text-gray-500" />
-            </motion.button>
+            <button className="flex items-center gap-2 px-4 py-1 rounded-full bg-[#F2F5DA] hover:bg-[#F2F5DA] transition-colors">
+              <span className="font-['Quicksand'] font-bold text-[#86AB5D]">{userName.toUpperCase()}</span>
+              <div className="w-6 h-6 rounded-full bg-[#E48D44]"></div>
+            </button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-56 bg-white text-black" align="end">
+          <DropdownMenuContent className="w-56 bg-[#86AB5D]" align="end">
             <DropdownMenuItem
-              className="cursor-pointer text-black"
+              className="cursor-pointer"
               onClick={() => changeLanguage(language === "en" ? "vi" : "en")}
             >
-              {t("language")}: {language.toUpperCase()}
+              {t("Language")}: {language.toUpperCase()}
             </DropdownMenuItem>
 
             <DropdownMenuSeparator />
@@ -159,11 +133,11 @@ export function NavBar() {
               onClick={handleSignOut}
             >
               <LogOut className="w-4 h-4 mr-2" />
-              {t("signOut")}
+              {t("SignOut")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </motion.div>
-    </motion.nav>
+      </div>
+    </div>
   )
 }

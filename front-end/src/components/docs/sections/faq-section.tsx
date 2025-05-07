@@ -2,8 +2,16 @@
 
 import { motion } from "framer-motion"
 import { fadeIn, staggerContainer } from "@/lib/motion-utils"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, HelpCircle } from "lucide-react"
 import { useState } from "react"
+import { Anton } from "next/font/google"
+
+// Initialize Anton font
+const anton = Anton({
+  weight: "400",
+  subsets: ["latin"],
+  display: "swap",
+})
 
 interface FAQItem {
   question: string
@@ -108,86 +116,113 @@ export function FAQSection() {
   }
 
   return (
-    <motion.div variants={staggerContainer(0.1, 0.1)} initial="hidden" animate="show" className="space-y-8">
+    <motion.div variants={staggerContainer(0.1, 0.1)} initial="hidden" animate="show" className="space-y-12">
       <motion.div variants={fadeIn("up", 0.1)}>
-        <h1 className="text-3xl font-bold mb-4">Frequently Asked Questions</h1>
-        <p className="text-lg text-gray-700 mb-6">Find answers to common questions about NoteUS and its features.</p>
+        <h1 className={`${anton.className} text-5xl font-bold mb-6 text-[#86AB5D]`}>FREQUENTLY ASKED QUESTIONS</h1>
+        <p className="text-lg text-gray-700 mb-6" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+          Find answers to common questions about NoteUS and its features.
+        </p>
       </motion.div>
 
       <motion.div variants={fadeIn("up", 0.2)}>
-        <div className="bg-white border rounded-xl overflow-hidden shadow-sm">
-          <div className="p-6">
-            <div className="mb-6 overflow-x-auto">
-              <div className="flex space-x-2 min-w-max">
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setActiveCategory(category.id)}
-                    className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                      activeCategory === category.id
-                        ? "bg-green-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
+        <div className="relative">
+          <h2 className={`${anton.className} text-3xl font-semibold mb-6 text-[#E48D44]`}>BROWSE BY CATEGORY</h2>
+
+          {/* Decorative element */}
+          <div className="absolute top-[-20px] right-[-30px] w-20 h-20 bg-[#86AB5D] rounded-full opacity-20"></div>
+
+          <div className="bg-white border-0 rounded-[40px] overflow-hidden shadow-lg relative">
+            {/* Decorative top corner */}
+            <div className="absolute top-0 right-0 w-40 h-40 bg-[#E48D44] opacity-5 rounded-bl-full"></div>
+
+            <div className="p-8" style={{ fontFamily: "'Quicksand', sans-serif" }}>
+              <div className="mb-8 overflow-x-auto">
+                <div className="flex space-x-3 min-w-max">
+                  {categories.map((category) => (
+                    <motion.button
+                      key={category.id}
+                      onClick={() => setActiveCategory(category.id)}
+                      className={`px-4 py-3 rounded-full text-sm font-bold transition-colors ${
+                        activeCategory === category.id
+                          ? "bg-[#86AB5D] text-white"
+                          : "bg-[#F2F5DA] text-[#3A5A40] hover:bg-[#E48D44]/20"
+                      }`}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      {category.name}
+                    </motion.button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {filteredFAQs.map((faq, index) => (
+                  <motion.div
+                    key={index}
+                    className="border-0 rounded-[30px] overflow-hidden shadow-md"
+                    variants={fadeIn("up", 0.1 * (index + 1))}
+                    whileHover={{ scale: 1.01 }}
                   >
-                    {category.name}
-                  </button>
+                    <button
+                      className={`w-full p-5 text-left flex justify-between items-center ${
+                        openIndex === index ? "bg-[#86AB5D] text-white" : "bg-[#F2F5DA] text-[#3A5A40]"
+                      } rounded-t-[30px] font-bold`}
+                      onClick={() => toggleFAQ(index)}
+                    >
+                      <span>{faq.question}</span>
+                      {openIndex === index ? (
+                        <ChevronUp className="w-5 h-5 flex-shrink-0" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 flex-shrink-0" />
+                      )}
+                    </button>
+                    {openIndex === index && (
+                      <div className="p-5 bg-white rounded-b-[30px]">
+                        <p className="text-gray-700">{faq.answer}</p>
+                      </div>
+                    )}
+                  </motion.div>
                 ))}
               </div>
-            </div>
 
-            <div className="space-y-4">
-              {filteredFAQs.map((faq, index) => (
-                <motion.div
-                  key={index}
-                  className="border rounded-lg overflow-hidden"
-                  variants={fadeIn("up", 0.1 * (index + 1))}
-                >
-                  <button
-                    className={`w-full p-4 text-left flex justify-between items-center ${
-                      openIndex === index ? "bg-green-50" : "bg-gray-50"
-                    }`}
-                    onClick={() => toggleFAQ(index)}
-                  >
-                    <span className="font-medium">{faq.question}</span>
-                    {openIndex === index ? (
-                      <ChevronUp className="w-5 h-5 text-green-600" />
-                    ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-600" />
-                    )}
-                  </button>
-                  {openIndex === index && (
-                    <div className="p-4 bg-white">
-                      <p className="text-gray-700">{faq.answer}</p>
-                    </div>
-                  )}
-                </motion.div>
-              ))}
-            </div>
+              {filteredFAQs.length === 0 && (
+                <div className="text-center py-12 bg-[#F2F5DA] rounded-[30px]">
+                  <p className="text-gray-500 text-lg">No FAQs found in this category.</p>
+                </div>
+              )}
 
-            {filteredFAQs.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-gray-500">No FAQs found in this category.</p>
-              </div>
-            )}
+              <div className="mt-8 bg-[#E48D44]/10 p-6 rounded-[30px] border-0 relative overflow-hidden">
+                {/* Decorative element */}
+                <div className="absolute bottom-0 right-0 w-32 h-32 bg-[#E48D44] opacity-10 rounded-tl-full"></div>
 
-            <div className="mt-8 bg-blue-50 p-4 rounded-lg border border-blue-100">
-              <h4 className="font-medium mb-2 text-blue-800">Still Have Questions?</h4>
-              <p className="text-sm text-gray-700 mb-4">
-                If you couldn't find the answer you were looking for, our support team is here to help.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a
-                  href="#"
-                  className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-                >
-                  Contact Support
-                </a>
-                <a
-                  href="#"
-                  className="inline-flex items-center justify-center px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Visit Help Center
-                </a>
+                <div className="relative z-10">
+                  <h4 className="font-bold flex items-center mb-4 text-[#E48D44] text-xl">
+                    <HelpCircle className="w-6 h-6 mr-3" />
+                    Still Have Questions?
+                  </h4>
+                  <p className="text-gray-700 text-lg mb-6">
+                    If you couldn't find the answer you were looking for, our support team is here to help.
+                  </p>
+                  <div className="flex flex-col sm:flex-row gap-4">
+                    <motion.a
+                      href="#"
+                      className="inline-flex items-center justify-center px-6 py-3 bg-[#86AB5D] text-white rounded-full text-base font-bold hover:bg-[#86AB5D]/90 transition-colors shadow-md"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Contact Support
+                    </motion.a>
+                    <motion.a
+                      href="#"
+                      className="inline-flex items-center justify-center px-6 py-3 bg-[#F2F5DA] border border-[#86AB5D]/30 text-[#3A5A40] rounded-full text-base font-bold hover:bg-[#F2F5DA]/70 transition-colors shadow-md"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Visit Help Center
+                    </motion.a>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

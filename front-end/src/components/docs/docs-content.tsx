@@ -42,7 +42,7 @@ export function DocsContent({ activeSection, sidebarOpen }: DocsContentProps) {
 
   return (
     <motion.div
-      className={`flex-1 p-6 md:p-10 overflow-y-auto transition-all duration-300 ${
+      className={`flex-1 p-6 md:p-10 overflow-y-auto transition-all duration-300 bg-[#F2F5DA] ${
         sidebarOpen ? "md:ml-0" : "md:ml-0"
       }`}
       initial="hidden"
@@ -50,7 +50,11 @@ export function DocsContent({ activeSection, sidebarOpen }: DocsContentProps) {
       variants={fadeIn("up", 0.2)}
       key={activeSection} // This forces re-render when section changes
     >
-      <div className="max-w-4xl mx-auto">{renderSection()}</div>
+      {/* Decorative elements */}
+      <div className="absolute top-[10%] right-[5%] w-40 h-40 bg-[#86AB5D] rounded-full opacity-10"></div>
+      <div className="absolute bottom-[10%] left-[5%] w-32 h-32 bg-[#E48D44] rounded-full opacity-10"></div>
+
+      <div className="max-w-4xl mx-auto relative z-10">{renderSection()}</div>
     </motion.div>
   )
 }

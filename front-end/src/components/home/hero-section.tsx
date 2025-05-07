@@ -1,9 +1,6 @@
 "use client"
 
 import { useState, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { motion } from "framer-motion"
-import { fadeIn, slideIn, zoomIn } from "@/lib/motion-utils"
 
 interface HeroSectionProps {
   onGetStarted: () => void
@@ -13,99 +10,139 @@ interface HeroSectionProps {
 export function HeroSection({ onGetStarted, onSeeDemo }: HeroSectionProps) {
   const [isPlaying, setIsPlaying] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const videoSectionRef = useRef<HTMLDivElement>(null)
 
   const handleSeeDemo = () => {
+    // Play video if available
     if (videoRef.current) {
       videoRef.current.play()
       setIsPlaying(true)
     }
+
+    // Scroll to video section
+    if (videoSectionRef.current) {
+      videoSectionRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+
     onSeeDemo()
   }
 
+  const scrollToVideo = () => {
+    // Scroll to video section
+    if (videoSectionRef.current) {
+      videoSectionRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }
+
   return (
-    <motion.div
-      className="relative bg-gradient-to-b from-white to-gray-50 py-20 overflow-hidden"
-      initial="hidden"
-      whileInView="show"
-      viewport={{ once: true, amount: 0.25 }}
-    >
-      <div className="container mx-auto px-6">
-        <div className="flex flex-col lg:flex-row items-center">
-          {/* Hero Content */}
-          <motion.div className="lg:w-1/2 text-center lg:text-left mb-12 lg:mb-0" variants={fadeIn("right", 0.2)}>
-            <motion.h1
-              className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight mb-6"
-              variants={fadeIn("up", 0.3)}
+    <div className="flex flex-col">
+      {/* Hero content */}
+      <div className="px-8 mb-16 mt-9">
+        <div className="max-w-[1062px]">
+          {/* Transform Your */}
+          <h1
+            className="text-[60px] md:text-[80px] text-[#86AB5D] font-normal leading-tight"
+            style={{ fontFamily: "'Anton', sans-serif" }}
+          >
+            TRANSFORM YOUR
+          </h1>
+
+          {/* Notes */}
+          <h1
+            className="text-[90px] md:text-[135px] text-[#E48D44] font-normal leading-tight -mt-4 md:-mt-2"
+            style={{ fontFamily: "'Anton', sans-serif" }}
+          >
+            NOTES
+          </h1>
+
+          {/* Into Knowledge */}
+          <h1
+            className="text-[60px] md:text-[80px] text-[#86AB5D] font-normal leading-tight -mt-4 md:mt-2"
+            style={{ fontFamily: "'Anton', sans-serif" }}
+          >
+            INTO KNOWLEDGE
+          </h1>
+
+          {/* Description - positioned in the cream-colored section */}
+
+        </div>
+
+        {/* See Demo Button and Arrow - Positioned to the right */}
+        <div className="mt-16 flex justify-start items-center pl-[3.75rem] md:pl-[0rem]">
+          <div className="flex items-center">
+            <button
+              onClick={handleSeeDemo}
+              className="text-[#86AB5D] text-[20px] md:text-[32px] font-bold hover:underline mr-4"
+              style={{ fontFamily: "'Quicksand', sans-serif" }}
             >
-              Transform Your <span className="text-green-600">Notes</span> into Knowledge
-            </motion.h1>
+              SEE DEMO
+            </button>
 
-            <motion.p
-              className="text-lg md:text-xl text-gray-600 mb-8 max-w-lg mx-auto lg:mx-0"
-              variants={fadeIn("up", 0.4)}
-            >
-              Upload your notes, ask questions, and get instant answers. Create flashcards, quizzes, and mind maps to
-              enhance your learning.
-            </motion.p>
-
-            <motion.div
-              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
-              variants={fadeIn("up", 0.5)}
-            >
-              <Button
-                onClick={onGetStarted}
-                className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg text-lg font-medium"
-              >
-                Get Started
-              </Button>
-              <Button
-                onClick={handleSeeDemo}
-                variant="outline"
-                className="border-green-600 text-green-600 hover:bg-green-50 px-8 py-3 rounded-lg text-lg font-medium"
-              >
-                See Demo
-              </Button>
-            </motion.div>
-          </motion.div>
-
-          {/* Hero Video/Image */}
-          <motion.div className="lg:w-1/2" variants={zoomIn(0.4, 1)}>
-            <div className="relative rounded-lg shadow-2xl overflow-hidden">
-              {/* Placeholder image that will be replaced by video when playing */}
-              {!isPlaying && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30 z-10">
-                  <div className="w-16 h-16 rounded-full bg-white bg-opacity-80 flex items-center justify-center">
-                    <div className="w-0 h-0 border-t-8 border-b-8 border-l-12 border-transparent border-l-green-600 ml-1"></div>
-                  </div>
-                </div>
-              )}
-
-              {/* Video element */}
-              <video
-                ref={videoRef}
-                className="w-full h-auto rounded-lg"
-                poster="/NoteUS.jpg"
-                controls={isPlaying}
-                onEnded={() => setIsPlaying(false)}
-                playsInline
-              >
-                <source src="/noteUS_demo.mp4" type="video/mp4" />
-                Your browser does not support the video tag.
-              </video>
-            </div>
-          </motion.div>
+            <button
+              onClick={scrollToVideo}
+              className="w-12 h-12 bg-[#E48D44] rounded-full flex items-center
+               justify-center hover:bg-[#d9a862] transition-colors mr-4">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                xmlns="http://www.w3.org/2000/svg">
+                <path d="M7 10L12 15L17 10"
+                  stroke="white" strokeWidth="2"
+                  strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
-      {/* Decorative Elements */}
-      <motion.div
-        className="absolute top-20 left-10 w-20 h-20 bg-green-200 rounded-full opacity-20"
-        variants={slideIn("down", "spring", 0.2, 1)}
-      />
-      <motion.div
-        className="absolute bottom-20 right-10 w-32 h-32 bg-blue-200 rounded-full opacity-20"
-        variants={slideIn("up", "spring", 0.4, 1)}
-      />
-    </motion.div>
+
+      {/* Video Section */}
+      <div ref={videoSectionRef} className="mt-32 px-8 mb-8">
+        <div
+          className="max-w-12xl mx-auto overflow-hidden"
+          style={{
+            backgroundColor: "#86AB5D",
+            borderTopLeftRadius: "50px",
+            borderTopRightRadius: "118px",
+            borderBottomRightRadius: "50px",
+            borderBottomLeftRadius: "80px",
+            aspectRatio: "16/9",
+          }}
+        >
+          {!isPlaying ? (
+            <div className="relative w-full h-full flex items-center justify-center">
+              <span className="text-white text-4xl font-bold">VIDEO</span>
+              <button
+                onClick={() => {
+                  if (videoRef.current) {
+                    videoRef.current.play()
+                    setIsPlaying(true)
+                  }
+                }}
+                className="absolute inset-0 w-full h-full cursor-pointer"
+              />
+            </div>
+          ) : (
+            <video
+              ref={videoRef}
+              className="w-full h-full object-cover"
+              controls
+              onEnded={() => setIsPlaying(false)}
+              playsInline
+            >
+              <source src="/noteUS_demo.mp4" type="video/mp4" />
+              Your browser does not support the video tag.
+            </video>
+          )}
+        </div>
+      </div>
+
+      {/* Get Started Button */}
+      <div className="flex justify-center mb-16">
+        <button
+          onClick={onGetStarted}
+          className="bg-[#86AB5D] text-white px-8 py-3 rounded-full text-lg font-bold hover:bg-[#7a9d53] transition-colors"
+        >
+          GET STARTED
+        </button>
+      </div>
+    </div>
   )
 }
-
