@@ -78,15 +78,6 @@ jobs:
           API_TAG="${GAR_LOCATION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/noteus-api:latest"
       
           # Set your build arguments
-          BUILD_ARGS=(
-            --build-arg NEXT_PUBLIC_APP_URL="${{ vars.NEXT_PUBLIC_APP_URL }}"
-            --build-arg NEXT_PUBLIC_BACKEND_API_URL="${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}"
-            --build-arg NEXTAUTH_URL="${{ vars.NEXTAUTH_URL }}"
-            --build-arg NEXT_PUBLIC_BACKEND_DB_URL="${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}"
-            --build-arg FRONTEND_API_URL="${{ vars.FRONTEND_API_URL }}"
-            --build-arg PORT_BACKEND="${{ vars.PORT_BACKEND }}"
-          )
-
           echo "Building frontend container: $FRONTEND_TAG"
           docker build "${BUILD_ARGS[@]}" -f front-end/Dockerfile --tag "${FRONTEND_TAG}" front-end/
           docker push "${FRONTEND_TAG}"
