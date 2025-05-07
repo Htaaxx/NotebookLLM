@@ -43,7 +43,62 @@ jobs:
         with:
           workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
           service_account: 'github-wif@${{ env.PROJECT_ID }}.iam.gserviceaccount.com'
-
+      # Create env.yaml file for Cloud Run
+      - name: 'Generate Cloud Run env.yaml'
+        run: |
+          echo "envs:" > env.yaml
+          echo "  - name: GOOGLE_CLIENT_ID" >> env.yaml
+          echo "    value: \"${{ secrets.GOOGLE_CLIENT_ID }}\"" >> env.yaml
+          echo "  - name: GOOGLE_CLIENT_SECRET" >> env.yaml
+          echo "    value: \"${{ secrets.GOOGLE_CLIENT_SECRET }}\"" >> env.yaml
+          echo "  - name: NEXTAUTH_SECRET" >> env.yaml
+          echo "    value: \"${{ secrets.NEXTAUTH_SECRET }}\"" >> env.yaml
+          echo "  - name: STRIPE_SECRET_KEY" >> env.yaml
+          echo "    value: \"${{ secrets.STRIPE_SECRET_KEY }}\"" >> env.yaml
+          echo "  - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY" >> env.yaml
+          echo "    value: \"${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}\"" >> env.yaml
+          echo "  - name: JWT_SECRET" >> env.yaml
+          echo "    value: \"${{ secrets.JWT_SECRET }}\"" >> env.yaml
+          echo "  - name: CLOUDINARY_CLOUD_NAME" >> env.yaml
+          echo "    value: \"${{ secrets.CLOUDINARY_CLOUD_NAME }}\"" >> env.yaml
+          echo "  - name: CLOUDINARY_API_KEY" >> env.yaml
+          echo "    value: \"${{ secrets.CLOUDINARY_API_KEY }}\"" >> env.yaml
+          echo "  - name: CLOUDINARY_API_SECRET" >> env.yaml
+          echo "    value: \"${{ secrets.CLOUDINARY_API_SECRET }}\"" >> env.yaml
+          echo "  - name: GOOGLE_API_KEY" >> env.yaml
+          echo "    value: \"${{ secrets.GOOGLE_API_KEY }}\"" >> env.yaml
+          echo "  - name: MONGO_URI" >> env.yaml
+          echo "    value: \"${{ secrets.MONGO_URI }}\"" >> env.yaml
+          echo "  - name: MONGO_DB_NAME" >> env.yaml
+          echo "    value: \"${{ secrets.MONGO_DB_NAME }}\"" >> env.yaml
+          echo "  - name: MONGO_COLLECTION_NAME" >> env.yaml
+          echo "    value: \"${{ secrets.MONGO_COLLECTION_NAME }}\"" >> env.yaml
+          echo "  - name: OPENAI_API_KEY" >> env.yaml
+          echo "    value: \"${{ secrets.OPENAI_API_KEY }}\"" >> env.yaml
+          echo "  - name: ZILLIZ_CLOUD_URI" >> env.yaml
+          echo "    value: \"${{ secrets.ZILLIZ_CLOUD_URI }}\"" >> env.yaml
+          echo "  - name: ZILLIZ_CLOUD_TOKEN" >> env.yaml
+          echo "    value: \"${{ secrets.ZILLIZ_CLOUD_TOKEN }}\"" >> env.yaml
+          echo "  - name: LANGCHAIN_API_KEY" >> env.yaml
+          echo "    value: \"${{ secrets.LANGCHAIN_API_KEY }}\"" >> env.yaml
+          echo "  - name: LANGCHAIN_ENDPOINT" >> env.yaml
+          echo "    value: \"${{ secrets.LANGCHAIN_ENDPOINT }}\"" >> env.yaml
+          echo "  - name: USER_AGENT" >> env.yaml
+          echo "    value: \"${{ secrets.USER_AGENT }}\"" >> env.yaml
+          echo "  - name: HUGGINGFACE_TOKEN" >> env.yaml
+          echo "    value: \"${{ secrets.HUGGINGFACE_TOKEN }}\"" >> env.yaml
+          echo "  - name: NEXT_PUBLIC_APP_URL" >> env.yaml
+          echo "    value: \"${{ vars.NEXT_PUBLIC_APP_URL }}\"" >> env.yaml
+          echo "  - name: NEXT_PUBLIC_BACKEND_API_URL" >> env.yaml
+          echo "    value: \"${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}\"" >> env.yaml
+          echo "  - name: NEXTAUTH_URL" >> env.yaml
+          echo "    value: \"${{ vars.NEXTAUTH_URL }}\"" >> env.yaml
+          echo "  - name: NEXT_PUBLIC_BACKEND_DB_URL" >> env.yaml
+          echo "    value: \"${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}\"" >> env.yaml
+          echo "  - name: FRONTEND_API_URL" >> env.yaml
+          echo "    value: \"${{ vars.FRONTEND_API_URL }}\"" >> env.yaml
+          echo "  - name: PORT_BACKEND" >> env.yaml
+          echo "    value: \"${{ vars.PORT_BACKEND }}\"" >> env.yaml
       # Authenticate Docker to Google Cloud Artifact Registry
       - name: 'Docker Auth'
         uses: 'docker/login-action@v3'
@@ -75,64 +130,7 @@ jobs:
           docker build -f api/Dockerfile --tag "${API_TAG}" api/
           docker push "${API_TAG}"
 
-      # Create Kubernetes Secret from GitHub secrets
-      - name: 'Generate Cloud Run env.yaml'
-        run: |
-          cat <<EOF > env.yaml
-          envs:
-            - name: GOOGLE_CLIENT_ID
-              value: "${{ secrets.GOOGLE_CLIENT_ID }}"
-            - name: GOOGLE_CLIENT_SECRET
-              value: "${{ secrets.GOOGLE_CLIENT_SECRET }}"
-            - name: NEXTAUTH_SECRET
-              value: "${{ secrets.NEXTAUTH_SECRET }}"
-            - name: STRIPE_SECRET_KEY
-              value: "${{ secrets.STRIPE_SECRET_KEY }}"
-            - name: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-              value: "${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}"
-            - name: JWT_SECRET
-              value: "${{ secrets.JWT_SECRET }}"
-            - name: CLOUDINARY_CLOUD_NAME
-              value: "${{ secrets.CLOUDINARY_CLOUD_NAME }}"
-            - name: CLOUDINARY_API_KEY
-              value: "${{ secrets.CLOUDINARY_API_KEY }}"
-            - name: CLOUDINARY_API_SECRET
-              value: "${{ secrets.CLOUDINARY_API_SECRET }}"
-            - name: GOOGLE_API_KEY
-              value: "${{ secrets.GOOGLE_API_KEY }}"
-            - name: MONGO_URI
-              value: "${{ secrets.MONGO_URI }}"
-            - name: MONGO_DB_NAME
-              value: "${{ secrets.MONGO_DB_NAME }}"
-            - name: MONGO_COLLECTION_NAME
-              value: "${{ secrets.MONGO_COLLECTION_NAME }}"
-            - name: OPENAI_API_KEY
-              value: "${{ secrets.OPENAI_API_KEY }}"
-            - name: ZILLIZ_CLOUD_URI
-              value: "${{ secrets.ZILLIZ_CLOUD_URI }}"
-            - name: ZILLIZ_CLOUD_TOKEN
-              value: "${{ secrets.ZILLIZ_CLOUD_TOKEN }}"
-            - name: LANGCHAIN_API_KEY
-              value: "${{ secrets.LANGCHAIN_API_KEY }}"
-            - name: LANGCHAIN_ENDPOINT
-              value: "${{ secrets.LANGCHAIN_ENDPOINT }}"
-            - name: USER_AGENT
-              value: "${{ secrets.USER_AGENT }}"
-            - name: HUGGINGFACE_TOKEN
-              value: "${{ secrets.HUGGINGFACE_TOKEN }}"
-            - name: NEXT_PUBLIC_APP_URL
-              value: "${{ vars.NEXT_PUBLIC_APP_URL }}"
-            - name: NEXT_PUBLIC_BACKEND_API_URL
-              value: "${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}"
-            - name: NEXTAUTH_URL
-              value: "${{ vars.NEXTAUTH_URL }}"
-            - name: NEXT_PUBLIC_BACKEND_DB_URL
-              value: "${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}"
-            - name: FRONTEND_API_URL
-              value: "${{ vars.FRONTEND_API_URL }}"
-            - name: PORT_BACKEND
-              value: "${{ vars.PORT_BACKEND }}"
-          EOF
+      
 
       - name: 'Deploy Frontend to Cloud Run'
         run: |
