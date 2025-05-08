@@ -415,7 +415,7 @@ export function MindMapNodeModal({
             exit={{ scale: 0.9, opacity: 0 }}
             transition={{ type: "spring", damping: 20, stiffness: 300 }}
           >
-            <Card className="border-0 shadow-xl">
+            <Card className="border-0 shadow-xl bg-[#F2F5DA]">
               <CardHeader className="bg-green-600 text-white py-4 px-6 flex flex-row items-center justify-between">
                 <CardTitle className="text-xl">{title}</CardTitle>
                 <Button
@@ -509,30 +509,30 @@ export function MindMapNodeModal({
 
                 {/* Create Flashcard */}
                 <div>
-                  <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-lg font-medium flex items-center">
-                      <span className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded-full mr-2">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="text-lg font-medium flex items-center">
+                    <span className="bg-[#F2F5DA] text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded-full mr-2">
+                      Create Flashcard
+                    </span>
+                  </h3>
+                  <Button
+                    onClick={handleCreateFlashcard}
+                    disabled={isFlashcardLoading || apiCallInProgress}
+                    className="bg-[#E48D44] hover:bg-[#518650]"
+                  >
+                    {isFlashcardLoading || (apiCallInProgress && flashcardSuccess) ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <BookOpen className="h-4 w-4 mr-2" />
                         Create Flashcard
-                      </span>
-                    </h3>
-                    <Button
-                      onClick={handleCreateFlashcard}
-                      disabled={isFlashcardLoading || apiCallInProgress}
-                      className="bg-amber-600 hover:bg-amber-700"
-                    >
-                      {isFlashcardLoading || (apiCallInProgress && flashcardSuccess) ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Loading...
-                        </>
-                      ) : (
-                        <>
-                          <BookOpen className="h-4 w-4 mr-2" />
-                          Create Flashcard
-                        </>
-                      )}
-                    </Button>
-                  </div>
+                      </>
+                    )}
+                  </Button>
+                </div>
 
                   {showFlashcardPaths && (
                     <div className="mt-3">
@@ -574,7 +574,7 @@ export function MindMapNodeModal({
                               Close
                             </Button>
                             <Button 
-                              className="bg-amber-600 hover:bg-amber-700"
+                              className="bg-[#E48D44] hover:bg-[#518650] text-white"
                               onClick={() => {
                                 // Store the current deck ID for easy access
                                 const deckData = JSON.parse(localStorage.getItem("last_generated_deck") || "{}");
