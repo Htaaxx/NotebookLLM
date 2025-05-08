@@ -193,15 +193,16 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
   if (!activePanel || (selectedFiles.length === 0 && activePanel !== "mindmap")) {
     return (
       <motion.div
-        className="w-[42%] border-l border-[#518650] h-[calc(100vh-64px)] p-4 flex items-center justify-center bg-[#F2F5DA] text-[#518650] rounded-r-xl transform scale-[0.95]"
+        className="w-[40%] border-2 border-[#518650] h-[calc(100vh-84px)] px-4 pb-4 pt-4 flex items-center justify-center bg-[#F2F5DA] text-[#518650] rounded-xl transform scale-[0.90] origin-center"
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
         exit={{ opacity: 0, x: 20 }}
         transition={{ duration: 0.3 }}
       >
-        <p className="text-lg text-gray-500">{t("noChosenFile")}</p>
+        <div className="text-center p-8 border-2 border-dashed border-[#86AB5D] rounded-lg">
+          <p className="text-lg text-gray-700">{t("noChosenFile")}</p>
+        </div>
       </motion.div>
-
     )
   }
 
@@ -228,7 +229,7 @@ export function RightPanel({ activePanel, selectedFiles, onViewChange, isDisable
 
   return (
     <motion.div
-    className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l border-[#86AB5D] h-[calc(100vh-64px)] p-4 flex flex-col bg-[#86AB5D] text-white overflow-hidden relative rounded-r-xl`}
+      className={`${sidebarOpen ? "w-[42%]" : "w-[50%]"} border-l border-[#86AB5D] h-[calc(100vh-64px)] px-4 pb-4 pt-5 flex flex-col bg-[#86AB5D] text-white overflow-hidden relative rounded-r-xl transform scale-[0.95] origin-center`}
       initial={{ opacity: 0, x: 20 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 20 }}
