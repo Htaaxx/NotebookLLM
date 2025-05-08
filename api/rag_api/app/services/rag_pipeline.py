@@ -183,8 +183,8 @@ from langchain_core.prompts import ChatPromptTemplate
 from sklearn.cluster import KMeans
 from typing import Tuple, List, Dict, Any, Optional
 
-# from langchain_google_genai import ChatGoogleGenerativeAI
-# import google.generativeai as genai
+from langchain_google_genai import ChatGoogleGenerativeAI
+import google.generativeai as genai
 
 import pymongo
 from pymongo.collection import (
@@ -210,19 +210,19 @@ MONGO_URI = os.getenv("MONGO_URI")  # <--- Lấy URI MongoDB
 MONGO_DB_NAME = os.getenv("MONGO_DB_NAME")  # <--- Lấy tên DB
 MONGO_COLLECTION_NAME = os.getenv("MONGO_COLLECTION_NAME")  # <--- Lấy tên Collection
 
-# GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-# if not GOOGLE_API_KEY:
-#     print(
-#         "Cảnh báo: GOOGLE_API_KEY chưa được cấu hình trong .env. Không thể sử dụng Gemini."
-#     )
-#     # Có thể raise lỗi hoặc đặt llm = None tùy logic xử lý của bạn
-# else:
-#     try:
-#         genai.configure(api_key=GOOGLE_API_KEY)
-#         print("Đã cấu hình thành công Google API Key.")
-#     except Exception as e:
-#         print(f"Lỗi khi cấu hình Google API Key: {e}")
+if not GOOGLE_API_KEY:
+    print(
+        "Cảnh báo: GOOGLE_API_KEY chưa được cấu hình trong .env. Không thể sử dụng Gemini."
+    )
+    # Có thể raise lỗi hoặc đặt llm = None tùy logic xử lý của bạn
+else:
+    try:
+        genai.configure(api_key=GOOGLE_API_KEY)
+        print("Đã cấu hình thành công Google API Key.")
+    except Exception as e:
+        print(f"Lỗi khi cấu hình Google API Key: {e}")
 
 hnsw_index_params = {
     "metric_type": "COSINE",  # Phải khớp với embedding của bạn
@@ -277,27 +277,27 @@ connections.connect(alias="default", uri=ZILLIZ_CLOUD_URI, token=ZILLIZ_CLOUD_TO
 COLLECTION_NAME = "rag_collection"
 
 # Set up LLM
-llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API_KEY)
+# llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.2, openai_api_key=OPENAI_API_KEY)
 
-# GEMINI_MODEL_NAME = "gemini-1.5-flash-latest"  # Hoặc "gemini-1.5-pro-latest", etc.
+GEMINI_MODEL_NAME = "gemini-1.5-flash-latest"  # Hoặc "gemini-1.5-pro-latest", etc.
 
-# # Khởi tạo LLM (Thay thế ChatOpenAI)
-# if GOOGLE_API_KEY:  # Chỉ khởi tạo nếu có API Key
-#     try:
-#         llm = ChatGoogleGenerativeAI(
-#             model=GEMINI_MODEL_NAME,
-#             google_api_key=GOOGLE_API_KEY,
-#             temperature=0.5,  # Điều chỉnh nhiệt độ nếu cần
-#             convert_system_message_to_human=False,  # Model mới hỗ trợ SystemMessage
-#             # Thêm các tham số khác nếu cần, ví dụ: safety_settings
-#         )
-#         print(f"Sử dụng mô hình LLM: Google Gemini ({GEMINI_MODEL_NAME})")
-#     except Exception as e:
-#         print(f"Lỗi khi khởi tạo ChatGoogleGenerativeAI model {GEMINI_MODEL_NAME}: {e}")
-#         llm = None  # Đặt llm là None nếu khởi tạo lỗi
-# else:
-#     print("Không thể khởi tạo LLM do thiếu GOOGLE_API_KEY.")
-#     llm = None
+# Khởi tạo LLM (Thay thế ChatOpenAI)
+if GOOGLE_API_KEY:  # Chỉ khởi tạo nếu có API Key
+    try:
+        llm = ChatGoogleGenerativeAI(
+            model=GEMINI_MODEL_NAME,
+            google_api_key=GOOGLE_API_KEY,
+            temperature=0.5,  # Điều chỉnh nhiệt độ nếu cần
+            convert_system_message_to_human=False,  # Model mới hỗ trợ SystemMessage
+            # Thêm các tham số khác nếu cần, ví dụ: safety_settings
+        )
+        print(f"Sử dụng mô hình LLM: Google Gemini ({GEMINI_MODEL_NAME})")
+    except Exception as e:
+        print(f"Lỗi khi khởi tạo ChatGoogleGenerativeAI model {GEMINI_MODEL_NAME}: {e}")
+        llm = None  # Đặt llm là None nếu khởi tạo lỗi
+else:
+    print("Không thể khởi tạo LLM do thiếu GOOGLE_API_KEY.")
+    llm = None
 
 # Prompt from LangChain hub
 prompt = ChatPromptTemplate.from_template(

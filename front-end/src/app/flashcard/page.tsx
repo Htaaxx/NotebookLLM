@@ -319,8 +319,8 @@ export default function FlashcardPage() {
       const fakeFlashcards: Flashcard[] = [
         {
           id: "card1",
-          front: "What is React?",
-          back: "A JavaScript library for building user interfaces",
+          front: "Tại sao cần mã hóa các đặc trưng phân loại trong học máy?",
+          back: "Vì các mô hình học máy không thể xử lý trực tiếp dữ liệu dạng văn bản, cần chuyển về dạng số để mô hình hiểu và học được.",
           starred: true,
           lastReviewed: "2024-04-10",
           status: "learning",
@@ -334,8 +334,8 @@ export default function FlashcardPage() {
         },
         {
           id: "card2",
-          front: "What is JSX?",
-          back: "A syntax extension for JavaScript that looks similar to HTML",
+          front: "Integer Encoding là gì?",
+          back: "Là phương pháp mã hóa mỗi lớp bằng một số nguyên. Đơn giản nhưng có thể gây hiểu nhầm về thứ tự giữa các lớp.",
           starred: false,
           lastReviewed: "2024-04-12",
           status: "review",
@@ -349,8 +349,8 @@ export default function FlashcardPage() {
         },
         {
           id: "card3",
-          front: "What is a React component?",
-          back: "An independent, reusable piece of code that returns React elements",
+          front: "One-Hot Encoding hoạt động như thế nào?",
+          back: "Biến mỗi lớp thành một vector nhị phân. Không giả định thứ tự giữa các lớp nhưng làm tăng số chiều dữ liệu.",
           starred: false,
           lastReviewed: "Never",
           status: "new",
@@ -364,8 +364,8 @@ export default function FlashcardPage() {
         },
         {
           id: "card4",
-          front: "What is the virtual DOM?",
-          back: "A lightweight copy of the real DOM that React uses for performance optimization",
+          front: "Embedding trong học máy là gì?",
+          back: "Là cách biểu diễn lớp bằng vector số thực, thường được học trong quá trình huấn luyện, đặc biệt hiệu quả với dữ liệu lớn và phức tạp.",
           starred: true,
           lastReviewed: "2024-04-15",
           status: "mastered",
@@ -379,8 +379,8 @@ export default function FlashcardPage() {
         },
         {
           id: "card5",
-          front: "What are React hooks?",
-          back: "Functions that let you use state and other React features without writing a class",
+          front: "Target Encoding là gì?",
+          back: "Là mã hóa mỗi lớp bằng giá trị trung bình của target tương ứng, nhưng dễ gây overfitting nếu không xử lý cẩn thận.",
           starred: false,
           lastReviewed: "2024-04-14",
           status: "learning",
@@ -394,8 +394,8 @@ export default function FlashcardPage() {
         },
         {
           id: "card6",
-          front: "What is useState?",
-          back: "A hook that lets you add React state to function components",
+          front: "Hàm sigmoid có vai trò gì trong hồi quy logistic?",
+          back: "Chuyển đầu ra của mô hình tuyến tính thành xác suất trong khoảng (0,1), giúp phân loại nhị phân.",
           starred: false,
           lastReviewed: "Never",
           status: "new",
@@ -409,8 +409,8 @@ export default function FlashcardPage() {
         },
         {
           id: "card7",
-          front: "What is useEffect?",
-          back: "A hook that lets you perform side effects in function components",
+          front: "One-vs-All (OvA) và One-vs-One (OvO) khác nhau thế nào?",
+          back: "OvA dùng n mô hình nhị phân, OvO dùng n(n−1)/2 mô hình cho từng cặp lớp. OvO cho hiệu quả cao hơn nhưng tốn tài nguyên hơn.",
           starred: false,
           lastReviewed: "2024-04-13",
           status: "learning",
@@ -422,7 +422,7 @@ export default function FlashcardPage() {
             ease_factor: 2.3,
           },
         },
-      ]
+      ];      
 
       setCards(fakeFlashcards)
 
@@ -760,7 +760,7 @@ export default function FlashcardPage() {
       case "new":
         return "bg-blue-100 text-blue-800"
       case "learning":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-[#F2F5DA]-100 text-gray-800"
       case "review":
         return "bg-purple-100 text-purple-800"
       case "mastered":
@@ -791,12 +791,27 @@ export default function FlashcardPage() {
 
         <div className="max-w-6xl mx-auto">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex justify-between items-center mb-6">
-              <h1 className="text-3xl font-bold">Flashcards</h1>
-              <TabsList>
-                <TabsTrigger value="decks">My Decks</TabsTrigger>
-                <TabsTrigger value="study">Study</TabsTrigger>
-                <TabsTrigger value="create">Create</TabsTrigger>
+          <div className="flex justify-between items-center mb-6">
+              <h1 className="text-3xl font-bold text-[#518650]">Flashcards</h1>
+              <TabsList className="bg-[#F2F5DA] p-1 border border-[#86AB5D]">
+                <TabsTrigger 
+                  value="decks" 
+                  className="data-[state=active]:bg-[#518650] data-[state=active]:text-white text-gray-700 hover:bg-[#F2F5DA]/80"
+                >
+                  My Decks
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="study" 
+                  className="data-[state=active]:bg-[#518650] data-[state=active]:text-white text-gray-700 hover:bg-[#F2F5DA]/80"
+                >
+                  Study
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="create" 
+                  className="data-[state=active]:bg-[#518650] data-[state=active]:text-white text-gray-700 hover:bg-[#F2F5DA]/80"
+                >
+                  Create
+                </TabsTrigger>
               </TabsList>
             </div>
             {/* Decks Tab */}
@@ -819,7 +834,7 @@ export default function FlashcardPage() {
                   // Replace the Card component inside the decks.map() function with this:
                   <Card
                     key={deck.id}
-                    className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer"
+                    className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer bg-[#FAFDF0]"
                     onClick={() => {
                       setActiveDeck(deck.id)
                       setActiveTab("study")
@@ -828,7 +843,7 @@ export default function FlashcardPage() {
                     <div className="h-2 bg-green-600"></div>
                     <CardContent className="p-6">
                       <div className="flex justify-between items-start">
-                        <h3 className="text-xl font-bold mb-2 text-[#F2F5DA]">{deck.name}</h3>
+                        <h3 className="text-xl font-bold mb-2 text-gray-700">{deck.name}</h3>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -861,14 +876,14 @@ export default function FlashcardPage() {
 
                 {/* Add New Deck Card */}
                 <Dialog open={isCreateDeckDialogOpen} onOpenChange={setIsCreateDeckDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Card className="border-2 border-dashed flex items-center justify-center h-[180px] cursor-pointer hover:border-green-600 transition-colors">
-                      <div className="text-center">
-                        <Plus className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                        <p className="font-medium">Create New Deck</p>
-                      </div>
-                    </Card>
-                  </DialogTrigger>
+                <DialogTrigger asChild>
+                  <Card className="border-2 border-dashed flex items-center justify-center h-[180px] cursor-pointer hover:border-[#86AB5D] transition-colors bg-[#F2F5DA]">
+                    <div className="text-center">
+                      <Plus className="w-8 h-8 mx-auto mb-2 text-gray-700" />
+                      <p className="font-medium text-gray-700">Create New Deck</p>
+                    </div>
+                  </Card>
+                </DialogTrigger>
                   <DialogContent className="bg-white">
                     <DialogHeader>
                       <DialogTitle>Create New Flashcard Deck</DialogTitle>
@@ -985,7 +1000,7 @@ export default function FlashcardPage() {
               {decks.length === 0 && !searchQuery && (
                 <div className="text-center py-8">
                   <p className="text-gray-500 mb-4">You don't have any flashcard decks yet</p>
-                  <Button onClick={() => setIsCreateDeckDialogOpen(true)} className="bg-green-600 hover:bg-green-700">
+                  <Button onClick={() => setIsCreateDeckDialogOpen(true)} className="bg-[#518650] hover:bg-[#40703E] text-gray">
                     <Plus className="h-4 w-4 mr-2" />
                     Create Your First Deck
                   </Button>
@@ -1047,9 +1062,9 @@ export default function FlashcardPage() {
 
                         {/* Review Card */}
                         <Card className="p-8 min-h-[300px] flex flex-col">
-                          <div className="flex-1 flex items-center justify-center">
-                            <h3 className="text-xl font-medium text-center">{reviewCards[currentReviewCard].front}</h3>
-                          </div>
+                        <div className="flex-1 flex items-center justify-center">
+                          <p className="text-lg text-[#518650] font-bold text-center">{cards[currentCard].back}</p>
+                        </div>
 
                           {!showAnswer ? (
                             <div className="mt-6 flex justify-center">
@@ -1060,7 +1075,7 @@ export default function FlashcardPage() {
                           ) : (
                             <>
                               <div className="mt-6 p-4 bg-gray-50 rounded-md">
-                                <p className="text-lg text-center">{reviewCards[currentReviewCard].back}</p>
+                                <p className="text-lg text-[#518650] font-bold text-center">{reviewCards[currentReviewCard].back}</p>
                               </div>
                               // Find the review rating buttons in the Review Mode UI section and replace them with
                               this:
@@ -1079,7 +1094,7 @@ export default function FlashcardPage() {
                                   </Button>
                                   <Button
                                     variant="outline"
-                                    className="border-yellow-500 text-yellow-500 hover:bg-yellow-50 flex-col py-4 px-6"
+                                    className="border-[] text-gray-500 hover:bg-[#518650] flex-col py-4 px-6"
                                     onClick={() => submitReviewRating(reviewCards[currentReviewCard].id, 1)}
                                   >
                                     <span className="text-2xl mb-2">😕</span>
@@ -1211,7 +1226,7 @@ export default function FlashcardPage() {
                                 }}
                               >
                                 {cards[currentCard].starred ? (
-                                  <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                                  <Star className="h-4 w-4 text-gray-500 fill-[#F2F5DA]-500" />
                                 ) : (
                                   <StarOff className="h-4 w-4 text-gray-400" />
                                 )}
@@ -1230,7 +1245,7 @@ export default function FlashcardPage() {
                             </div>
 
                             <div className="flex-1 flex items-center justify-center">
-                              <h3 className="text-xl font-medium text-center">{cards[currentCard].front}</h3>
+                              <h3 className="text-xl text-[#518650] font-bold text-center">{cards[currentCard].front}</h3>
                             </div>
 
                             <div className="text-center mt-4 text-gray-500">

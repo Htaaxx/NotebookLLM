@@ -145,18 +145,18 @@ export function MindMapTaskbar({
             <ChevronDown className={`h-4 w-4 transition-transform ${isDropdownOpen ? "rotate-180" : ""}`} />
           </Button>
           {isDropdownOpen && (
-            <div className="absolute z-50 mt-1 w-64 bg-white border rounded-md shadow-lg max-h-80 overflow-y-auto">
+            <div className="absolute z-50 mt-1 w-64 bg-[#F2F5DA] border border-[#86AB5D] rounded-md shadow-lg max-h-80 overflow-y-auto">
               {Object.entries(groupedNodes)
                 .sort(([a], [b]) => Number(a) - Number(b))
                 .map(([level, nodeList]) => (
                   <div key={level} className="px-1">
-                    <div className="text-xs text-gray-500 py-1 px-2 bg-gray-50">
+                    <div className="text-xs text-gray-600 py-1 px-2 bg-[#E7E7C9]">
                       {level === "0" ? "Root" : `Level ${level}`}
                     </div>
                     {nodeList.map((node) => (
-                      <div key={node.id} className="flex items-center justify-between w-full hover:bg-green-50">
+                      <div key={node.id} className="flex items-center justify-between w-full hover:bg-[#E7E7C9]">
                         <button
-                          className="text-left px-3 py-2 text-sm truncate flex-grow"
+                          className="text-left px-3 py-2 text-sm truncate flex-grow text-gray-700"
                           onClick={() => {
                             onNodeSelect(node);
                             setIsDropdownOpen(false);
@@ -165,7 +165,7 @@ export function MindMapTaskbar({
                           {node.topic}
                         </button>
                         <button
-                          className="p-1 hover:bg-blue-100 rounded mr-1"
+                          className="p-1 hover:bg-[#86AB5D]/20 rounded mr-1"
                           onClick={(e) => {
                             e.stopPropagation();
                             onNodeSearch(node);
@@ -173,7 +173,7 @@ export function MindMapTaskbar({
                           }}
                           title="Add to search paths"
                         >
-                          <Search className="h-4 w-4" />
+                          <Search className="h-4 w-4 text-[#518650]" />
                         </button>
                       </div>
                     ))}

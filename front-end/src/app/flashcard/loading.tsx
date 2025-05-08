@@ -7,7 +7,7 @@ export default function Loading() {
         <div className="relative">
           <Loader2 className="h-16 w-16 animate-spin mx-auto text-green-600 mb-4" />
           <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-            <CreditCard className="h-6 w-6 text-green-800" />
+            <CreditCard className="h-6 w-6 text-gray-800" />
           </div>
         </div>
         <h2 className="text-xl font-bold text-gray-800 mb-2">Loading Flashcards</h2>
