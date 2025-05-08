@@ -78,33 +78,33 @@ jobs:
           echo "Generating .env for api and database..."
           for service in api database; do
             cat <<EOF > $service/.env
-            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
-            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
-            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
-            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
-            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
-            JWT_SECRET=${{ secrets.JWT_SECRET }}
-            CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
-            CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
-            CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
-            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
-            MONGO_URI=${{ secrets.MONGO_URI }}
-            MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}
-            MONGO_COLLECTION_NAME=${{ secrets.MONGO_COLLECTION_NAME }}
-            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
-            ZILLIZ_CLOUD_URI=${{ secrets.ZILLIZ_CLOUD_URI }}
-            ZILLIZ_CLOUD_TOKEN=${{ secrets.ZILLIZ_CLOUD_TOKEN }}
-            LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
-            LANGCHAIN_ENDPOINT=${{ secrets.LANGCHAIN_ENDPOINT }}
-            USER_AGENT=${{ secrets.USER_AGENT }}
-            HUGGINGFACE_TOKEN=${{ secrets.HUGGINGFACE_TOKEN }}
-            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
-            NEXT_PUBLIC_BACKEND_API_URL=${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}
-            NEXTAUTH_URL=${{ vars.NEXTAUTH_URL }}
-            NEXT_PUBLIC_BACKEND_DB_URL=${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}
-            FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
-            PORT_BACKEND=${{ vars.PORT_BACKEND }}
-            EOF
+          GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+          NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+          STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+          MONGO_URI=${{ secrets.MONGO_URI }}
+          MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}
+          MONGO_COLLECTION_NAME=${{ secrets.MONGO_COLLECTION_NAME }}
+          OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+          ZILLIZ_CLOUD_URI=${{ secrets.ZILLIZ_CLOUD_URI }}
+          ZILLIZ_CLOUD_TOKEN=${{ secrets.ZILLIZ_CLOUD_TOKEN }}
+          LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
+          LANGCHAIN_ENDPOINT=${{ secrets.LANGCHAIN_ENDPOINT }}
+          USER_AGENT=${{ secrets.USER_AGENT }}
+          HUGGINGFACE_TOKEN=${{ secrets.HUGGINGFACE_TOKEN }}
+          NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+          NEXT_PUBLIC_BACKEND_API_URL=${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}
+          NEXTAUTH_URL=${{ vars.NEXTAUTH_URL }}
+          NEXT_PUBLIC_BACKEND_DB_URL=${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}
+          FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
+          PORT_BACKEND=${{ vars.PORT_BACKEND }}
+          EOF
           done
 
           echo "Building and pushing Frontend..."
