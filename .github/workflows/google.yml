@@ -43,8 +43,9 @@ jobs:
           export DATABASE_TAG="$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/noteus-database:latest"
           export API_TAG="$GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY/noteus-api:latest"
 
-    # Common ENV string
-          ENV_VARS=$(cat <<EOF
+          # Generate .env.local for front-end
+          echo "Generating .env.local for front-end..."
+          cat <<EOF > front-end/.env.local
           GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
           GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
           NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
@@ -72,19 +73,39 @@ jobs:
           FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
           PORT_BACKEND=${{ vars.PORT_BACKEND }}
           EOF
-          )
 
-          Function to write env file
-          write_env_file() {
-            local path=$1
-            local filename=$2
-            echo "Writing $filename for $path"
-            echo "$ENV_VARS" > "$path/$filename"
-          }
-
-          write_env_file "front-end" ".env.local"
-          write_env_file "api" ".env"
-          write_env_file "database" ".env"
+          # Generate .env for API and database
+          echo "Generating .env for api and database..."
+          for service in api database; do
+            cat <<EOF > $service/.env
+            GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}
+            GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}
+            NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}
+            STRIPE_SECRET_KEY=${{ secrets.STRIPE_SECRET_KEY }}
+            NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=${{ secrets.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            CLOUDINARY_CLOUD_NAME=${{ secrets.CLOUDINARY_CLOUD_NAME }}
+            CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+            CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+            GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+            MONGO_URI=${{ secrets.MONGO_URI }}
+            MONGO_DB_NAME=${{ secrets.MONGO_DB_NAME }}
+            MONGO_COLLECTION_NAME=${{ secrets.MONGO_COLLECTION_NAME }}
+            OPENAI_API_KEY=${{ secrets.OPENAI_API_KEY }}
+            ZILLIZ_CLOUD_URI=${{ secrets.ZILLIZ_CLOUD_URI }}
+            ZILLIZ_CLOUD_TOKEN=${{ secrets.ZILLIZ_CLOUD_TOKEN }}
+            LANGCHAIN_API_KEY=${{ secrets.LANGCHAIN_API_KEY }}
+            LANGCHAIN_ENDPOINT=${{ secrets.LANGCHAIN_ENDPOINT }}
+            USER_AGENT=${{ secrets.USER_AGENT }}
+            HUGGINGFACE_TOKEN=${{ secrets.HUGGINGFACE_TOKEN }}
+            NEXT_PUBLIC_APP_URL=${{ vars.NEXT_PUBLIC_APP_URL }}
+            NEXT_PUBLIC_BACKEND_API_URL=${{ vars.NEXT_PUBLIC_BACKEND_API_URL }}
+            NEXTAUTH_URL=${{ vars.NEXTAUTH_URL }}
+            NEXT_PUBLIC_BACKEND_DB_URL=${{ vars.NEXT_PUBLIC_BACKEND_DB_URL }}
+            FRONTEND_API_URL=${{ vars.FRONTEND_API_URL }}
+            PORT_BACKEND=${{ vars.PORT_BACKEND }}
+            EOF
+          done
 
           echo "Building and pushing Frontend..."
           docker build -f front-end/Dockerfile -t $FRONTEND_TAG front-end/
